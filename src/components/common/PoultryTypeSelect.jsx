@@ -41,7 +41,7 @@ export default function PoultryTypeSelect({ selected = [], onChange, columns = '
                   <Check className="w-3 h-3" />
                 </span>
               )}
-              <span className="text-xl leading-none">{t.emoji}</span>
+              <span className="text-xl leading-none text-emerald-600"><Icon className="w-5 h-5" /></span>
               <span className={`text-xs font-bold ${isSelected ? 'text-emerald-800' : 'text-slate-700'}`}>
                 {t.label}
               </span>

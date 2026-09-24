@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, Printer, Filter, Calendar } from 'lucide-react';
+import { FileText, Download, Printer, Filter, Calendar, Lock } from 'lucide-react';
 import { useFarm } from '../../context/FarmContext';
 
 export default function Reports() {
@@ -94,7 +94,7 @@ export default function Reports() {
       {pdfWarning && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center justify-between no-print">
           <div>
-            <strong className="font-extrabold text-amber-950 block">🔒 PDF Export Gated</strong>
+            <strong className="font-extrabold text-amber-950 flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" /> PDF Export Gated</strong>
             {pdfWarning}
           </div>
           <a

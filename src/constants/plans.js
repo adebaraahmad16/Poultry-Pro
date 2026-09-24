@@ -8,7 +8,7 @@ export const PLAN_DETAILS = {
   [PLANS.FREE]: {
     id: PLANS.FREE,
     name: 'Free',
-    badge: '🆓 Free',
+    badge: 'Free',
     tagline: 'Ideal for smallholder backyard farmers',
     priceNgn: 0,
     priceFormatted: '₦0',
@@ -41,7 +41,7 @@ export const PLAN_DETAILS = {
   [PLANS.BASIC]: {
     id: PLANS.BASIC,
     name: 'Basic',
-    badge: '🌱 Basic',
+    badge: 'Basic',
     tagline: 'Perfect for growing commercial poultry operations',
     priceNgn: 5000,
     priceFormatted: '₦5,000',
@@ -75,7 +75,7 @@ export const PLAN_DETAILS = {
   [PLANS.PRO]: {
     id: PLANS.PRO,
     name: 'Pro Enterprise',
-    badge: '🚀 Pro',
+    badge: 'Pro',
     tagline: 'For commercial farms & multi-site managers',
     priceNgn: 15000,
     priceFormatted: '₦15,000',

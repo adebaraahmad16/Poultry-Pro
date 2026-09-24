@@ -24,7 +24,7 @@ export default function PoultrySelector() {
               <option value="all">All Poultry</option>
               {selectedTypes.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.emoji} {t.label}
+                  {t.label}
                 </option>
               ))}
             </select>

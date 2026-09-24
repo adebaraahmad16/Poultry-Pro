@@ -18,6 +18,9 @@ import {
   Megaphone,
   Star,
   Info,
+  Feather,
+  Sprout,
+  Rocket,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { POULTRY_TYPES } from '../constants/poultryTypes';
@@ -50,11 +53,11 @@ function SectionHeading({ eyebrow, title, subtitle, light = false }) {
   );
 }
 
-function HeroDashCard({ emoji, label, value, color }) {
+function HeroDashCard({ icon: Icon, label, value, color }) {
   return (
     <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-200/80 shadow-lg px-4 py-3">
-      <span className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-xl" aria-hidden="true">
-        {emoji}
+      <span className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700" aria-hidden="true">
+        {Icon && <Icon className="w-5 h-5 text-emerald-600" />}
       </span>
       <div>
         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
@@ -120,10 +123,6 @@ export default function LandingPage() {
         <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/70 via-slate-50 to-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-20 grid lg:grid-cols-5 gap-12 items-center">
             <div className="lg:col-span-3 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold tracking-wide uppercase mb-6 shadow-sm">
-                <Bird className="w-4 h-4 text-emerald-600" />
-                Farm OS for Poultry Farmers
-              </div>
 
               <h1 className="text-4xl sm:text-5xl xl:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
                 Manage Your Poultry Farm{' '}
@@ -147,10 +146,10 @@ export default function LandingPage() {
 
               {/* Floating dashboard preview cards */}
               <div className="mt-10 grid grid-cols-2 gap-3 max-w-lg mx-auto lg:mx-0">
-                <HeroDashCard emoji="🐔" label="Total Birds" value="4,500" color="text-emerald-600" />
-                <HeroDashCard emoji="🥚" label="Eggs Today" value="3,820" color="text-blue-600" />
-                <HeroDashCard emoji="🌾" label="Feed Today" value="850 kg" color="text-amber-600" />
-                <HeroDashCard emoji="💰" label="Revenue (MTD)" value="₦485,000" color="text-slate-900" />
+                <HeroDashCard icon={Bird} label="Total Birds" value="4,500" color="text-emerald-600" />
+                <HeroDashCard icon={Egg} label="Eggs Today" value="3,820" color="text-blue-600" />
+                <HeroDashCard icon={Wheat} label="Feed Today" value="850 kg" color="text-amber-600" />
+                <HeroDashCard icon={PiggyBank} label="Revenue (MTD)" value="₦485,000" color="text-slate-900" />
               </div>
             </div>
 
@@ -172,23 +171,22 @@ export default function LandingPage() {
 
             <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { icon: Bird, emoji: '🐔', title: 'Flock Management', desc: 'Track your birds, breeds, ages, flock sizes and mortality.' },
-                { icon: Wheat, emoji: '🌾', title: 'Feed Management', desc: 'Monitor feed purchases, consumption and remaining stock.' },
-                { icon: Egg, emoji: '🥚', title: 'Production Tracking', desc: 'Track egg production and other poultry-specific production metrics.' },
-                { icon: ShieldCheck, emoji: '💉', title: 'Health Management', desc: 'Manage vaccinations, medication and health records.' },
-                { icon: PiggyBank, emoji: '💰', title: 'Sales & Expenses', desc: 'Track your income, expenses and farm profitability.' },
-                { icon: BarChart3, emoji: '📊', title: 'Farm Analytics', desc: 'Turn your farm records into useful insights.' },
-                { icon: Package, emoji: '📦', title: 'Inventory', desc: 'Know what farm supplies you have and when you need to restock.' },
-                { icon: Users, emoji: '👷', title: 'Worker Management', desc: 'Manage farm workers and assign daily tasks.' },
+                { icon: Bird, title: 'Flock Management', desc: 'Track your birds, breeds, ages, flock sizes and mortality.' },
+                { icon: Wheat, title: 'Feed Management', desc: 'Monitor feed purchases, consumption and remaining stock.' },
+                { icon: Egg, title: 'Production Tracking', desc: 'Track egg production and other poultry-specific production metrics.' },
+                { icon: ShieldCheck, title: 'Health Management', desc: 'Manage vaccinations, medication and health records.' },
+                { icon: PiggyBank, title: 'Sales & Expenses', desc: 'Track your income, expenses and farm profitability.' },
+                { icon: BarChart3, title: 'Farm Analytics', desc: 'Turn your farm records into useful insights.' },
+                { icon: Package, title: 'Inventory', desc: 'Know what farm supplies you have and when you need to restock.' },
+                { icon: Users, title: 'Worker Management', desc: 'Manage farm workers and assign daily tasks.' },
               ].map((f) => {
                 const Icon = f.icon;
                 return (
                   <div key={f.title} className="p-6 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="mb-4">
                       <div className="p-3 w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
                         <Icon className="w-6 h-6" />
                       </div>
-                      <span className="text-2xl" aria-hidden="true">{f.emoji}</span>
                     </div>
                     <h3 className="text-lg font-bold text-slate-900">{f.title}</h3>
                     <p className="mt-2 text-sm text-slate-600 leading-relaxed">{f.desc}</p>
@@ -209,13 +207,18 @@ export default function LandingPage() {
             />
 
             <div className="mt-14 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {POULTRY_TYPES.map((t) => (
-                <div key={t.id} className="p-5 rounded-2xl bg-white border border-slate-200 text-center hover:border-emerald-300 hover:shadow-md transition-all">
-                  <div className="text-4xl" aria-hidden="true">{t.emoji}</div>
-                  <h3 className="mt-3 text-sm font-extrabold text-slate-900">{t.label}</h3>
-                  <p className="mt-1.5 text-xs text-slate-500 leading-relaxed line-clamp-3">{t.description}</p>
-                </div>
-              ))}
+              {POULTRY_TYPES.map((t) => {
+                const Icon = t.icon || Bird;
+                return (
+                  <div key={t.id} className="p-5 rounded-2xl bg-white border border-slate-200 text-center hover:border-emerald-300 hover:shadow-md transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto" aria-hidden="true">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <h3 className="mt-3 text-sm font-extrabold text-slate-900">{t.label}</h3>
+                    <p className="mt-1.5 text-xs text-slate-500 leading-relaxed line-clamp-3">{t.description}</p>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="mt-10 text-center">
@@ -354,12 +357,12 @@ export default function LandingPage() {
             />
             <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { icon: NotebookPen, emoji: '📒', title: 'Less Paperwork', desc: 'Keep your farm records digitally.' },
-                { icon: BarChart3, emoji: '📊', title: 'Better Decisions', desc: 'Understand your farm using real data.' },
-                { icon: PiggyBank, emoji: '💰', title: 'Know Your Profit', desc: 'Track revenue and expenses.' },
-                { icon: Wheat, emoji: '🌾', title: 'Control Feed Costs', desc: 'Monitor your feed consumption and stock.' },
-                { icon: Bird, emoji: '🐔', title: 'Monitor Your Flocks', desc: 'Know exactly what is happening with your birds.' },
-                { icon: Clock, emoji: '⏰', title: 'Save Time', desc: 'Manage your farm from your phone or computer.' },
+                { icon: NotebookPen, title: 'Less Paperwork', desc: 'Keep your farm records digitally.' },
+                { icon: BarChart3, title: 'Better Decisions', desc: 'Understand your farm using real data.' },
+                { icon: PiggyBank, title: 'Know Your Profit', desc: 'Track revenue and expenses.' },
+                { icon: Wheat, title: 'Control Feed Costs', desc: 'Monitor your feed consumption and stock.' },
+                { icon: Bird, title: 'Monitor Your Flocks', desc: 'Know exactly what is happening with your birds.' },
+                { icon: Clock, title: 'Save Time', desc: 'Manage your farm from your phone or computer.' },
               ].map((b) => {
                 const Icon = b.icon;
                 return (
@@ -369,7 +372,6 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <h3 className="text-base font-extrabold text-slate-900">
-                        <span className="mr-1.5" aria-hidden="true">{b.emoji}</span>
                         {b.title}
                       </h3>
                       <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">{b.desc}</p>
@@ -422,7 +424,7 @@ export default function LandingPage() {
               {[
                 {
                   name: 'Free',
-                  emoji: '🆓',
+                  icon: Feather,
                   price: '₦0',
                   period: '/month',
                   features: ['2 Flocks', 'Up to 500 Birds', '1 Farm', '1 User', 'Basic Dashboard', 'Flock Management', 'Basic Records'],
@@ -431,7 +433,7 @@ export default function LandingPage() {
                 },
                 {
                   name: 'Basic',
-                  emoji: '🌱',
+                  icon: Sprout,
                   price: '₦5,000',
                   period: '/month',
                   features: ['10 Flocks', 'Up to 5,000 Birds', '1 Farm', '3 Users', 'Advanced Dashboard', 'Feed Management', 'Egg Production', 'Health Records', 'Sales & Expenses', 'Reports'],
@@ -440,14 +442,16 @@ export default function LandingPage() {
                 },
                 {
                   name: 'Pro',
-                  emoji: '🚀',
+                  icon: Rocket,
                   price: '₦15,000',
                   period: '/month',
                   features: ['Unlimited Flocks', 'Unlimited Birds', 'Multiple Farms', '10 Users', 'Advanced Analytics', 'PDF Reports', 'Staff Management', 'Notifications', 'Priority Support'],
                   cta: 'Go Pro',
                   popular: false,
                 },
-              ].map((p) => (
+              ].map((p) => {
+                const PlanIcon = p.icon;
+                return (
                 <div
                   key={p.name}
                   className={`relative p-8 rounded-2xl flex flex-col ${
@@ -461,8 +465,8 @@ export default function LandingPage() {
                       Most Popular
                     </span>
                   )}
-                  <span className={`text-3xl ${p.popular ? 'bg-emerald-800' : 'bg-slate-100'} w-12 h-12 rounded-xl flex items-center justify-center`} aria-hidden="true">
-                    {p.emoji}
+                  <span className={`w-12 h-12 rounded-xl flex items-center justify-center ${p.popular ? 'bg-emerald-800 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`} aria-hidden="true">
+                    <PlanIcon className="w-6 h-6" />
                   </span>
                   <h3 className={`mt-4 text-xl font-extrabold ${p.popular ? 'text-white' : 'text-slate-900'}`}>{p.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
@@ -488,7 +492,8 @@ export default function LandingPage() {
                     {p.cta}
                   </Link>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -523,12 +528,17 @@ export default function LandingPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {ADVERTISER_TYPES.map((a) => (
-                    <div key={a.label} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10">
-                      <span className="text-xl" aria-hidden="true">{a.emoji}</span>
-                      <span className="text-sm font-semibold text-slate-200">{a.label}</span>
-                    </div>
-                  ))}
+                  {ADVERTISER_TYPES.map((a) => {
+                    const AdvIcon = a.icon;
+                    return (
+                      <div key={a.label} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10">
+                        <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-emerald-300 shrink-0" aria-hidden="true">
+                          {AdvIcon && <AdvIcon className="w-4 h-4" />}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-200">{a.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

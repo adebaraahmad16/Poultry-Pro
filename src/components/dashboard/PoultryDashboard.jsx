@@ -50,7 +50,7 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>{poultryType.emoji}</span>
+            {(() => { const TypeIcon = poultryType.icon; return TypeIcon ? <TypeIcon className="w-6 h-6 text-emerald-600" /> : null; })()}
             {poultryType.label} Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">

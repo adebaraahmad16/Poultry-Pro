@@ -24,11 +24,14 @@ export function SponsoredLabel({ dark = false }) {
  */
 export function TopBannerAd({ ad }) {
   if (!ad) return null;
+  const AdIcon = ad.icon || Megaphone;
   return (
     <div className="bg-slate-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
         <div className="flex items-center gap-2 text-sm">
-          <span aria-hidden="true">{ad.emoji}</span>
+          <span className="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <AdIcon className="w-3.5 h-3.5" />
+          </span>
           <span className="font-semibold">
             <span className="text-emerald-400">SPECIAL OFFER:</span>{' '}
             {ad.text.replace('SPECIAL OFFER: ', '')}
@@ -59,6 +62,7 @@ export function TopBannerAd({ ad }) {
  */
 export function HeroAdCard({ ad }) {
   if (!ad) return null;
+  const AdIcon = ad.icon || Megaphone;
   return (
     <aside className="relative bg-gradient-to-br from-emerald-700 to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl shadow-emerald-900/20 overflow-hidden">
       {/* Decorative rings */}
@@ -76,8 +80,8 @@ export function HeroAdCard({ ad }) {
           </span>
         </div>
 
-        <div className="mt-5 w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-3xl" aria-hidden="true">
-          {ad.emoji}
+        <div className="mt-5 w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-white" aria-hidden="true">
+          <AdIcon className="w-7 h-7" />
         </div>
 
         <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-emerald-300">{ad.company}</p>
@@ -114,11 +118,12 @@ export function HeroAdCard({ ad }) {
  */
 export function SponsoredAdCard({ ad }) {
   if (!ad) return null;
+  const AdIcon = ad.icon || Megaphone;
   return (
     <div className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-6 hover:shadow-lg hover:border-emerald-200 transition-all">
       <div className="flex items-start justify-between">
-        <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform" aria-hidden="true">
-          {ad.emoji}
+        <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 group-hover:scale-105 transition-transform" aria-hidden="true">
+          <AdIcon className="w-6 h-6" />
         </div>
         <SponsoredLabel />
       </div>

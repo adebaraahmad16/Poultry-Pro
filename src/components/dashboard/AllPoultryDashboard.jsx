@@ -114,10 +114,14 @@ export default function AllPoultryDashboard() {
               {breakdownIds.map((id) => {
                 const stats = computeTypeStats(id);
                 const type = selectedTypes.find((t) => t.id === id);
-                const label = type ? `${type.emoji} ${type.label}` : id;
+                const TypeIcon = type?.icon;
+                const label = type ? type.label : id;
                 return (
                   <tr key={id} className="border-b border-slate-50 last:border-0">
-                    <td className="py-3 pr-4 font-bold text-slate-800">{label}</td>
+                    <td className="py-3 pr-4 font-bold text-slate-800 flex items-center gap-2">
+                      {TypeIcon && <TypeIcon className="w-4 h-4 text-emerald-600 shrink-0" />}
+                      {label}
+                    </td>
                     <td className="py-3 pr-4 text-right font-semibold text-slate-700">{stats.totalBirds.toLocaleString()}</td>
                     <td className="py-3 pr-4 text-right text-slate-600">{stats.activeFlocks}</td>
                     <td className="py-3 pr-4 text-right text-slate-700">{money(stats.revenue)}</td>

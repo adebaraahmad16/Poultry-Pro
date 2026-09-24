@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, User, Building, Bell, Shield, CreditCard, Check, RefreshCw, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, User, Building, Bell, Shield, CreditCard, Check, RefreshCw, Trash2, Lightbulb } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useFarm, usePoultryData } from '../../context/FarmContext';
 import { farmProfileService } from '../../services/managementService';
@@ -349,7 +349,7 @@ export default function Settings() {
 
             {/* Flock Definition Banner */}
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">
-              <strong className="font-extrabold block text-amber-950 mb-1">💡 What counts as a Flock?</strong>
+              <strong className="font-extrabold flex items-center gap-1.5 text-amber-950 mb-1"><Lightbulb className="w-3.5 h-3.5 text-amber-600 shrink-0" /> What counts as a Flock?</strong>
               A flock refers to a distinct batch or group of birds (e.g., <em>Broiler Batch A — 500 birds</em>), not individual birds. For instance, on the <strong>Free plan (2 flocks)</strong>, you can manage up to 500 total birds divided between 2 active batches.
             </div>
 
