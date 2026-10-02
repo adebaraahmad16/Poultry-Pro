@@ -126,7 +126,7 @@ export default function LandingPage() {
 
               <h1 className="text-4xl sm:text-5xl xl:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
                 Manage Your Poultry Farm{' '}
-                <span className="text-emerald-600 underline decoration-emerald-300 decoration-4 underline-offset-4">Smarter</span>.
+                <span className="text-emerald-600 underline underline-offset-4">Smarter</span>.
               </h1>
 
               <p className="mt-6 text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0">

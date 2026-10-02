@@ -1,5 +1,5 @@
 import React from 'react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 export default function EggProductionChart({ data }) {
   const chartData = [...data].reverse().map((d) => ({
@@ -12,7 +12,7 @@ export default function EggProductionChart({ data }) {
   return (
     <div className="w-full h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
           <XAxis dataKey="date" stroke="#94A3B8" fontSize={12} tickLine={false} />
           <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} />
@@ -20,8 +20,8 @@ export default function EggProductionChart({ data }) {
             contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
           />
           <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
-          <Area type="monotone" dataKey="GoodEggs" name="Good Eggs" stroke="#16A34A" strokeWidth={2.5} fill="#DCFCE7" fillOpacity={0.7} />
-        </AreaChart>
+          <Line type="monotone" dataKey="GoodEggs" name="Good Eggs" stroke="#16A34A" strokeWidth={2.5} dot={{ r: 3, fill: '#16A34A' }} activeDot={{ r: 5 }} />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
