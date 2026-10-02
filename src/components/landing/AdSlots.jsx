@@ -64,7 +64,7 @@ export function HeroAdCard({ ad }) {
   if (!ad) return null;
   const AdIcon = ad.icon || Megaphone;
   return (
-    <aside className="relative bg-gradient-to-br from-emerald-700 to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl shadow-emerald-900/20 overflow-hidden">
+    <aside className="relative bg-[#15803D] rounded-3xl p-6 sm:p-8 text-white shadow-2xl shadow-emerald-900/20 overflow-hidden">
       {/* Decorative rings */}
       <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full border-[24px] border-emerald-600/30" aria-hidden="true" />
       <div className="absolute -bottom-20 -left-10 w-40 h-40 rounded-full border-[20px] border-emerald-500/20" aria-hidden="true" />

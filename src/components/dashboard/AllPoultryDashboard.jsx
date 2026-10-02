@@ -23,7 +23,7 @@ export default function AllPoultryDashboard() {
   return (
     <div className="space-y-6">
       {/* Farm Overview Banner */}
-      <div className="bg-gradient-to-br from-slate-900 to-emerald-950 text-white p-6 rounded-2xl shadow-md">
+      <div className="bg-[#0F172A] text-white p-6 rounded-2xl shadow-md">
         <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
           <LayoutGrid className="w-3.5 h-3.5" />
           Farm Overview — All Poultry

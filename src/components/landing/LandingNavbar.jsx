@@ -25,7 +25,7 @@ export default function LandingNavbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5" aria-label="PoultryPro home">
-          <span className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-white shadow-md">
+          <span className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-md">
             <Bird className="w-6 h-6 stroke-[2.5]" />
           </span>
           <span className="text-xl font-extrabold tracking-tight text-slate-900">

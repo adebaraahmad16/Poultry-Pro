@@ -120,7 +120,7 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* 3. Hero + 4. Hero advertisement */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/70 via-slate-50 to-white">
+        <section className="relative overflow-hidden bg-[#F8FAFC]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-20 grid lg:grid-cols-5 gap-12 items-center">
             <div className="lg:col-span-3 text-center lg:text-left">
 
@@ -251,7 +251,7 @@ export default function LandingPage() {
                 <span className="ml-4 text-xs text-slate-400 font-semibold">poultrypro.app/dashboard</span>
               </div>
 
-              <div className="p-6 sm:p-8 bg-gradient-to-br from-slate-50 to-emerald-50/40">
+              <div className="p-6 sm:p-8 bg-[#F8FAFC]">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
                     { label: 'Total Birds', value: '6,800', color: 'text-emerald-600' },
@@ -384,7 +384,7 @@ export default function LandingPage() {
         </section>
 
         {/* 11. Farmer statistics */}
-        <section className="py-20 bg-gradient-to-br from-emerald-800 via-emerald-700 to-blue-800 border-t border-emerald-900/20">
+        <section className="py-20 bg-[#15803D] border-t border-emerald-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               light
@@ -501,7 +501,7 @@ export default function LandingPage() {
         {/* 13. Advertise with us CTA */}
         <section id="advertise" className="py-20 bg-slate-50 border-t border-slate-200/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-8 sm:p-14 shadow-2xl">
+            <div className="relative overflow-hidden rounded-3xl bg-[#0F172A] p-8 sm:p-14 shadow-2xl">
               <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full border-[36px] border-emerald-500/10" aria-hidden="true" />
               <div className="absolute -bottom-28 -left-16 w-72 h-72 rounded-full border-[30px] border-blue-500/10" aria-hidden="true" />
 
@@ -603,7 +603,7 @@ export default function LandingPage() {
         </section>
 
         {/* 16. Final CTA */}
-        <section className="py-20 bg-gradient-to-br from-emerald-600 via-emerald-600 to-blue-700 border-t border-emerald-700/30">
+        <section className="py-20 bg-[#16A34A] border-t border-emerald-700/30">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
               Your Farm. Your Data. Your Growth.

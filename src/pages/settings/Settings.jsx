@@ -260,7 +260,7 @@ export default function Settings() {
             </div>
 
             {/* Current Active Plan Banner */}
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 text-white shadow-md relative overflow-hidden">
+            <div className="p-6 rounded-2xl bg-[#0F172A] text-white shadow-md relative overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
