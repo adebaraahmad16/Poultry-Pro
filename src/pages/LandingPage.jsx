@@ -603,7 +603,7 @@ export default function LandingPage() {
         </section>
 
         {/* 16. Final CTA */}
-        <section className="py-20 bg-[#16A34A] border-t border-emerald-700/30">
+        <section className="py-20 bg-[#15803D] border-t border-emerald-700/30">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
               Your Farm. Your Data. Your Growth.
