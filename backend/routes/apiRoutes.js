@@ -83,6 +83,43 @@ const formatExpense = (ex) => ({
   notes: ex.notes
 });
 
+const formatCustomer = (c) => ({
+  id: c.id,
+  name: c.name,
+  contactPerson: c.contact_person,
+  phone: c.phone,
+  email: c.email,
+  address: c.address,
+  type: c.type,
+  totalPurchases: Number(c.total_purchases),
+  outstandingBalance: Number(c.outstanding_balance),
+  notes: c.notes
+});
+
+const formatVaccination = (v) => ({
+  id: v.id,
+  flockId: v.flock_id,
+  flockName: v.flock_name,
+  vaccine: v.vaccine,
+  scheduledDate: v.scheduled_date ? v.scheduled_date.toISOString().split('T')[0] : '',
+  status: v.status,
+  administeredBy: v.administered_by,
+  notes: v.notes
+});
+
+const formatMedication = (m) => ({
+  id: m.id,
+  flockId: m.flock_id,
+  flockName: m.flock_name,
+  medicationName: m.medication_name,
+  reason: m.reason,
+  dosage: m.dosage,
+  startDate: m.start_date ? m.start_date.toISOString().split('T')[0] : '',
+  endDate: m.end_date ? m.end_date.toISOString().split('T')[0] : '',
+  cost: Number(m.cost),
+  notes: m.notes
+});
+
 // --- FLOCKS API ---
 router.get('/flocks', async (req, res) => {
   try {
@@ -218,6 +255,15 @@ router.post('/feed/:id/usage', async (req, res) => {
   }
 });
 
+router.delete('/feed/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM feed_inventory WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- HEALTH & MORTALITY API ---
 router.get('/mortality', async (req, res) => {
   try {
@@ -254,6 +300,15 @@ router.post('/mortality', async (req, res) => {
   }
 });
 
+router.delete('/mortality/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM mortality_records WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- SALES API ---
 router.get('/sales', async (req, res) => {
   try {
@@ -285,6 +340,25 @@ router.post('/sales', async (req, res) => {
   }
 });
 
+router.patch('/sales/:id/status', async (req, res) => {
+  try {
+    const { paymentStatus } = req.body;
+    await pool.query('UPDATE sales SET payment_status = ? WHERE id = ?', [paymentStatus, req.params.id]);
+    res.json({ success: true, paymentStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/sales/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM sales WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- EXPENSES API ---
 router.get('/expenses', async (req, res) => {
   try {
@@ -308,6 +382,130 @@ router.post('/expenses', async (req, res) => {
 
     const [rows] = await pool.query('SELECT * FROM expenses WHERE id = ?', [id]);
     res.status(201).json(formatExpense(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/expenses/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM expenses WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- CUSTOMERS API ---
+router.get('/customers', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM customers ORDER BY created_at DESC');
+    res.json(rows.map(formatCustomer));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/customers', async (req, res) => {
+  try {
+    const c = req.body;
+    const id = `cust-${Date.now()}`;
+    await pool.query(
+      `INSERT INTO customers (id, farm_id, name, contact_person, phone, email, address, type, total_purchases, outstanding_balance, notes)
+       VALUES (?, 'farm-101', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, c.name, c.contactPerson || '', c.phone || '', c.email || '', c.address || '', c.type || 'Retailer', Number(c.totalPurchases || 0), Number(c.outstandingBalance || 0), c.notes || '']
+    );
+    const [rows] = await pool.query('SELECT * FROM customers WHERE id = ?', [id]);
+    res.status(201).json(formatCustomer(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/customers/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM customers WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- VACCINATIONS API ---
+router.get('/vaccinations', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM vaccinations ORDER BY scheduled_date ASC');
+    res.json(rows.map(formatVaccination));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/vaccinations', async (req, res) => {
+  try {
+    const v = req.body;
+    const id = `vac-${Date.now()}`;
+    await pool.query(
+      `INSERT INTO vaccinations (id, flock_id, flock_name, vaccine, scheduled_date, status, administered_by, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, v.flockId, v.flockName || '', v.vaccine, v.scheduledDate || new Date(), v.status || 'Upcoming', v.administeredBy || '', v.notes || '']
+    );
+    const [rows] = await pool.query('SELECT * FROM vaccinations WHERE id = ?', [id]);
+    res.status(201).json(formatVaccination(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/vaccinations/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    await pool.query('UPDATE vaccinations SET status = ? WHERE id = ?', [status, req.params.id]);
+    res.json({ success: true, status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/vaccinations/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM vaccinations WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- MEDICATIONS API ---
+router.get('/medications', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM medications ORDER BY created_at DESC');
+    res.json(rows.map(formatMedication));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/medications', async (req, res) => {
+  try {
+    const m = req.body;
+    const id = `med-${Date.now()}`;
+    await pool.query(
+      `INSERT INTO medications (id, flock_id, flock_name, medication_name, reason, dosage, start_date, end_date, cost, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, m.flockId, m.flockName || '', m.medicationName, m.reason || '', m.dosage || '', m.startDate || null, m.endDate || null, Number(m.cost || 0), m.notes || '']
+    );
+    const [rows] = await pool.query('SELECT * FROM medications WHERE id = ?', [id]);
+    res.status(201).json(formatMedication(rows[0]));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/medications/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM medications WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -44,7 +44,8 @@ export const FarmProvider = ({ children }) => {
 
   const refreshAllData = useCallback(async () => {
     initializeStorage();
-    setFarm(farmProfileService.getFarm());
+    const loadedFarm = await farmProfileService.fetchFarm();
+    setFarm(loadedFarm || farmProfileService.getFarm());
 
     // Fetch asynchronously from Express API + MySQL, with local storage fallback
     const loadedFlocks = await flockService.getAll();
@@ -59,13 +60,17 @@ export const FarmProvider = ({ children }) => {
     const loadedMortality = await healthService.getMortalityRecords();
     setMortality(loadedMortality || []);
 
-    setVaccinations(healthService.getVaccinations());
-    setMedications(healthService.getMedications());
+    const loadedVaccinations = await healthService.getVaccinations();
+    setVaccinations(loadedVaccinations || []);
+
+    const loadedMedications = await healthService.getMedications();
+    setMedications(loadedMedications || []);
 
     const loadedSales = await salesService.getSales();
     setSales(loadedSales || []);
 
-    setCustomers(customerService.getCustomers());
+    const loadedCustomers = await customerService.getCustomers();
+    setCustomers(loadedCustomers || []);
 
     const loadedExpenses = await expenseService.getExpenses();
     setExpenses(loadedExpenses || []);

@@ -24,17 +24,17 @@ export default function EggProduction() {
   const calculatedGood = Math.max(0, form.totalEggs - form.brokenEggs - form.rejectedEggs);
   const calculatedCrates = (calculatedGood / 30).toFixed(1);
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     const flockObj = flocks.find((f) => f.id === form.flockId) || flocks[0];
-    eggService.createRecord({ ...form, flockName: flockObj?.name || 'Layer Flock' });
+    await eggService.createRecord({ ...form, flockName: flockObj?.name || 'Layer Flock' });
     refreshAllData();
     setIsAddOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      eggService.deleteRecord(deletingId);
+      await eggService.deleteRecord(deletingId);
       refreshAllData();
       setDeletingId(null);
     }

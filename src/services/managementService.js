@@ -1,4 +1,5 @@
 import { getItem, setItem, KEYS } from './storageService';
+import { API_BASE_URL } from './apiConfig';
 
 export const workerService = {
   getWorkers: () => getItem(KEYS.WORKERS, []),
@@ -76,6 +77,23 @@ export const notificationService = {
 
 export const farmProfileService = {
   getFarm: () => getItem(KEYS.FARM, {}),
+  fetchFarm: async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/farm`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.name) {
+          const current = getItem(KEYS.FARM, {});
+          const updated = { ...current, ...data };
+          setItem(KEYS.FARM, updated);
+          return updated;
+        }
+      }
+    } catch (err) {
+      console.warn('API error, using local farm profile:', err);
+    }
+    return getItem(KEYS.FARM, {});
+  },
   getUser: () => getItem(KEYS.USER, {}),
 
   updateFarm: (data) => {

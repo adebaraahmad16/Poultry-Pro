@@ -1,843 +1,1077 @@
-# 🐔 PoultryPro
+# PoultryPro Admin Dashboard
 
-> **Smart Management. Healthier Flocks. Better Profits.**
+**Poultry Farm Management System | Super Admin Panel — Structure & Complete Features**
 
-PoultryPro is a production-ready poultry farm management SaaS platform. It helps poultry farmers manage farms, poultry types, flocks, feed, egg production, health, mortality, sales, customers, expenses, inventory, workers, tasks, reports, notifications, and profitability, all in one place.
+This document specifies a professional, modern, and fully responsive **Super Admin Dashboard** for PoultryPro. It allows the platform administrator to manage farmers, poultry farms, subscriptions, payments, advertisements, support requests, and the overall performance of the platform.
 
-PoultryPro is a real commercial web application. It is **not** a static frontend, mockup, or visual-only prototype.
+PoultryPro supports different poultry types, so the admin dashboard is designed differently from the regular farmer dashboard.
 
----
+> **The farmer dashboard manages poultry farming activities, while the admin dashboard manages the entire PoultryPro platform.**
 
+**Brand colours**
+
+- 🟢 **Green:** Primary colour for buttons, active navigation, and success indicators.
+- 🔵 **Blue:** Secondary colour for information, analytics, and navigation elements.
+- ⚪ **Off-white:** Main background in light mode.
+- ⚫ **Dark charcoal:** Background in dark mode.
+- **No gradients:** Use solid colours throughout the interface.
+
+<!-- toc-start -->
 ## Table of Contents
 
-1. [Core Principle: Everything Must Work](#1-core-principle-everything-must-work)
-2. [Tech Stack](#2-tech-stack)
-3. [Brand Identity](#3-brand-identity)
-4. [Authentication](#4-authentication)
-5. [User Roles](#5-user-roles)
-6. [Onboarding](#6-onboarding)
-7. [Multiple Poultry Types](#7-multiple-poultry-types)
-8. [Poultry-Specific Dashboards](#8-poultry-specific-dashboards)
-9. [Dashboard & Sidebar](#9-dashboard--sidebar)
-10. [Flock Management](#10-flock-management)
-11. [Feed Management](#11-feed-management)
-12. [Egg Production](#12-egg-production)
-13. [Health Management](#13-health-management)
-14. [Mortality](#14-mortality)
-15. [Sales](#15-sales)
-16. [Customers](#16-customers)
-17. [Expenses](#17-expenses)
-18. [Inventory](#18-inventory)
-19. [Workers](#19-workers)
-20. [Task Management](#20-task-management)
-21. [Analytics](#21-analytics)
-22. [Profit & Loss](#22-profit--loss)
-23. [Reports](#23-reports)
-24. [Notifications](#24-notifications)
-25. [Search, Filters & Modals](#25-search-filters--modals)
-26. [Settings](#26-settings)
-27. [Subscription Plans & Limits](#27-subscription-plans--limits)
-28. [Landing Page](#28-landing-page)
-29. [Advertisement System](#29-advertisement-system)
-30. [Routes](#30-routes)
-31. [Button Functionality Audit](#31-button-functionality-audit)
-32. [Form Validation](#32-form-validation)
-33. [Data Persistence](#33-data-persistence)
-34. [Demo Data](#34-demo-data)
-35. [Responsive Design](#35-responsive-design)
-36. [Loading, Empty & Error States](#36-loading-empty--error-states)
-37. [Security](#37-security)
-38. [User Profile & Global UX](#38-user-profile--global-ux)
-39. [Real Calculations](#39-real-calculations)
-40. [Quality Control Checklist](#40-quality-control-checklist)
-41. [Guiding Questions](#41-guiding-questions)
+1. [Admin Dashboard Layout](#1-admin-dashboard-layout)
+2. [Admin Sidebar Structure](#2-admin-sidebar-structure)
+3. [Dashboard Overview](#3-dashboard-overview)
+4. [Farmers Management](#4-farmers-management)
+5. [Farms Management](#5-farms-management)
+6. [Poultry Types Management](#6-poultry-types-management)
+7. [Subscription Plans Management](#7-subscription-plans-management)
+8. [Payments & Revenue Management](#8-payments--revenue-management)
+9. [Advertisement Management](#9-advertisement-management)
+10. [Notification Management](#10-notification-management)
+11. [Support Center](#11-support-center)
+12. [Reports & Analytics](#12-reports--analytics)
+13. [Admin Management](#13-admin-management)
+14. [Website Content Management](#14-website-content-management)
+15. [Admin Settings Page](#15-admin-settings-page)
+16. [Audit Logs](#16-audit-logs)
+17. [Admin Login Page](#17-admin-login-page)
+18. [Admin Top Navigation Bar](#18-admin-top-navigation-bar)
+19. [Recommended Admin UI/UX Design](#19-recommended-admin-uiux-design)
+20. [Recommended React Project Structure](#20-recommended-react-project-structure)
+21. [How the Admin Dashboard Connects to the Farmer Dashboard](#21-how-the-admin-dashboard-connects-to-the-farmer-dashboard)
+22. [Final Recommended Sidebar](#22-final-recommended-sidebar)
+<!-- toc-end -->
 
 ---
 
-## 1. Core Principle: Everything Must Work
+## 1. Admin Dashboard Layout
 
-Every visible interactive element must perform a real action.
+The admin dashboard has three main sections.
 
-**Do NOT create:**
+- **A. Left Sidebar:** A collapsible sidebar containing all administrative navigation links.
+- **B. Top Navigation Bar:** A fixed or sticky header containing important administrative tools.
+- **C. Main Content Area:** A dynamic workspace displaying the selected administrative page.
 
-- Dead buttons
-- Fake links
-- Empty navigation items
-- Non-functional forms
-- Fake login or signup buttons
-- Placeholder dashboard actions
-- Buttons that only show `alert()`
-- "Coming soon" for core features
-- Static tables that cannot be edited
-- Fake search fields or filters
-- Fake charts
-- Fake notifications
-- Fake profile settings
-- Fake subscription buttons
-
-**Every button and link must either:**
-
-1. Navigate to a real page,
-2. Open a functional modal or drawer,
-3. Submit, update, or delete actual data,
-4. Filter or search actual data,
-5. Trigger a real application action,
-6. Download or export actual generated data, or
-7. Clearly explain why an external service is required.
-
----
-
-## 2. Tech Stack
-
-| Area | Technology |
-|---|---|
-| Framework | React.js (JavaScript, JSX) |
-| Styling | Tailwind CSS |
-| Routing | React Router |
-| Icons | Lucide React |
-| Charts | Recharts |
-| State | Context API (or another appropriate state-management approach) |
-| Validation | Custom form validation |
-| Design | Fully responsive |
-
-The application is structured so a real backend and database can be connected cleanly.
-
-- If a backend is available, implement proper API communication.
-- If not, use a **functional local data layer with LocalStorage** so CRUD operations persist after refresh.
-- Do not hardcode dashboard data in UI components.
-
-### Reusable Services
+**Recommended layout**
 
 ```text
-authService
-farmService
-flockService
-feedService
-productionService
-healthService
-salesService
-customerService
-expenseService
-inventoryService
-workerService
-taskService
-reportService
-notificationService
-subscriptionService
+┌──────────────────────────────────────────────────────────────────┐
+│ POULTRYPRO ADMIN                                                 │
+├──────────────────┬───────────────────────────────────────────────┤
+│                  │                                               │
+│  Dashboard       │  Welcome Back, Administrator                  │
+│                  │                                               │
+│  Farmers         │  ┌─────────┐ ┌─────────┐ ┌─────────┐          │
+│                  │  │ Farmers │ │  Farms  │ │ Revenue │          │
+│  Farms           │  └─────────┘ └─────────┘ └─────────┘          │
+│                  │                                               │
+│  Poultry Types   │  ┌─────────────────────────────────┐          │
+│                  │  │      Platform Analytics         │          │
+│  Subscriptions   │  │                                 │          │
+│                  │  │          CHART                  │          │
+│  Payments        │  │                                 │          │
+│                  │  └─────────────────────────────────┘          │
+│  Advertisements  │                                               │
+│                  │  Recent Registrations                         │
+│  Notifications   │  ┌─────────────────────────────────┐          │
+│                  │  │ Farmer | Farm | Plan | Status   │          │
+│  Support         │  └─────────────────────────────────┘          │
+│                  │                                               │
+│  Reports         │                                               │
+│                  │                                               │
+│  Settings        │                                               │
+│                  │                                               │
+│  Logout          │                                               │
+└──────────────────┴───────────────────────────────────────────────┘
 ```
 
----
-
-## 3. Brand Identity
-
-Use the selected **Professional Agricultural PoultryPro** logo concept.
-
-| Token | Hex |
-|---|---|
-| Primary Green | `#16A34A` |
-| Dark Green | `#15803D` |
-| Light Green | `#DCFCE7` |
-| Primary Blue | `#2563EB` |
-| Dark Blue | `#1D4ED8` |
-| Light Blue | `#DBEAFE` |
-| Background | `#F8FAFC` |
-| White | `#FFFFFF` |
-| Dark Text | `#0F172A` |
-| Muted Text | `#64748B` |
-
-Use the logo consistently in: landing page, navbar, login, registration, dashboard, sidebar, loading screen, favicon/app icon, reports, and PDF exports.
+The sidebar collapses into an icon-only navigation panel on desktop and opens as a drawer on mobile devices.
 
 ---
 
-## 4. Authentication
+## 2. Admin Sidebar Structure
 
-### Registration
+The sidebar is organised into logical groups to make navigation easier.
 
-**Fields:** Full name, Email, Phone number, Password, Confirm password
+**Main Menu**
 
-**Validation:** Required fields, valid email, password strength, password confirmation, duplicate email
+1. Dashboard
+2. Farmers Management
+3. Farms Management
+4. Poultry Types
+5. Subscription Plans
+6. Payments & Revenue
 
-**Flow:**
+**Platform Management**
+
+7. Advertisements
+8. Notifications
+9. Support Center
+10. Reports & Analytics
+
+**System Management**
+
+11. Admin Management
+12. Website Content
+13. Settings
+14. Audit Logs
+
+**Account**
+
+15. My Profile
+16. Logout
+
+Each sidebar item should have an appropriate icon, an active state, and a hover effect.
+
+---
+
+## 3. Dashboard Overview
+
+This is the first page displayed when an administrator logs into PoultryPro. It provides an overview of everything happening across the platform.
+
+### A. Overview Statistics Cards
+
+| Statistics | Description |
+| --- | --- |
+| Total Farmers | Number of registered farmers |
+| Active Farmers | Farmers currently using the platform |
+| Total Farms | Number of registered poultry farms |
+| Total Poultry Flocks | Number of active flocks across farms |
+| Total Birds | Total recorded poultry population |
+| Active Subscriptions | Number of active paid subscriptions |
+| Total Revenue | Revenue generated from subscriptions |
+| Pending Payments | Payments awaiting confirmation |
+| Active Advertisements | Number of advertisements currently running |
+| Support Tickets | Number of unresolved support requests |
+
+Each card should contain an icon, a title, the current value, and a percentage change compared with the previous period.
+
+### B. Platform Analytics
+
+Include interactive charts showing:
+
+1. **Farmer Registration Chart:** Displays the number of farmers registering daily, weekly, monthly, or yearly.
+2. **Revenue Analytics:** Displays revenue generated through subscriptions.
+3. **Subscription Distribution:** Shows the number of farmers using the Free Plan, Basic Plan, Premium Plan, and Enterprise Plan (if introduced).
+4. **Poultry Distribution:** Shows the distribution of poultry types across the platform.
+
+| Poultry Type | Registered Farms |
+| --- | ---: |
+| Broilers | 250 |
+| Layers | 180 |
+| Cockerels | 120 |
+| Turkeys | 70 |
+| Ducks | 35 |
+| Quails | 20 |
+
+> These figures are illustrative and should be replaced with actual platform data.
+
+### C. Recent Activities
+
+Display recent activities such as:
+
+- New farmer registrations
+- New farm creation
+- Subscription upgrades
+- Successful payments
+- Failed payments
+- New support requests
+- Account suspensions
+- Subscription expirations
+
+Every activity should include the date, time, description, and relevant user.
+
+---
+
+## 4. Farmers Management
+
+This section allows the administrator to manage all farmers registered on PoultryPro.
+
+### A. Farmers Overview
+
+Display a searchable table containing:
+
+| Field | Description |
+| --- | --- |
+| Farmer ID | Unique farmer identification |
+| Full Name | Farmer's registered name |
+| Email | Email address |
+| Phone Number | Contact information |
+| Location | State or country |
+| Number of Farms | Farms owned by the farmer |
+| Poultry Types | Birds managed |
+| Subscription | Current plan |
+| Account Status | Active, Suspended, or Deactivated |
+| Date Joined | Registration date |
+| Actions | View, Edit, Suspend |
+
+### B. Farmer Profile
+
+When the administrator clicks on a farmer, a detailed profile page opens.
+
+**Personal Information**
+
+- Full name
+- Email address
+- Phone number
+- Location
+- Date of registration
+- Last login
+
+**Farm Information**
+
+- Registered farms
+- Poultry types
+- Total flocks
+- Total recorded birds
+
+**Subscription Information**
+
+- Current subscription plan
+- Subscription status
+- Payment history
+- Renewal date
+
+**Account Actions**
+
+- View farmer information
+- Suspend account
+- Reactivate account
+- Reset account access
+- Send notification
+- View account activity
+
+> **Important:** Administrators should not have unrestricted access to farmers' private farm records. Sensitive information should be protected through role-based permissions.
+
+---
+
+## 5. Farms Management
+
+Since PoultryPro allows farmers to manage different poultry types, the administrator has a dedicated Farms Management section.
+
+### A. Farms Overview
+
+| Field | Description |
+| --- | --- |
+| Farm ID | Unique farm identification |
+| Farm Name | Registered farm name |
+| Farm Owner | Farmer's name |
+| Location | Farm location |
+| Poultry Types | Birds raised |
+| Total Flocks | Number of flocks |
+| Total Birds | Recorded bird population |
+| Date Created | Registration date |
+| Status | Active or Inactive |
+| Actions | View Details |
+
+### B. Farm Details
+
+When an administrator selects a farm, display:
+
+**Farm Information**
+
+- Farm name
+- Owner's information
+- Location
+- Date established
+- Farm registration date
+
+**Poultry Information**
+
+- Poultry types managed
+- Number of flocks per poultry type
+- Total bird population
+- Active and completed production cycles
+
+**Farm Activity**
+
+- Last recorded activity
+- Last flock update
+- Farm status
+
+### C. Multi-Poultry Farm Support
+
+This is particularly important for PoultryPro. If a farmer manages broilers, layers, and turkeys, the admin sees a breakdown of each poultry type.
 
 ```text
-Register → Create account → Login → Farm onboarding → Dashboard
+FARM: GREENFIELD POULTRY FARM
+
+Owner: John Ade
+Location: Ilorin, Kwara State
+
+Poultry Types: 3
+
+----------------------------------
+BROILERS
+Active Flocks: 4
+Total Birds: 1,200
+----------------------------------
+LAYERS
+Active Flocks: 2
+Total Birds: 850
+----------------------------------
+TURKEYS
+Active Flocks: 1
+Total Birds: 150
+----------------------------------
+
+TOTAL BIRDS: 2,200
+TOTAL FLOCKS: 7
 ```
 
-### Login
-
-**Fields:** Email, Password, Remember me
-
-**Actions:** Login, Forgot password, Show/hide password
-
-### Forgot Password
-
-Create a real password-reset flow. If a production email service is not connected, implement the UI and a local development reset flow **without pretending an email was actually sent**.
-
-### Logout
-
-Logout must:
-
-- Clear the active session
-- Clear authentication state
-- Redirect to `/login`
-
-Users must not be able to access protected dashboard routes after logout.
+This ensures that farms with multiple poultry types are represented correctly.
 
 ---
 
-## 5. User Roles
+## 6. Poultry Types Management
 
-| Role | Access |
-|---|---|
-| **Farm Owner** | Full access to their farm |
-| **Farm Manager** | Access based on permissions |
-| **Worker** | Limited access to assigned tasks and permitted farm records |
+This section controls the poultry categories supported by PoultryPro.
 
-Users must never be able to access another farmer's data.
+### Supported Poultry Categories
 
----
+1. Broilers
+2. Layers
+3. Cockerels
+4. Turkeys
+5. Ducks
+6. Quails
+7. Guinea Fowls
+8. Geese
+9. Breeders
 
-## 6. Onboarding
+### Features
 
-After registration, show a proper onboarding process that collects:
+- **Add Poultry Type:** A form containing poultry name, description, category image, production purpose, and status.
+- **Edit Poultry Type:** Update the name, description, and image.
+- **Enable/Disable Poultry Type:** Temporarily disable new registrations for a category without deleting existing farm records.
+- **Poultry Statistics:** Total farms using the category, total registered flocks, total recorded birds, and active production cycles.
 
-**Farmer information:** Name, Phone, Email
+### Important Functionality
 
-**Farm information:** Farm name, Farm location, State, Country, Farm size, Number of workers
+Each poultry type has its own farmer dashboard structure.
 
-**Poultry types:** The farmer **must** select at least one. Multiple selections are allowed:
+| Poultry Type | Farmer Dashboard Modules |
+| --- | --- |
+| Broilers | Flock management, feed management, weight monitoring, mortality tracking, sales records |
+| Layers | Egg production, egg collection records, feed management, mortality tracking, egg sales |
+| Turkeys | Flock management, feed records, weight monitoring, health records, sales |
 
-- Broilers
-- Layers
-- Chickens/Chicks
-- Ducks
-- Turkeys
-- Geese
-- Guinea Fowl
-- Quails
-- Other Poultry
-
-Selections are saved to the farmer's farm profile.
-
----
-
-## 7. Multiple Poultry Types
-
-This is a critical feature.
-
-- If the farmer selects only **Layers**, show a layer-focused dashboard.
-- If they select **Broilers, Layers, Turkeys**, show a poultry selector with:
-
-```text
-All Poultry | Broilers | Layers | Turkeys
-```
-
-### "All Poultry" view
-
-Displays combined: total birds, active flocks, feed stock, mortality, revenue, expenses, and profit.
-
-Poultry-specific production records must **not** be mixed incorrectly. For example, layer egg production must never appear as broiler egg production.
+The admin manages which poultry categories are available, while the farmer manages daily activities.
 
 ---
 
-## 8. Poultry-Specific Dashboards
+## 7. Subscription Plans Management
 
-| Poultry Type | Dashboard Metrics |
-|---|---|
-| **Broiler** | Total birds, active flocks, average weight, growth, feed consumption, feed conversion ratio, mortality, age, sales |
-| **Layer** | Total layers, egg production today, egg production rate, good / broken / rejected eggs, feed consumption, mortality, sales |
-| **Turkey** | Total birds, average weight, growth, feed consumption, mortality, health records, sales |
-| **Duck** | Population, egg production (where applicable), feed consumption, weight, mortality, health, sales |
-| **Quail** | Population, egg production, production rate, feed consumption, mortality, sales |
+This is one of the most important sections because PoultryPro can generate revenue through subscriptions. The administrator has full control over subscription plans.
 
-The system must be built so **new poultry types can be added later without rewriting the application**.
+### A. Subscription Overview
 
----
+- Total subscribers
+- Free plan users
+- Basic plan subscribers
+- Premium plan subscribers
+- Active subscriptions
+- Expired subscriptions
+- Cancelled subscriptions
+- Monthly recurring revenue
 
-## 9. Dashboard & Sidebar
+### B. Subscription Plans
 
-A professional SaaS dashboard with the following sidebar. Every item must navigate to a working route.
+| Feature | Free | Basic | Premium |
+| --- | --- | --- | --- |
+| Registered Farms | 1 | 3 | Unlimited |
+| Active Flocks | 2 | 10 | Unlimited |
+| Poultry Types | 1 | 3 | Unlimited |
+| Feed Tracking | Basic | Advanced | Advanced |
+| Health Records | Basic | Full | Full |
+| Financial Reports | Limited | Advanced | Advanced |
+| Data Export | No | Yes | Yes |
+| Priority Support | No | No | Yes |
 
-```text
-Dashboard
-Farm Overview
+> **Note:** These are suggested plan limits, not previously confirmed PoultryPro pricing or entitlements.
 
-Flock Management
-    Flocks
+### C. Create Subscription Plan
 
-Production
-    Egg Production
-    Feed Management
+The administrator enters:
 
-Health
-    Health Records
-    Vaccinations
-    Medication
-    Mortality
+- Plan name
+- Plan description
+- Monthly price
+- Annual price
+- Maximum farms
+- Maximum flocks
+- Maximum poultry types
+- Available features
+- Subscription duration
+- Plan status
 
-Business
-    Sales
-    Customers
-    Expenses
-    Inventory
+### D. Subscription Actions
 
-Management
-    Workers
-    Tasks
+- Create a new plan
+- Edit an existing plan
+- Enable or disable plans
+- Update subscription prices
+- View subscribers
+- Manage subscription renewals
+- Review cancellations
+- Configure trial periods
+- Configure promotional discounts
 
-Analytics
-    Reports
-    Profit & Loss
-
-Settings
-    Farm Profile
-    Notifications
-    Security
-    Subscription
-
-Logout
-```
-
----
-
-## 10. Flock Management
-
-**Capabilities:** Create, view, edit, delete, search, filter, sort, and view flock details.
-
-**Fields:**
-
-```text
-Flock Name, Poultry Type, Breed, Initial Number, Current Number,
-Date Acquired, Source, Cost, Pen/Location, Notes, Status
-```
-
-**Auto-calculated:** Current Birds, Mortality, Mortality Rate, Age
-
-### Flock Details Page
-
-Clicking **View Details** opens a complete flock page showing: Overview, Population, Age, Feed, Health, Mortality, Production, Sales, Expenses, and Performance charts.
-
-**Actions (all must work):**
-
-```text
-Edit Flock
-Record Mortality
-Add Feed Record
-Add Health Record
-Record Sale
-Delete Flock
-```
+> **Important:** Changing subscription limits should not automatically delete existing farmers' records. Existing subscribers should be handled according to clearly defined subscription policies.
 
 ---
 
-## 11. Feed Management
+## 8. Payments & Revenue Management
 
-**Capabilities:** Add, edit, delete, record usage, record purchase, search, filter, low-stock alerts.
+This section manages PoultryPro's financial transactions. Since the platform is intended for Nigerian farmers, integration with payment gateways such as [Paystack](https://paystack.com) or [Flutterwave](https://flutterwave.com) is appropriate.
 
-**Fields:** Feed Type, Quantity, Unit, Cost, Supplier, Purchase Date, Expiry Date, Minimum Stock
+### A. Revenue Overview
 
-**Auto-calculated:** Current Stock, Total Feed Cost, Low Stock Status
+- Total revenue
+- Monthly revenue
+- Annual revenue
+- Successful payments
+- Failed payments
+- Pending payments
+- Refunds
+- Subscription revenue
 
----
+### B. Payment Transactions
 
-## 12. Egg Production
+| Field | Description |
+| --- | --- |
+| Transaction ID | Unique payment reference |
+| Farmer Name | Customer information |
+| Subscription Plan | Purchased plan |
+| Amount | Payment amount |
+| Payment Method | Card, transfer, etc. |
+| Payment Date | Transaction date |
+| Status | Successful, Pending, Failed |
+| Actions | View Receipt |
 
-Only show egg production where relevant.
+### C. Payment Details
 
-**Record:** Date, Flock, Total Eggs, Broken Eggs, Rejected Eggs
+Clicking on a transaction displays:
 
-**Calculations:**
+- Payment reference
+- Farmer information
+- Amount paid
+- Subscription purchased
+- Payment gateway
+- Transaction date
+- Payment status
+- Gateway verification status
 
-```text
-Good Eggs = Total Eggs - Broken Eggs - Rejected Eggs
-Egg Production Rate (calculated from stored records)
-```
+### D. Payment Actions
 
-**Charts:** Daily production, Weekly production, Monthly production, Production by flock
+- View payment records
+- Download transaction reports
+- Generate receipts
+- Review failed payments
+- Initiate authorised refunds
+- Track subscription renewals
 
----
-
-## 13. Health Management
-
-### Vaccination
-
-**Fields:** Vaccine, Flock, Date, Next Due Date, Administered By, Notes
-
-Automatic reminders for upcoming vaccinations.
-
-### Medication
-
-**Fields:** Medication Name, Flock, Reason, Dosage, Start Date, End Date, Cost, Notes
-
-### Health Records
-
-Record: Disease, Symptoms, Treatment, Recovery, Notes
-
----
-
-## 14. Mortality
-
-**Record:** Date, Flock, Number of Birds, Cause, Notes
-
-**Causes:** Disease, Heat Stress, Injury, Predators, Unknown, Other
-
-- Mortality rate is calculated automatically.
-- Alerts fire when mortality rises above configured thresholds.
+> Payment confirmation must come from verified payment gateway records, not simply an administrator changing a payment status.
 
 ---
 
-## 15. Sales
+## 9. Advertisement Management
 
-**Capabilities:** Add, edit, delete, view, search, filter.
+Because PoultryPro's landing page will contain advertisements, this section allows the administrator to manage advertisements displayed throughout the website.
 
-**Fields:** Date, Customer, Product, Flock, Quantity, Unit Price, Total, Payment Status, Payment Method
+### A. Advertisement Overview
 
-**Products:** Live Birds, Eggs, Manure, Spent Layers, Other
+- Total advertisements
+- Active advertisements
+- Scheduled advertisements
+- Expired advertisements
+- Total impressions
+- Total clicks
+- Advertising revenue, if applicable
 
-```text
-Total = Quantity × Unit Price
-```
+### B. Create Advertisement
 
----
+**Advertisement Information**
 
-## 16. Customers
+- Advertisement title
+- Advertiser or company name
+- Description
+- Advertisement image
+- Destination link
+- Call-to-action button text
 
-**Capabilities:** Add, edit, delete, view, search.
+**Advertisement Placement**
 
-**Fields:** Name, Phone, Email, Address, Customer Type, Notes
+1. Landing page hero section
+2. Landing page advertisement banner
+3. Landing page sidebar
+4. Farmer dashboard advertisement section
+5. Subscription page
+6. Educational content section
 
-**Customer types:** Individual, Restaurant, Retailer, Wholesaler, Distributor
+**Advertisement Schedule**
 
-**Customer profile shows:** Total Purchases, Outstanding Balance, Purchase History
+- Start date
+- End date
+- Status
+- Display priority
 
----
+### C. Advertisement Management Table
 
-## 17. Expenses
+| Advertisement | Placement | Start Date | End Date | Status |
+| --- | --- | --- | --- | --- |
+| Poultry Feed Promo | Landing Page | Oct 1 | Oct 30 | Active |
+| Farm Equipment | Dashboard | Oct 5 | Nov 5 | Active |
+| Veterinary Services | Landing Page | Oct 10 | Nov 10 | Scheduled |
 
-**Categories:** Feed, Medication, Labour, Transport, Electricity, Water, Equipment, Repairs, Housing, Other
+> These are example advertisements.
 
-**Fields:** Date, Category, Description, Amount, Payment Method, Notes
+### D. Advertisement Actions
 
----
+- Upload advertisement images
+- Edit advertisement details
+- Activate advertisements
+- Pause advertisements
+- Delete advertisements
+- Schedule advertisements
+- Preview advertisements
+- Track advertisement performance
 
-## 18. Inventory
-
-**Categories:** Feed, Vaccines, Medication, Equipment, Packaging, Supplies
-
-**Fields:** Name, Category, Quantity, Unit, Minimum Stock, Cost, Supplier, Expiry Date, Status
-
-**Status display:** In Stock / Low Stock / Out of Stock
-
----
-
-## 19. Workers
-
-Owners and managers can add, edit, delete, and view workers.
-
-**Fields:** Name, Phone, Email, Role, Start Date, Status
-
-**Roles:** Farm Manager, Worker, Accountant, Supervisor
-
----
-
-## 20. Task Management
-
-**Capabilities:** Create, edit, delete, assign, complete.
-
-**Fields:** Task, Assignee, Due Date, Priority, Status, Notes
-
-- **Priorities:** Low, Medium, High, Urgent
-- **Statuses:** Pending, In Progress, Completed
-
-Workers see their assigned tasks.
-
----
-
-## 21. Analytics
-
-Real calculations from stored farm data, rendered with Recharts:
-
-- Flock population
-- Egg production
-- Feed consumption
-- Revenue vs expenses
-- Mortality
-- Sales
-- Profit
-- Production trends
-
-Charts must update when underlying records change. **Do not hardcode chart values.**
+Advertisements should be clearly labelled as **sponsored content**.
 
 ---
 
-## 22. Profit & Loss
+## 10. Notification Management
 
-```text
-Revenue       = Total Sales
-Expenses      = Total Recorded Expenses
-Profit        = Revenue - Expenses
-Profit Margin = (Profit / Revenue) × 100
-```
+This section allows administrators to communicate with farmers.
 
-**Display:** Revenue, Expenses, Gross profit, Profit margin, Expense breakdown, Revenue trends. Date filtering is supported.
+### A. Send Notifications
 
----
+Target audiences:
 
-## 23. Reports
+- All farmers
+- Free plan users
+- Paid subscribers
+- Farmers managing broilers
+- Farmers managing layers
+- Farmers managing turkeys
+- Farmers with expiring subscriptions
+- Selected farmers
 
-**Report types:**
+### B. Notification Form
 
-```text
-Flock Report
-Egg Production Report
-Feed Report
-Mortality Report
-Sales Report
-Expense Report
-Inventory Report
-Health Report
-Profit & Loss Report
-```
+- Notification title
+- Notification message
+- Notification category
+- Target audience
+- Delivery channel
+- Schedule date
+- Send button
 
-**Filters:** Today, 7 Days, 30 Days, This Month, Last Month, Custom Date
+**Notification categories**
 
-**Actions:** Export PDF, Export CSV, Print
+| Category | Examples |
+| --- | --- |
+| System Notifications | Scheduled maintenance, new features, platform updates |
+| Subscription Notifications | Subscription expiration, renewal reminders, payment confirmation |
+| Agricultural Updates | Poultry management tips, disease prevention information, farm management advice |
+| Promotional Notifications | Subscription discounts, new advertisements, promotional campaigns |
 
-Exported reports must contain the actual selected farm data.
+### C. Notification History
 
----
-
-## 24. Notifications
-
-A real notification system. Examples:
-
-```text
-Low feed stock
-Vaccination due
-Medication ending
-High mortality
-Pending customer payment
-Overdue task
-Low inventory
-```
-
-Users can open, mark as read, mark all as read, and delete notifications. The unread count updates dynamically.
+Display previously sent notifications, including their delivery status and date.
 
 ---
 
-## 25. Search, Filters & Modals
+## 11. Support Center
 
-- Every major data table has **search, filtering, sorting**, and **pagination** where appropriate. Search must actually filter the underlying data.
-- All destructive actions use professional confirmation dialogs:
+The Support Center allows administrators to manage problems reported by farmers.
 
-```text
-Delete Flock?
+### A. Support Overview
 
-This action cannot be undone.
+- Total tickets
+- Open tickets
+- Pending tickets
+- Resolved tickets
+- High-priority tickets
 
-[Cancel]  [Delete Flock]
-```
+### B. Support Ticket Table
 
-Deletion occurs only after confirmation.
+| Ticket ID | Farmer | Subject | Priority | Status |
+| --- | --- | --- | --- | --- |
+| SUP001 | John Ade | Payment Issue | High | Open |
+| SUP002 | Mary Bello | Flock Registration | Medium | Pending |
+| SUP003 | Musa Ibrahim | Account Access | High | Resolved |
 
----
+### C. Support Ticket Details
 
-## 26. Settings
+- Farmer's name
+- Email
+- Subject
+- Description
+- Date submitted
+- Priority
+- Attachments
+- Conversation history
 
-| Section | Capabilities |
-|---|---|
-| **Farm Profile** | Edit farm name, location, farm size, poultry types, contact information |
-| **Poultry Types** | Add or remove poultry types; dashboard selectors and relevant modules update accordingly |
-| **Notifications** | Enable/disable notification categories |
-| **Security** | Change password, session management, log out from all sessions |
-| **Subscription** | Show Free / Basic / Pro, current plan, usage, limits, upgrade button, billing information |
+### D. Support Actions
 
----
+- Reply to farmers
+- Assign tickets to support staff
+- Change ticket priority
+- Update ticket status
+- Close resolved tickets
+- Reopen tickets
+- View support history
 
-## 27. Subscription Plans & Limits
-
-| | **Free** | **Basic** | **Pro** |
-|---|---|---|---|
-| Farms | 1 | 1 | Multiple |
-| Flocks | 2 | 10 | Unlimited |
-| Birds | 500 | 5,000 | Unlimited |
-| Users | 1 | 3 | 10 |
-| Features | Basic Dashboard | Reports, Advanced Management | Advanced Analytics, PDF Reports, Notifications |
-
-Plan-limit checks are enforced. Example when a Free user hits the flock limit:
-
-```text
-You have reached your flock limit.
-
-Upgrade your plan to add more flocks.
-```
-
-The upgrade button navigates to the subscription page.
+A conversation-style interface is ideal for communication between administrators and farmers.
 
 ---
 
-## 28. Landing Page
+## 12. Reports & Analytics
 
-A professional commercial landing page.
+This section provides detailed insights into the performance of PoultryPro. Unlike the dashboard overview, this page contains more advanced reporting tools.
 
-**Sections:**
+### A. User Analytics
 
-1. Sponsored Advertisement Banner
-2. Navbar
-3. Hero
-4. Hero Advertisement
-5. Features
-6. Poultry Type Personalization
-7. Dashboard Preview
-8. Sponsored Recommendations
-9. How PoultryPro Works
-10. Benefits
-11. Pricing
-12. Advertise With Us
-13. Testimonials
-14. FAQ
-15. Final CTA
-16. Footer
+- Total registrations
+- Monthly registrations
+- Active farmers
+- Inactive farmers
+- Subscription conversion rate
+- Farmer retention rate
 
-**Hero headline:**
+### B. Poultry Analytics
 
-> **Manage Your Poultry Farm Smarter.**
+- Most registered poultry type
+- Total poultry farms
+- Total flocks
+- Recorded bird population
+- Poultry distribution by location
 
-**Supporting text:**
+### C. Revenue Analytics
 
-> PoultryPro gives you everything you need to manage your flocks, feed, production, health, sales and expenses in one simple platform.
+- Monthly subscription revenue
+- Annual subscription revenue
+- Revenue by subscription plan
+- Payment success rate
+- Subscription cancellations
 
-**Buttons (both must work):** `Start Managing Your Farm` · `Explore PoultryPro`
+### D. Advertisement Analytics
 
----
+- Advertisement impressions
+- Advertisement clicks
+- Click-through rate
+- Advertisement revenue
 
-## 29. Advertisement System
+### E. Report Export
 
-Ads must be clearly labelled **Sponsored** and must not look like system notifications.
+- Filter reports by date
+- Download PDF reports
+- Export CSV files
+- Export Excel reports
+- Print reports
 
-**Relevant advertisers:** Feed manufacturers, hatcheries, veterinary companies, poultry equipment suppliers, egg tray suppliers, poultry medication companies, agricultural insurance, farm equipment, agricultural financial services.
-
-**Reusable components:**
-
-```text
-SponsoredBanner
-SponsoredCard
-SponsoredRecommendation
-```
-
-Include an **Advertise With PoultryPro** CTA with a working contact/advertiser form.
+> Farm-level analytics should use aggregated or appropriately authorised data to protect farmers' private information.
 
 ---
 
-## 30. Routes
+## 13. Admin Management
 
-Every route must work. No route may lead to a blank page.
+This section is only accessible to the Super Admin. It allows the platform owner to manage other administrative accounts.
 
-```text
-/
-/login
-/register
-/forgot-password
-/onboarding
-/dashboard
-/farm
-/farm/flocks
-/farm/flocks/:id
-/production/eggs
-/production/feed
-/health
-/health/vaccinations
-/health/medication
-/health/mortality
-/business/sales
-/business/customers
-/business/expenses
-/business/inventory
-/management/workers
-/management/tasks
-/reports
-/reports/profit-loss
-/settings
-/settings/profile
-/settings/farm
-/settings/notifications
-/settings/security
-/settings/subscription
-```
+### A. Administrative Roles
+
+| Role | Responsibility |
+| --- | --- |
+| Super Admin | Full platform management |
+| Platform Admin | Farmers, farms, and platform operations |
+| Finance Admin | Subscriptions, payments, and revenue |
+| Support Admin | Customer support and user assistance |
+| Content Admin | Advertisements and website content |
+
+### B. Admin Management Features
+
+- Create administrator accounts
+- Assign administrative roles
+- Edit permissions
+- Suspend administrator accounts
+- Reactivate administrator accounts
+- View administrator activity
+- Revoke administrator access
+
+### C. Permission Management
+
+Permissions are assigned according to each administrator's responsibilities. For example, a Support Admin should not automatically have permission to change subscription prices or initiate refunds.
 
 ---
 
-## 31. Button Functionality Audit
+## 14. Website Content Management
 
-Every button must do something real:
+This section allows the administrator to update PoultryPro's public-facing website without modifying the source code.
 
-| Button | Behaviour |
-|---|---|
-| + Add Flock | Opens Add Flock form |
-| View Details | Opens flock details |
-| Edit | Opens edit form |
-| Delete | Opens confirmation modal |
-| Save | Saves data |
-| Cancel | Closes modal/form |
-| Search | Filters records |
-| Export | Generates actual export |
-| View Report | Opens report |
-| Upgrade | Opens subscription page |
-| Add Poultry Type | Opens selection interface |
-| Logout | Logs user out |
-| View All Notifications | Opens notification page |
-| Mark as Read | Updates notification state |
+### A. Homepage Content
 
-No button should exist without functionality.
+- Hero section heading
+- Hero description
+- Hero image
+- Call-to-action buttons
+- Featured platform benefits
+- Advertisement banners
 
----
+### B. About PoultryPro
 
-## 32. Form Validation
+- About Us content
+- Mission statement
+- Vision statement
+- Platform description
 
-Every form must have:
+### C. Platform Features
 
-- Required-field validation
-- Appropriate input types
-- Error messages (e.g. *"Please enter the flock name."*)
-- Success messages
-- Loading states
-- Disabled submit state while processing
-- Duplicate-data protection where appropriate
+Manage the features displayed on the landing page, for example: Flock Management, Feed Tracking, Health Monitoring, Financial Records, Egg Production Tracking, and Farm Analytics.
 
-Do not rely only on HTML validation.
+### D. Frequently Asked Questions
 
----
+- Add FAQs
+- Edit questions
+- Update answers
+- Delete FAQs
+- Reorder FAQs
 
-## 33. Data Persistence
+### E. Contact Information
 
-All created, edited, and deleted records must persist. For frontend-only development, use LocalStorage with a structured, database-like approach:
+- Official email
+- Phone number
+- WhatsApp support contact
+- Office address
+- Social media links
 
-```text
-users, farms, flocks, feedRecords, eggRecords, healthRecords,
-vaccinations, medications, mortalityRecords, sales, customers,
-expenses, inventory, workers, tasks, notifications, subscriptions
-```
+### F. Testimonials
 
-Data must survive **refresh**, **logout/login**, and **navigation**. Use user/farm IDs to isolate data.
+Allow administrators to review and approve farmer testimonials before displaying them publicly.
 
 ---
 
-## 34. Demo Data
+## 15. Admin Settings Page
 
-Include an optional, clearly labelled **Demo Farm**.
+The settings page contains different tabs.
 
-- **Load Demo Data** and **Clear Demo Data** actions
-- Demo data is clearly labelled as demonstration data
-- Demo data is never mixed with real user data
+| Tab | Settings |
+| --- | --- |
+| A. General Settings | Platform name, platform logo, favicon, platform description, default currency (NGN), time zone, date format, maintenance mode |
+| B. Account Settings | Admin profile, email address, phone number, change password, profile picture |
+| C. Security Settings | Two-factor authentication, login session management, password requirements, session timeout, login activity, account recovery settings |
+| D. Subscription Settings | Default free plan, subscription duration, renewal reminders, trial period, subscription grace period |
+| E. Payment Settings | Payment gateway configuration, supported payment methods, payment verification settings, refund policy, transaction notifications |
+| F. Notification Settings | Email notification preferences, in-app notifications, subscription reminders, system announcements |
+| G. Appearance Settings | Light mode, dark mode, sidebar behaviour, dashboard display preferences |
+| H. Data & Privacy | Data retention settings, account deletion requests, data export requests, privacy policy, data access permissions |
 
----
-
-## 35. Responsive Design
-
-The app works on desktop, laptop, tablet, and mobile.
-
-- **Desktop:** Sidebar + main content
-- **Mobile:** Top bar, hamburger, slide-out sidebar
-- Tables become mobile-friendly cards or scroll horizontally where necessary
-
-### Mobile Sidebar Behaviour
-
-| Action | Result |
-|---|---|
-| Click hamburger | Sidebar opens |
-| Click outside | Sidebar closes |
-| Click navigation item | Navigate and sidebar closes |
+> Sensitive payment credentials and security secrets must be stored securely on the backend and should never be displayed openly in the frontend.
 
 ---
 
-## 36. Loading, Empty & Error States
+## 16. Audit Logs
 
-Every data-driven page supports:
+The Audit Logs section tracks important actions performed by administrators. This is especially useful when PoultryPro has multiple administrators.
 
-- **Loading:** skeleton or spinner
-- **Empty:** e.g. *"No flocks have been added yet."* with an **Add Your First Flock** button
-- **Error:** a useful message with a retry action
+| Administrator | Action | Date | Status |
+| --- | --- | --- | --- |
+| Super Admin | Updated Subscription Price | Oct 12 | Successful |
+| Finance Admin | Initiated Refund | Oct 12 | Successful |
+| Support Admin | Suspended Farmer Account | Oct 11 | Successful |
+| Content Admin | Published Advertisement | Oct 11 | Successful |
 
-No blank screens.
+The system should record:
+
+- Administrator ID
+- Action performed
+- Affected record
+- Date and time
+- IP address, where appropriate
+- Action status
+
+Audit logs should be protected against unauthorised modification.
 
 ---
 
-## 37. Security
+## 17. Admin Login Page
 
-- Protected routes
+PoultryPro should have a separate administrator login interface, using a modern two-column layout on desktop.
+
+**Left section**
+
+- PoultryPro logo
+- PoultryPro Admin Portal
+- Short description
+- Professional poultry farm image or illustration
+
+**Right section**
+
+- Welcome Back heading
+- Email address field
+- Password field
+- Show/hide password
+- Remember me
+- Forgot password
+- Login button
+
+**Login security**
+
+- Secure authentication
 - Role-based access
-- Session handling
-- Input validation
-- User/farm data isolation
-- No plain-text passwords in a production architecture
-- No unnecessary exposure of sensitive data
-- With a backend: proper authentication and authorization
+- Session management
+- Two-factor authentication
+- Login attempt protection
+
+Farmers should not be able to access administrative routes simply by entering the admin URL.
 
 ---
 
-## 38. User Profile & Global UX
+## 18. Admin Top Navigation Bar
 
-### User Profile
+**Left side**
 
-Displays the logged-in user's name, email, profile picture, and farm name.
+- Sidebar toggle button
+- Current page title
+- Breadcrumb navigation
 
-**Profile menu (all items work):** My Profile · Farm Settings · Subscription · Notifications · Logout
+**Right side**
 
-### Global UX
+- Global search
+- Notification bell
+- Light/dark mode toggle
+- Admin profile picture
+- Profile dropdown
 
-- Toast notifications (e.g. *Flock created successfully.*, *Sale recorded successfully.*, *Farm profile updated.*, *Task completed.*)
-- Confirmation modals
-- Smooth transitions
-- Clear hover and disabled states
-- Loading states
-- Accessible labels
-- Keyboard-friendly forms
-- Consistent spacing and typography
-
----
-
-## 39. Real Calculations
-
-No fake calculations. All dashboard statistics derive from actual stored records.
+**Admin profile dropdown**
 
 ```text
-Current Birds  = Initial Birds - Total Mortality
-Mortality Rate = (Total Mortality / Initial Birds) × 100
-Good Eggs      = Total Eggs - Broken Eggs - Rejected Eggs
-Revenue        = Sum of Sales
-Expenses       = Sum of Expenses
-Profit         = Revenue - Expenses
-Profit Margin  = Profit / Revenue × 100
+┌─────────────────────────┐
+│  Administrator          │
+│  Super Admin            │
+├─────────────────────────┤
+│  My Profile             │
+│  Account Settings       │
+│  Security               │
+│  Logout                 │
+└─────────────────────────┘
 ```
 
 ---
 
-## 40. Quality Control Checklist
+## 19. Recommended Admin UI/UX Design
 
-Before considering the application complete, run a full functionality audit.
+A **modern agricultural SaaS dashboard design** is recommended.
 
-- [ ] **Authentication:** Register, Login, Logout, Forgot password, Protected routes
-- [ ] **Farm:** Create, Edit, Poultry types, Multiple poultry types
-- [ ] **Flocks:** Add, Edit, Delete, Search, Filter, Details
-- [ ] **Production:** Feed, Eggs
-- [ ] **Health:** Vaccination, Medication, Mortality
-- [ ] **Business:** Sales, Customers, Expenses, Inventory
-- [ ] **Management:** Workers, Tasks
-- [ ] **Reports:** Generate, Filter, Export, Print
-- [ ] **Settings:** Profile, Farm, Notifications, Security, Subscription
-- [ ] **UI:** Desktop, Tablet, Mobile, light/dark backgrounds where applicable, Sidebar, Navbar, Modals, Toasts, Empty states, Error states
+### Colour System
+
+| Element | Colour | Hex Code |
+| --- | --- | --- |
+| Primary Green | Forest Green | `#15803D` |
+| Secondary Blue | Professional Blue | `#2563EB` |
+| Main Background | Soft Off-White | `#F8FAF9` |
+| Sidebar | Dark Green | `#123524` |
+| Cards | White | `#FFFFFF` |
+| Primary Text | Dark Charcoal | `#1F2937` |
+| Secondary Text | Slate Gray | `#64748B` |
+| Success | Green | `#16A34A` |
+| Warning | Amber | `#F59E0B` |
+| Error | Red | `#DC2626` |
+
+### Design Requirements
+
+**Sidebar**
+
+- Dark green background
+- White navigation text
+- Collapsible design
+- Active navigation highlighted with a lighter green
+- Smooth transitions
+
+**Dashboard Cards**
+
+- White background
+- Subtle borders
+- Small rounded corners
+- Minimal shadows
+- Clear typography
+
+**Tables**
+
+- Search functionality
+- Pagination
+- Filters
+- Sorting
+- Action dropdowns
+- Responsive layouts
+
+**Charts**
+
+- Green and blue chart elements
+- Clear legends
+- Date filters
+- Interactive tooltips
+
+**Mobile Responsiveness**
+
+- Sidebar becomes a drawer
+- Cards stack vertically
+- Tables support horizontal scrolling or mobile-friendly row layouts
+- Buttons remain accessible
+
+> **Important:** Do not use gradients anywhere in the admin dashboard.
 
 ---
 
-## 41. Guiding Questions
+## 20. Recommended React Project Structure
 
-**Do not stop at designing the interface.** Build PoultryPro as if real poultry farmers will use it tomorrow. For every feature, ask:
+Since PoultryPro is being developed with React and Tailwind CSS, the admin interface should have a modular component structure.
 
-- *"What happens when the farmer clicks this?"* → Implement that behaviour.
-- *"Where is this data stored?"* → Implement the data flow.
-- *"Where does this number come from?"* → Calculate it from stored records.
-- *"Where should this link take the user?"* → Create the correct route.
-- *"How is the user protected from accidental deletion?"* → Implement confirmation.
-- *"What happens when the user reaches the limit?"* → Implement the restriction and upgrade flow.
+```text
+src/
+│
+├── admin/
+│   │
+│   ├── components/
+│   │   ├── AdminSidebar.jsx
+│   │   ├── AdminHeader.jsx
+│   │   ├── StatCard.jsx
+│   │   ├── DataTable.jsx
+│   │   ├── SearchBar.jsx
+│   │   ├── FilterDropdown.jsx
+│   │   ├── StatusBadge.jsx
+│   │   ├── ConfirmModal.jsx
+│   │   └── AdminLayout.jsx
+│   │
+│   ├── pages/
+│   │   ├── Dashboard.jsx
+│   │   ├── Farmers.jsx
+│   │   ├── FarmerDetails.jsx
+│   │   ├── Farms.jsx
+│   │   ├── FarmDetails.jsx
+│   │   ├── PoultryTypes.jsx
+│   │   ├── Subscriptions.jsx
+│   │   ├── Payments.jsx
+│   │   ├── Advertisements.jsx
+│   │   ├── Notifications.jsx
+│   │   ├── Support.jsx
+│   │   ├── Reports.jsx
+│   │   ├── AdminManagement.jsx
+│   │   ├── WebsiteContent.jsx
+│   │   ├── Settings.jsx
+│   │   ├── AuditLogs.jsx
+│   │   └── AdminProfile.jsx
+│   │
+│   ├── auth/
+│   │   ├── AdminLogin.jsx
+│   │   ├── ForgotPassword.jsx
+│   │   └── ProtectedAdminRoute.jsx
+│   │
+│   ├── hooks/
+│   │   └── useAdminAuth.js
+│   │
+│   └── routes/
+│       └── AdminRoutes.jsx
+│
+└── App.jsx
+```
 
-The final result must feel like a **real commercial SaaS product**, not a template, landing-page mockup, or CRUD demonstration, and the architecture must allow the frontend to connect to a production backend/API later without a rebuild.
+This keeps the administrative interface separate from the farmer dashboard while allowing both to use shared components where appropriate.
+
+---
+
+## 21. How the Admin Dashboard Connects to the Farmer Dashboard
+
+The admin dashboard and farmer dashboard operate within the same platform but have different permissions.
+
+| Farmer Action | Admin Dashboard Result |
+| --- | --- |
+| Farmer creates an account | New farmer appears in Farmers Management |
+| Farmer registers a farm | Farm appears in Farms Management |
+| Farmer selects poultry types | Poultry statistics update |
+| Farmer creates a flock | Aggregated flock statistics update |
+| Farmer upgrades subscription | Subscription statistics update |
+| Farmer completes payment | Verified transaction appears in Payments |
+| Farmer submits support ticket | Ticket appears in Support Center |
+| Farmer receives notification | Notification appears in farmer dashboard |
+| Farmer's subscription expires | Subscription status updates |
+| Admin publishes advertisement | Advertisement appears in its assigned location |
+
+For example, if a farmer registers an account and selects **Broilers and Layers**, PoultryPro should automatically create the appropriate farmer dashboard sections. The administrator can then see that the farmer manages two poultry categories, along with relevant aggregated statistics. The administrator should not need to create those dashboards manually.
+
+---
+
+## 22. Final Recommended Sidebar
+
+For the first production version of PoultryPro:
+
+```text
+POULTRYPRO
+ADMIN PANEL
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+MAIN
+  Dashboard
+  Farmers
+  Farms
+  Poultry Types
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+BUSINESS
+  Subscriptions
+  Payments & Revenue
+  Advertisements
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+COMMUNICATION
+  Notifications
+  Support Center
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+ANALYTICS
+  Reports & Analytics
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+PLATFORM
+  Website Content
+  Admin Management
+  Audit Logs
+  Settings
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+ACCOUNT
+  My Profile
+  Logout
+```
+
+### Recommendation: Five Major Responsibilities
+
+1. **Farmer and Farm Management:** Monitor registered farmers, their farms, and poultry categories.
+2. **Subscription and Revenue Management:** Control subscription plans, payments, and revenue generation.
+3. **Platform Content Management:** Manage advertisements, landing page content, and announcements.
+4. **Customer Support:** Handle farmer complaints, technical problems, and account issues.
+5. **Platform Analytics and Security:** Track performance, manage administrative permissions, and protect the platform.
+
+### Suggested Addition: Platform Health & Monitoring
+
+Because PoultryPro is intended to operate as a real farm management platform, the administrator should also be able to monitor:
+
+- API and backend availability
+- Database connectivity
+- Failed background jobs
+- Payment webhook failures
+- Email and notification delivery failures
+- Storage usage
+- Application errors
+
+This could be a dedicated page or a section within the main dashboard. It helps administrators detect platform problems before they affect large numbers of farmers.
+
+> **The overall goal is to make PoultryPro's admin dashboard a central control system for managing the platform, its users, subscriptions, operations, and business growth — without interfering unnecessarily with farmers' private farm management activities.**

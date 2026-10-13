@@ -1,11 +1,10 @@
 import { getItem, setItem, KEYS } from './storageService';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE_URL } from './apiConfig';
 
 export const eggService = {
   getAll: async () => {
     try {
-      const res = await fetch(`${API_BASE}/eggs`);
+      const res = await fetch(`${API_BASE_URL}/eggs`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.EGGS, data);
@@ -19,7 +18,7 @@ export const eggService = {
   
   createRecord: async (record) => {
     try {
-      const res = await fetch(`${API_BASE}/eggs`, {
+      const res = await fetch(`${API_BASE_URL}/eggs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(record)
@@ -57,7 +56,7 @@ export const eggService = {
 
   deleteRecord: async (id) => {
     try {
-      await fetch(`${API_BASE}/eggs/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/eggs/${id}`, { method: 'DELETE' });
     } catch (err) {
       console.warn('API error:', err);
     }
@@ -71,7 +70,7 @@ export const eggService = {
 export const feedService = {
   getInventory: async () => {
     try {
-      const res = await fetch(`${API_BASE}/feed`);
+      const res = await fetch(`${API_BASE_URL}/feed`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.FEED, data);
@@ -85,7 +84,7 @@ export const feedService = {
   
   addFeedItem: async (item) => {
     try {
-      const res = await fetch(`${API_BASE}/feed`, {
+      const res = await fetch(`${API_BASE_URL}/feed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
@@ -115,7 +114,7 @@ export const feedService = {
 
   recordUsage: async (feedId, bagsUsed) => {
     try {
-      await fetch(`${API_BASE}/feed/${feedId}/usage`, {
+      await fetch(`${API_BASE_URL}/feed/${feedId}/usage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bagsUsed })
@@ -134,5 +133,17 @@ export const feedService = {
       return f;
     });
     setItem(KEYS.FEED, updated);
+  },
+
+  deleteFeedItem: async (id) => {
+    try {
+      await fetch(`${API_BASE_URL}/feed/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('API error:', err);
+    }
+    const feeds = getItem(KEYS.FEED, []);
+    const updated = feeds.filter((f) => f.id !== id);
+    setItem(KEYS.FEED, updated);
+    return true;
   }
 };

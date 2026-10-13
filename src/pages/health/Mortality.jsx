@@ -20,17 +20,17 @@ export default function Mortality() {
     notes: ''
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     const flockObj = flocks.find((f) => f.id === form.flockId) || flocks[0];
-    healthService.recordMortality({ ...form, flockName: flockObj?.name || 'Flock' });
+    await healthService.recordMortality({ ...form, flockName: flockObj?.name || 'Flock' });
     refreshAllData();
     setIsAddOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      healthService.deleteMortalityRecord(deletingId);
+      await healthService.deleteMortalityRecord(deletingId);
       refreshAllData();
       setDeletingId(null);
     }

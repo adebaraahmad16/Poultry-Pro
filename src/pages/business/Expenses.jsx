@@ -21,16 +21,16 @@ export default function Expenses() {
     notes: ''
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    expenseService.createExpense(form);
+    await expenseService.createExpense(form);
     refreshAllData();
     setIsAddOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      expenseService.deleteExpense(deletingId);
+      await expenseService.deleteExpense(deletingId);
       refreshAllData();
       setDeletingId(null);
     }

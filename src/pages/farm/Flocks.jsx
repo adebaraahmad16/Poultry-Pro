@@ -44,7 +44,7 @@ export default function Flocks() {
     setIsAddOpen(true);
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!canAddFlock()) {
       setLimitError(`Flock creation limit reached for your ${currentPlan.name} plan (${currentPlan.limits.maxFlocks} flocks max). Please upgrade to add more flocks.`);
@@ -56,16 +56,16 @@ export default function Flocks() {
       return;
     }
 
-    flockService.create(form);
+    await flockService.create(form);
     refreshAllData();
     setIsAddOpen(false);
     setLimitError('');
     setForm({ name: '', type: 'Layer', breed: 'Isa Brown', initialBirds: 250, costPerBird: 1000, pen: 'House 1', source: 'Local Hatchery', notes: '' });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      flockService.delete(deletingId);
+      await flockService.delete(deletingId);
       refreshAllData();
       setDeletingId(null);
     }

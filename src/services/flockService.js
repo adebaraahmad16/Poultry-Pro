@@ -1,11 +1,10 @@
 import { getItem, setItem, KEYS } from './storageService';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE_URL } from './apiConfig';
 
 export const flockService = {
   getAll: async () => {
     try {
-      const res = await fetch(`${API_BASE}/flocks`);
+      const res = await fetch(`${API_BASE_URL}/flocks`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.FLOCKS, data);
@@ -24,7 +23,7 @@ export const flockService = {
   
   create: async (flockData) => {
     try {
-      const res = await fetch(`${API_BASE}/flocks`, {
+      const res = await fetch(`${API_BASE_URL}/flocks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(flockData)
@@ -56,7 +55,7 @@ export const flockService = {
 
   delete: async (id) => {
     try {
-      await fetch(`${API_BASE}/flocks/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/flocks/${id}`, { method: 'DELETE' });
     } catch (err) {
       console.warn('API error:', err);
     }

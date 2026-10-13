@@ -24,25 +24,25 @@ export default function FeedManagement() {
     minStockThresholdBags: 10
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    feedService.addFeedItem(form);
+    await feedService.addFeedItem(form);
     refreshAllData();
     setIsAddOpen(false);
   };
 
-  const handleRecordUsage = (e) => {
+  const handleRecordUsage = async (e) => {
     e.preventDefault();
     if (selectedFeedId) {
-      feedService.recordUsage(selectedFeedId, bagsToDeduct);
+      await feedService.recordUsage(selectedFeedId, bagsToDeduct);
       refreshAllData();
       setIsUsageOpen(false);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      feedService.deleteFeedItem(deletingId);
+      await feedService.deleteFeedItem(deletingId);
       refreshAllData();
       setDeletingId(null);
     }

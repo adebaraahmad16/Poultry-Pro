@@ -40,15 +40,15 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     onClose();
   };
 
-  const handleSubmit = (fn) => (e) => {
+  const handleSubmit = (fn) => async (e) => {
     e.preventDefault();
-    fn();
+    await fn();
     refreshAllData();
     close();
   };
 
-  const handleAddFlock = handleSubmit(() => {
-    flockService.create({
+  const handleAddFlock = handleSubmit(async () => {
+    await flockService.create({
       ...flockForm,
       type: poultryType?.flockTypes[0] || flockForm.type,
       breed: flockForm.breed || poultryType?.label || 'Local',
@@ -57,9 +57,9 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     });
   });
 
-  const handleRecordEgg = handleSubmit(() => {
+  const handleRecordEgg = handleSubmit(async () => {
     const flock = typeFlocks.find((f) => f.id === eggForm.flockId) || typeFlocks[0];
-    eggService.createRecord({
+    await eggService.createRecord({
       ...eggForm,
       flockId: flock?.id || '',
       flockName: flock?.name || 'Flock',
@@ -69,9 +69,9 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     });
   });
 
-  const handleRecordMortality = handleSubmit(() => {
+  const handleRecordMortality = handleSubmit(async () => {
     const flock = typeFlocks.find((f) => f.id === mortalityForm.flockId) || typeFlocks[0];
-    healthService.recordMortality({
+    await healthService.recordMortality({
       ...mortalityForm,
       flockId: flock?.id || '',
       flockName: flock?.name || 'Flock',
@@ -79,7 +79,7 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     });
   });
 
-  const handleRecordWeight = handleSubmit(() => {
+  const handleRecordWeight = handleSubmit(async () => {
     const flock = typeFlocks.find((f) => f.id === weightForm.flockId) || typeFlocks[0];
     weightService.addWeightRecord({
       ...weightForm,
@@ -90,8 +90,8 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     });
   });
 
-  const handleAddExpense = handleSubmit(() => {
-    expenseService.createExpense({
+  const handleAddExpense = handleSubmit(async () => {
+    await expenseService.createExpense({
       ...expenseForm,
       amount: Number(expenseForm.amount),
       // Attribute to the selected flock so the expense stays in this poultry type's books
@@ -100,8 +100,8 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     });
   });
 
-  const handleRecordSale = handleSubmit(() => {
-    salesService.createSale({
+  const handleRecordSale = handleSubmit(async () => {
+    await salesService.createSale({
       ...saleForm,
       quantity: Number(saleForm.quantity),
       unitPrice: Number(saleForm.unitPrice),

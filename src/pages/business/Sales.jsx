@@ -24,22 +24,22 @@ export default function Sales() {
     notes: ''
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    salesService.createSale(form);
+    await salesService.createSale(form);
     refreshAllData();
     setIsAddOpen(false);
   };
 
-  const handleUpdateStatus = (id, currentStatus) => {
+  const handleUpdateStatus = async (id, currentStatus) => {
     const next = currentStatus === 'Paid' ? 'Pending' : 'Paid';
-    salesService.updateSaleStatus(id, next);
+    await salesService.updateSaleStatus(id, next);
     refreshAllData();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      salesService.deleteSale(deletingId);
+      await salesService.deleteSale(deletingId);
       refreshAllData();
       setDeletingId(null);
     }
