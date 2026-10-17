@@ -5,10 +5,13 @@ import {resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
-export async function checkPoultryScopeBrowser({apiBase,farmer,second,stranger,adminToken,flocks}){
+export async function checkPoultryScopeBrowser({apiBase,farmer,second,stranger,adminToken,flocks,productionPreview=false}){
   const originalCwd=process.cwd(),root=fileURLToPath(new URL('../',import.meta.url));process.chdir(root);
   process.env.VITE_API_BASE_URL=apiBase;
-  const {createServer}=await import('vite');const vite=await createServer({root,server:{host:'127.0.0.1',port:0},clearScreen:false});await vite.listen();
+  const {createServer,build,preview}=await import('vite');
+  if(productionPreview) await build({root,clearScreen:false});
+  const vite=productionPreview ? await preview({root,preview:{host:'127.0.0.1',port:0}}) : await createServer({root,server:{host:'127.0.0.1',port:0},clearScreen:false});
+  if(!productionPreview) await vite.listen();
   const origin=vite.resolvedUrls.local[0];
   const browser=spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check',`--user-data-dir=${resolve(tmpdir(),'poultry-scope-'+randomUUID())}`,'--remote-debugging-port=9243','about:blank'],{windowsHide:true,stdio:'ignore'});
   let socket;const errors=[];
@@ -34,9 +37,24 @@ export async function checkPoultryScopeBrowser({apiBase,farmer,second,stranger,a
       const offenders=await evaluate(`Array.from(document.querySelectorAll('main *')).filter(e=>e.getBoundingClientRect().right>innerWidth&&!e.closest('.overflow-x-auto')).slice(0,14).map(e=>({tag:e.tagName,cls:e.getAttribute('class'),width:e.getBoundingClientRect().width,text:e.innerText?.slice(0,60)}))`);
       throw new Error(`${label} overflow: ${JSON.stringify(overflow)}\n${JSON.stringify(offenders)}`);
     };
-    await send('Page.enable');await send('Runtime.enable');
+    await send('Page.enable');await send('Runtime.enable');await send('Network.enable');
+    const originalMessage=socket.onmessage;
+    socket.onmessage=e=>{
+      const message=JSON.parse(e.data);
+      if(message.method==='Network.responseReceived' && message.params.response.status>=400 && /\.(js|css)(?:\?|$)/.test(message.params.response.url)) errors.push(`Asset ${message.params.response.status}: ${message.params.response.url}`);
+      originalMessage(e);
+    };
     await send('Page.addScriptToEvaluateOnNewDocument',{source:`if(!localStorage.getItem('scope_browser_initialized')){localStorage.setItem('poultrypro_token',${JSON.stringify(farmer.token)});localStorage.setItem('scope_browser_initialized','true');}`});
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+    await load('/');await wait(`document.querySelector('#root')?.innerText.length > 20`);
+    await load('/admin');await wait(`location.pathname==='/admin/login' && document.querySelector('form')`);
+    await load('/admin',true);await wait(`location.pathname==='/admin/login' && document.querySelector('form')`);
+    await evaluate(`localStorage.setItem('poultrypro_current_admin',JSON.stringify({role:'Super Admin'}));localStorage.setItem('poultrypro_admin_token',${JSON.stringify(farmer.token)});`);
+    await load('/admin/farmers');await wait(`location.pathname==='/admin/login' && document.querySelector('form')`);
+    assert.equal(await evaluate(`localStorage.getItem('poultrypro_admin_token')`),null,'Farmer token cannot restore admin access');
+    await evaluate(`localStorage.setItem('poultrypro_admin_token','expired-or-invalid');`);
+    await load('/admin/dashboard');await wait(`location.pathname==='/admin/login' && document.querySelector('form')`);
+    console.log('PASS homepage, direct admin entry, refresh, forged cached profile, farmer role and expired admin session');
     await load('/dashboard');await ready();await wait(`!document.querySelector('select[aria-label="Selected poultry type"]').disabled`);
     for(const [type,title] of [['broilers','Broilers'],['layers','Layers'],['turkeys','Turkeys'],['cockerels','Cockerels']]){
       await select(type);await wait(`document.querySelector('main h1')?.innerText.includes(${JSON.stringify(title+' Dashboard')})`);
@@ -86,6 +104,21 @@ export async function checkPoultryScopeBrowser({apiBase,farmer,second,stranger,a
     await evaluate(`localStorage.setItem('poultrypro_token',${JSON.stringify(stranger.token)})`);await load('/dashboard');await ready();
     assert.equal(await evaluate(`document.querySelector('select[aria-label="Selected poultry type"]').value`),'broilers','Another account never inherits Turkey preference');
     assert.equal(await evaluate(`document.querySelector('main').innerText.includes('Turkey Distinct Batch')`),false,'Another account has no previous farmer records');
+    await load('/admin/login');await wait(`document.querySelector('form')`);
+    await evaluate(`(()=>{const set=(element,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));};set(document.querySelector('input[type="email"]'),'scope-admin@example.test');set(document.querySelector('input[type="password"]'),'scope-admin-password');})()`);
+    await evaluate(`document.querySelector('form').requestSubmit()`);
+    await wait(`location.pathname==='/admin/dashboard' && document.querySelector('main h1')`);
+    await send('Network.setBlockedURLs',{urls:[apiBase+'/auth/admin/session']});
+    await load('/admin');await wait(`document.querySelector('[role="alert"]')?.innerText.includes('Unable to verify admin access')`);
+    await send('Network.setBlockedURLs',{urls:[]});
+    await evaluate(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Retry').click()`);
+    await wait(`location.pathname==='/admin/dashboard' && document.querySelector('main h1')`);
+    await send('Network.setBlockedURLs',{urls:[apiBase+'/subscription/subscribers']});
+    await load('/admin');await wait(`document.querySelector('[role="alert"]')?.innerText.includes('Retry loading data')`);
+    await send('Network.setBlockedURLs',{urls:[]});
+    await evaluate(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Retry loading data').click()`);
+    await wait(`document.querySelector('main h1') && !document.querySelector('[role="alert"]')`);
+    console.log('PASS real admin login, session verification, recoverable backend failures and retry');
     await evaluate(`localStorage.setItem('poultrypro_admin_token',${JSON.stringify(adminToken)});localStorage.setItem('poultrypro_current_admin',JSON.stringify({id:'scope-admin',name:'Test Admin',email:'admin@example.test',role:'Super Admin'}));`);
     for(const [width,height,label] of [[320,800,'phone-small'],[390,844,'phone'],[768,1024,'tablet'],[1440,1000,'desktop']]){
       await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<600});
@@ -102,5 +135,5 @@ export async function checkPoultryScopeBrowser({apiBase,farmer,second,stranger,a
     }
     assert.deepEqual(errors,[],'No runtime exceptions or React reconciliation warnings');
     console.log('PASS account isolation and no browser runtime errors');
-  }finally{socket?.close();browser.kill();await vite.close();process.chdir(originalCwd);}
+  }finally{socket?.close();browser.kill();if(productionPreview)await new Promise(resolve=>vite.httpServer.close(resolve));else await vite.close();process.chdir(originalCwd);}
 }

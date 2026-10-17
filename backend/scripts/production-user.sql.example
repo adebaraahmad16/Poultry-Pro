@@ -1,0 +1,13 @@
+-- Run manually in local XAMPP phpMyAdmin as an administrator.
+-- Replace BOTH password placeholders and confirm the existing database name.
+-- Do not commit the filled-in version. No records or tables are deleted.
+CREATE USER 'poultrypro_app'@'localhost' IDENTIFIED BY 'REPLACE_WITH_A_UNIQUE_LONG_PASSWORD';
+CREATE USER 'poultrypro_app'@'127.0.0.1' IDENTIFIED BY 'REPLACE_WITH_THE_SAME_UNIQUE_LONG_PASSWORD';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
+  ON poultrypro_db.* TO 'poultrypro_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
+  ON poultrypro_db.* TO 'poultrypro_app'@'127.0.0.1';
+-- CREATE/ALTER/INDEX/REFERENCES are needed by the existing runtime initializers.
+-- No global privileges, DROP, GRANT OPTION or wildcard-host accounts are granted.
+SHOW GRANTS FOR 'poultrypro_app'@'localhost';
+SHOW GRANTS FOR 'poultrypro_app'@'127.0.0.1';

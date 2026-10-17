@@ -1,0 +1,43 @@
+# Keep the repository root available: backend imports ../shared modules.
+services:
+  - type: web
+    name: poultrypro-api
+    runtime: node
+    plan: free
+    repo: https://github.com/adebaraahmad16/Poultrypro-backend
+    buildCommand: npm ci --prefix backend --omit=dev && node backend/scripts/install-tailscale.mjs
+    startCommand: npm --prefix backend run start:render
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://poultry-pro-pi.vercel.app
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: DB_HOST
+        value: 127.0.0.1
+      - key: DB_PORT
+        value: "13306"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL
+        value: "false"
+      - key: TS_VERSION
+        value: "1.104.1"
+      - key: TS_AUTHKEY
+        sync: false
+      - key: TS_DB_HOST
+        sync: false
+      - key: TS_DB_PORT
+        value: "13306"

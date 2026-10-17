@@ -17,6 +17,7 @@ dist-ssr
 backend/node_modules
 backend/.env
 backend/.env.*
+!backend/.env.example
 
 # Environment variables
 .env
@@ -41,3 +42,5 @@ backend/.env.*
 .image-browser/
 .ui-browser/
 .ui-checks/
+.render-bin/
+deployment/

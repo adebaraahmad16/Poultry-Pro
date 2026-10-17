@@ -4,6 +4,7 @@ import mysql from 'mysql2/promise';
 import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {localDate} from '../../shared/dailyRecords.js';
@@ -12,6 +13,8 @@ const schema=`poultrypro_scope_test_${randomUUID().replaceAll('-','')}`;
 assert.match(schema,/^poultrypro_scope_test_[a-f0-9]{32}$/);
 const root=await mysql.createConnection({host:process.env.DB_HOST||'localhost',user:process.env.DB_USER||'root',password:process.env.DB_PASSWORD||'',multipleStatements:true});
 process.env.DB_NAME=schema;process.env.JWT_SECRET=randomUUID();
+process.env.ADMIN_EMAIL='scope-admin@example.test';
+process.env.ADMIN_PASSWORD_HASH=await bcrypt.hash('scope-admin-password',4);
 let pool,server,checks=0;
 const check=(condition,label)=>{assert.ok(condition,label);checks++;console.log('PASS '+label);};
 try{
@@ -84,7 +87,7 @@ try{
   check(scopeFarmData({...all,sales:[],expenses:[],dailyRecords:all.records},'turkeys').flocks.every(f=>f.type==='Turkey'),'Client and backend share the same canonical type mapping');
   if(process.argv.includes('--browser')){
     const {checkPoultryScopeBrowser}=await import('../../scripts/check_poultry_scope_browser.mjs');
-    await checkPoultryScopeBrowser({apiBase,farmer,second,stranger,flocks,adminToken:jwt.sign({sub:'scope-admin',role:'admin'},process.env.JWT_SECRET)});
+    await checkPoultryScopeBrowser({apiBase,farmer,second,stranger,flocks,productionPreview:process.argv.includes('--preview'),adminToken:jwt.sign({sub:'scope-admin',role:'admin'},process.env.JWT_SECRET)});
   }
   console.log(`PASS ${checks} poultry selection and data isolation checks`);
 }finally{

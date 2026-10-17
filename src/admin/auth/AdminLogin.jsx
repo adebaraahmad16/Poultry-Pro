@@ -13,6 +13,7 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const redirectPath = location.state?.from?.pathname || '/admin/dashboard';
 
@@ -25,8 +26,11 @@ export default function AdminLogin() {
       return;
     }
 
+    if (submitting) return;
+    setSubmitting(true);
     let success;
     try { success = await loginAdmin(email,password); } catch(e) { setError(e.message); return; }
+    finally { setSubmitting(false); }
     if (success) {
       navigate(redirectPath, { replace: true });
     }
@@ -167,9 +171,10 @@ export default function AdminLogin() {
 
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="w-full py-3.5 px-6 bg-[#15803D] hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
                 >
-                  Access Super Admin Panel
+                  {submitting ? 'Verifying access...' : 'Access Super Admin Panel'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>

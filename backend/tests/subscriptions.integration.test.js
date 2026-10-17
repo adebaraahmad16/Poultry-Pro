@@ -53,10 +53,16 @@ try {
  check((await call('/subscription/plans/basic','PUT',basic)).status === 401,'Anonymous updates rejected');
  check((await call('/auth/admin/login','POST',{email:'admin@example.test',password:'wrong'})).status === 401,'Invalid admin credentials rejected');
  const admin = (await call('/auth/admin/login','POST',{email:'admin@example.test',password:'test-password-123'})).data.token;
+ check((await call('/auth/admin/session')).status === 401,'Anonymous admin session rejected');
+ check((await call('/auth/admin/session','GET',null,'invalid')).status === 401,'Invalid admin token rejected');
+ check((await call('/auth/admin/session','GET',null,jwt.sign({sub:'administrator',role:'admin'},process.env.JWT_SECRET,{expiresIn:-1}))).status === 401,'Expired admin session rejected');
+ const adminSession = await call('/auth/admin/session','GET',null,admin);
+ check(adminSession.status === 200 && adminSession.data.admin.role === 'admin','Signed admin session verified by backend');
  const farmerInfo = {fullName:'Subscription Test',email:'farmer@example.test',password:'test-password-123',farmName:'Test farm',poultryTypes:['broilers'],planId:'basic',billingCycle:'monthly'};
  const registration = await call('/auth/register','POST',farmerInfo);
  check(registration.status === 201,'Registration creates farm and trial');
  const farmer = registration.data.token;
+ check((await call('/auth/admin/session','GET',null,farmer)).status === 403,'Farmer token cannot enter admin session');
  check((await call('/auth/session')).status === 401,'Session restoration rejects missing tokens');
  check((await call('/auth/session','GET',null,'invalid-token')).status === 401,'Session restoration rejects invalid tokens');
  const session = await call('/auth/session','GET',null,farmer);

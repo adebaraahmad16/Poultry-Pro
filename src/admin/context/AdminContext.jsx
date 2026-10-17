@@ -57,6 +57,8 @@ export const AdminProvider = ({ children }) => {
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
+  const [dataError, setDataError] = useState('');
 
   // Core Data Collections
   const [farmers, setFarmers] = useState([]);
@@ -72,37 +74,72 @@ export const AdminProvider = ({ children }) => {
   const [cmsContent, setCmsContent] = useState({});
   const [subscriptionSettings, setSubscriptionSettings] = useState({});
 
-  const refreshAllAdminData = useCallback(() => {
-    initializeAdminStorage();
-
-    const logged = adminService.getCurrentAdmin();
-    if (logged) {
-      setCurrentAdmin(logged);
+  const refreshAllAdminData = useCallback(async () => {
+    setLoading(true);
+    setAuthError('');
+    setDataError('');
+    const token = localStorage.getItem('poultrypro_admin_token');
+    try {
+      initializeAdminStorage();
+      setFarms(adminService.getFarms());
+      setCategories(adminService.getCategories());
+      setPayments(adminService.getPayments());
+      setNotifications(adminService.getNotifications());
+      setTickets(adminService.getTickets());
+      setAuditLogs(adminService.getAuditLogs());
+      setAdminStaff(adminService.getAdminStaff());
+      setPlatformSettings(adminService.getSettings());
+      setCmsContent(adminService.getCmsContent());
+      setSubscriptionSettings(adminService.getSubscriptionSettings());
+      if (!token) {
+        // Public registration and pricing also consume the shared server catalog.
+        refreshCatalog().then(setSubscriptionPlans).catch(console.error);
+        setCurrentAdmin(null);
+        setIsAdminLoggedIn(false);
+        setFarmers([]);
+        return;
+      }
+      // Cached profile data never grants access: verify the signed server session.
+      const { admin } = await request('/auth/admin/session', {headers:{Authorization:`Bearer ${token}`}});
+      if (localStorage.getItem('poultrypro_admin_token') !== token) return;
+      const profile = {...adminService.getCurrentAdmin(), id:admin.id, email:admin.email, role:'Super Admin'};
+      setCurrentAdmin(profile);
       setIsAdminLoggedIn(true);
-    } else {
-      // Default to null so login is prompted, unless previously remembered
+      const results = await Promise.allSettled([
+        request('/subscription/subscribers', {headers:{Authorization:`Bearer ${token}`}}),
+        refreshCatalog()
+      ]);
+      if (localStorage.getItem('poultrypro_admin_token') !== token) return;
+      if (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) setFarmers(results[0].value);
+      else setFarmers([]);
+      if (results[1].status === 'fulfilled') setSubscriptionPlans(results[1].value);
+      const failed = results.find(result => result.status === 'rejected');
+      if (failed) setDataError(failed.reason.message || 'Admin data could not be loaded. Please retry.');
+      else if (!Array.isArray(results[0].value)) setDataError('The backend returned an invalid farmer list. Please retry.');
+    } catch (error) {
+      if (localStorage.getItem('poultrypro_admin_token') !== token) return;
       setCurrentAdmin(null);
       setIsAdminLoggedIn(false);
+      if ([401,403].includes(error.status)) {
+        localStorage.removeItem('poultrypro_admin_token');
+        adminService.clearCurrentAdmin();
+      } else setAuthError(error.message || 'Unable to verify administrator access. Please retry.');
+    } finally {
+      setLoading(false);
     }
-
-    setFarmers(adminService.getFarmers());
-    if (localStorage.getItem('poultrypro_admin_token')) request('/subscription/subscribers', {headers:{Authorization:`Bearer ${localStorage.getItem('poultrypro_admin_token')}`}}).then(rows => setFarmers(rows)).catch(console.error);
-    setFarms(adminService.getFarms());
-    setCategories(adminService.getCategories());
-    refreshCatalog().then(setSubscriptionPlans).catch(console.error);
-    setPayments(adminService.getPayments());
-    setNotifications(adminService.getNotifications());
-    setTickets(adminService.getTickets());
-    setAuditLogs(adminService.getAuditLogs());
-    setAdminStaff(adminService.getAdminStaff());
-    setPlatformSettings(adminService.getSettings());
-    setCmsContent(adminService.getCmsContent());
-    setSubscriptionSettings(adminService.getSubscriptionSettings());
-    setLoading(false);
   }, []);
 
   useEffect(() => {
     refreshAllAdminData();
+    const expired = () => {
+      setCurrentAdmin(null);
+      setIsAdminLoggedIn(false);
+      setAuthError('');
+      setFarmers([]);
+      setLoading(false);
+    };
+    window.addEventListener('admin_session_expired',expired);
+    return () => window.removeEventListener('admin_session_expired',expired);
   }, [refreshAllAdminData]);
 
   useEffect(() => {
@@ -115,7 +152,7 @@ export const AdminProvider = ({ children }) => {
   const loginAdmin = async (email, password) => {
     const result = await request('/auth/admin/login',{method:'POST',body:JSON.stringify({email,password})});
     localStorage.setItem('poultrypro_admin_token',result.token);
-    setFarmers(await request('/subscription/subscribers',{headers:{Authorization:`Bearer ${result.token}`}}));
+
     const superAdmin = initialAdminUsers[0];
     const adminObj = {
       ...superAdmin,
@@ -126,6 +163,7 @@ export const AdminProvider = ({ children }) => {
     adminService.setCurrentAdmin(adminObj);
     setCurrentAdmin(adminObj);
     setIsAdminLoggedIn(true);
+    await refreshAllAdminData();
     adminService.logAction('Super Admin Signed In', `${adminObj.name} logged into Admin Panel`);
     return true;
   };
@@ -146,6 +184,8 @@ export const AdminProvider = ({ children }) => {
   };
 
   const logoutAdmin = () => {
+    setAuthError('');
+    setDataError('');
     localStorage.removeItem('poultrypro_admin_token');
     if (currentAdmin) {
       adminService.logAction('Admin Signed Out', `${currentAdmin.name} logged out`);
@@ -344,6 +384,8 @@ export const AdminProvider = ({ children }) => {
         currentAdmin,
         isAdminLoggedIn,
         loading,
+        authError,
+        dataError,
         loginAdmin,
         logoutAdmin,
         farmers,

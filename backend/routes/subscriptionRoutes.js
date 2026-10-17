@@ -36,6 +36,10 @@ router.post('/auth/admin/login', wrap(async (req,res) => {
  if (typeof password !== 'string' || email?.toLowerCase() !== process.env.ADMIN_EMAIL.toLowerCase() || !await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH)) throw Object.assign(new Error('Invalid administrator credentials'), { status: 401 });
  res.json({ token: token({ sub: 'administrator', role: 'admin' }) });
 }));
+router.get('/auth/admin/session', admin, (req,res) => {
+ res.set('Cache-Control','no-store');
+ res.json({admin:{id:req.session.sub,email:process.env.ADMIN_EMAIL || '',role:'admin'}});
+});
 router.post('/auth/login', wrap(async (req,res) => {
  const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [req.body.email || '']);
  const u = rows[0];

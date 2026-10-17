@@ -95,7 +95,7 @@ router.use(async(req,res,next)=>{
       `SELECT t.*,d.poultry_type FROM ${table} t LEFT JOIN flocks f ON f.id=t.flock_id LEFT JOIN daily_records d ON d.id=t.id WHERE ${farmWide?'t.farm_id':'f.farm_id'}=? AND (LOWER(f.type) IN (${marks}) OR (t.flock_id IS NULL AND LOWER(d.poultry_type) IN (${marks})))`;
     const params=segment==='flocks'?[req.session.farmId,...names]:[req.session.farmId,...names,...names];
     const [rows]=await pool.query(sql,params);res.json(rows.map(format));
-  }catch(e){res.status(500).json({error:'Unable to load selected poultry records.'});}
+  }catch(e){res.status(e.status || 500).json({error:e.status ? e.message : 'Unable to load selected poultry records.'});}
 });
 
 // Existing entry points write through the same transaction and inventory ledger.
@@ -244,14 +244,15 @@ router.get('/flocks', requireSession, async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM flocks WHERE farm_id = ? ORDER BY created_at DESC', [req.session.farmId]);
     res.json(rows.map(formatFlock));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
 router.post('/flocks', requireSession, async (req, res) => {
   if (req.session.role !== 'farmer' || !req.session.farmId) return res.status(403).json({ error: 'Farmer account required' });
-  const db = await pool.getConnection();
+  let db;
   try {
+    db = await pool.getConnection();
     const f = req.body;
     if(req.session.poultryTypeId&&req.session.poultryTypeId!=='all'&&poultryTypeId(f.type)!==req.session.poultryTypeId) return res.status(400).json({error:'The new flock must match the selected poultry type.'});
     const initialBirds = Number(f.initialBirds), costPerBird = Number(f.costPerBird || 0);
@@ -269,8 +270,8 @@ router.post('/flocks', requireSession, async (req, res) => {
     await db.commit();
     const [rows] = await db.query('SELECT * FROM flocks WHERE id = ?', [id]);
     res.status(201).json(formatFlock(rows[0]));
-  } catch (err) { await db.rollback(); res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to create flock' }); }
-  finally { db.release(); }
+  } catch (err) { if(db) await db.rollback().catch(() => {}); res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to create flock' }); }
+  finally { db?.release(); }
 });
 
 router.delete('/flocks/:id', requireSession, async (req, res) => {
@@ -281,7 +282,7 @@ router.delete('/flocks/:id', requireSession, async (req, res) => {
     await pool.query('DELETE FROM flocks WHERE id = ? AND farm_id = ?', [req.params.id, req.session.farmId]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -291,7 +292,7 @@ router.get('/eggs', async (req, res) => {
     const [rows] = await pool.query('SELECT e.* FROM egg_production e JOIN flocks f ON f.id=e.flock_id WHERE f.farm_id=? ORDER BY e.date DESC',[req.session.farmId]);
     res.json(rows.map(formatEgg));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -314,7 +315,7 @@ router.post('/eggs', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM egg_production WHERE id = ?', [id]);
     res.status(201).json(formatEgg(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -323,7 +324,7 @@ router.delete('/eggs/:id', async (req, res) => {
     await pool.query('DELETE FROM egg_production WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -333,7 +334,7 @@ router.get('/feed', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM feed_inventory WHERE farm_id=? ORDER BY created_at DESC',[req.session.farmId]);
     res.json(rows.map(formatFeed));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -355,7 +356,7 @@ router.post('/feed', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM feed_inventory WHERE id = ?', [id]);
     res.status(201).json(formatFeed(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -368,7 +369,7 @@ router.delete('/feed/:id', async (req, res) => {
     await pool.query('DELETE FROM feed_inventory WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -378,7 +379,7 @@ router.get('/mortality', async (req, res) => {
     const [rows] = await pool.query('SELECT m.* FROM mortality_records m JOIN flocks f ON f.id=m.flock_id WHERE f.farm_id=? ORDER BY m.date DESC',[req.session.farmId]);
     res.json(rows.map(formatMortality));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -404,7 +405,7 @@ router.post('/mortality', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM mortality_records WHERE id = ?', [id]);
     res.status(201).json(formatMortality(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -413,7 +414,7 @@ router.delete('/mortality/:id', async (req, res) => {
     await pool.query('DELETE FROM mortality_records WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -423,7 +424,7 @@ router.get('/sales', async (req, res) => {
     const [rows] = await pool.query('SELECT t.*,d.poultry_type FROM sales t LEFT JOIN daily_records d ON d.id=t.id WHERE t.farm_id=? ORDER BY t.date DESC',[req.session.farmId]);
     res.json(rows.map(formatSale));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -444,7 +445,7 @@ router.post('/sales', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM sales WHERE id = ?', [id]);
     res.status(201).json(formatSale(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -454,7 +455,7 @@ router.patch('/sales/:id/status', async (req, res) => {
     await pool.query('UPDATE sales SET payment_status = ? WHERE id = ?', [paymentStatus, req.params.id]);
     res.json({ success: true, paymentStatus });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -463,7 +464,7 @@ router.delete('/sales/:id', async (req, res) => {
     await pool.query('DELETE FROM sales WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -473,7 +474,7 @@ router.get('/expenses', async (req, res) => {
     const [rows] = await pool.query('SELECT t.*,d.poultry_type FROM expenses t LEFT JOIN daily_records d ON d.id=t.id WHERE t.farm_id=? ORDER BY t.date DESC',[req.session.farmId]);
     res.json(rows.map(formatExpense));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -491,7 +492,7 @@ router.post('/expenses', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM expenses WHERE id = ?', [id]);
     res.status(201).json(formatExpense(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -500,7 +501,7 @@ router.delete('/expenses/:id', async (req, res) => {
     await pool.query('DELETE FROM expenses WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -510,7 +511,7 @@ router.get('/customers', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM customers WHERE farm_id=? ORDER BY created_at DESC',[req.session.farmId]);
     res.json(rows.map(formatCustomer));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -526,7 +527,7 @@ router.post('/customers', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM customers WHERE id = ?', [id]);
     res.status(201).json(formatCustomer(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -535,7 +536,7 @@ router.delete('/customers/:id', async (req, res) => {
     await pool.query('DELETE FROM customers WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -545,7 +546,7 @@ router.get('/vaccinations', async (req, res) => {
     const [rows] = await pool.query('SELECT v.* FROM vaccinations v JOIN flocks f ON f.id=v.flock_id WHERE f.farm_id=? ORDER BY v.scheduled_date ASC',[req.session.farmId]);
     res.json(rows.map(formatVaccination));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -561,7 +562,7 @@ router.post('/vaccinations', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM vaccinations WHERE id = ?', [id]);
     res.status(201).json(formatVaccination(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -571,7 +572,7 @@ router.patch('/vaccinations/:id/status', async (req, res) => {
     await pool.query('UPDATE vaccinations SET status = ? WHERE id = ?', [status, req.params.id]);
     res.json({ success: true, status });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -580,7 +581,7 @@ router.delete('/vaccinations/:id', async (req, res) => {
     await pool.query('DELETE FROM vaccinations WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -590,7 +591,7 @@ router.get('/medications', async (req, res) => {
     const [rows] = await pool.query('SELECT m.* FROM medications m JOIN flocks f ON f.id=m.flock_id WHERE f.farm_id=? ORDER BY m.created_at DESC',[req.session.farmId]);
     res.json(rows.map(formatMedication));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -606,7 +607,7 @@ router.post('/medications', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM medications WHERE id = ?', [id]);
     res.status(201).json(formatMedication(rows[0]));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -615,7 +616,7 @@ router.delete('/medications/:id', async (req, res) => {
     await pool.query('DELETE FROM medications WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
@@ -625,7 +626,7 @@ router.get('/farm', async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM farms WHERE id = ?', ['farm-101']);
     res.json(rows[0] || {});
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Unable to process farm data.' });
   }
 });
 
