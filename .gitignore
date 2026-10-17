@@ -35,3 +35,9 @@ backend/.env.*
 *.njsproj
 *.sln
 *.sw?
+
+# Local image preparation and visual review artifacts
+.image-sources/
+.image-browser/
+.ui-browser/
+.ui-checks/

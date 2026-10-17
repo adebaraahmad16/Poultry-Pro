@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HeartPulse, Syringe, Pill, TrendingDown, ShieldCheck, ArrowRight } from 'lucide-react';
+import { HeartPulse, Syringe, Pill, TrendingDown, ShieldCheck, ArrowRight } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
 
 export default function HealthOverview() {
-  const { vaccinations, medications, mortality, flocks } = useFarm();
+  const { vaccinations, medications, mortality, flocks, dailyRecords } = useFarm();
   const navigate = useNavigate();
 
   const upcomingVaccines = vaccinations.filter((v) => v.status === 'Upcoming');
@@ -43,6 +43,7 @@ export default function HealthOverview() {
         </div>
       </div>
 
+      <section className="rounded-xl border border-slate-200 bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-bold">Daily Health Activities</h2><button className="rounded-lg bg-[#15803D] px-4 py-2 text-sm font-semibold text-white" onClick={()=>navigate('/daily-records?category=health')}>Record Health Activity</button></div><ul className="mt-3 space-y-2 text-sm">{dailyRecords.filter(r=>r.category==='health').slice(0,5).map(r=><li key={r.id} className="rounded-lg bg-slate-50 p-3">{r.date} · {flocks.find(f=>f.id===r.flockId)?.name} · {r.status==='Recorded'?`${r.values.recordType}: ${r.values.name||r.values.reason}`:r.status}</li>)}</ul></section>
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <StatCard title="Upcoming Vaccinations" value={upcomingVaccines.length} icon={Syringe} subtitle="Scheduled doses due" color="amber" />

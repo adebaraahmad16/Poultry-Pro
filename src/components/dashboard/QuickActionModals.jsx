@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
 import { useFarm } from '../../context/FarmContext';
@@ -15,7 +16,8 @@ import { salesService, expenseService } from '../../services/businessService';
  * activeModal: 'flock' | 'egg' | 'mortality' | 'weight' | 'expense' | 'sale' | null
  */
 export default function QuickActionModals({ activeModal, onClose, poultryType }) {
-  const { flocks, scopedDataFor, refreshAllData } = useFarm();
+  const { flocks, scopedDataFor, refreshAllData, canAddFlock, canAddBirds, currentPlan, isSubscriptionExpired } = useFarm();
+  const [limitError,setLimitError] = useState('');
   const today = new Date().toISOString().split('T')[0];
 
   // Flocks belonging to the active poultry type (records stay scoped per type)
@@ -23,7 +25,7 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
 
   const [flockForm, setFlockForm] = useState({
     name: '',
-    type: poultryType?.flockTypes[0] || 'Broiler',
+    type: poultryType?.flockTypes[0] || flocks[0]?.type || '',
     breed: '',
     initialBirds: 500,
     costPerBird: 1000,
@@ -47,15 +49,31 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     close();
   };
 
-  const handleAddFlock = handleSubmit(async () => {
-    await flockService.create({
+  const handleAddFlock = async (e) => {
+    e.preventDefault();
+    if (isSubscriptionExpired) {
+      alert('Your subscription or 14-day free trial has expired. Please activate your plan under Settings → Subscription & Billing to add new flocks.');
+      return;
+    }
+    if (!canAddFlock()) {
+      alert(`Flock creation limit reached on your ${currentPlan?.name || 'current'} plan (${currentPlan?.limits?.maxFlocks} active flocks max). Please upgrade to Pro or Enterprise in Settings to add more flocks.`);
+      return;
+    }
+    if (!canAddBirds(flockForm.initialBirds)) {
+      alert(`Adding ${flockForm.initialBirds} birds would exceed your ${currentPlan?.name || 'current'} plan capacity (${currentPlan?.limits?.maxBirds?.toLocaleString()} birds max). Please upgrade your plan in Settings to expand capacity.`);
+      return;
+    }
+
+    try { await flockService.create({
       ...flockForm,
       type: poultryType?.flockTypes[0] || flockForm.type,
       breed: flockForm.breed || poultryType?.label || 'Local',
       initialBirds: Number(flockForm.initialBirds),
       costPerBird: Number(flockForm.costPerBird)
-    });
-  });
+    }); } catch(e) { setLimitError(e.message); return; }
+    refreshAllData();
+    close();
+  };
 
   const handleRecordEgg = handleSubmit(async () => {
     const flock = typeFlocks.find((f) => f.id === eggForm.flockId) || typeFlocks[0];
@@ -81,7 +99,7 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
 
   const handleRecordWeight = handleSubmit(async () => {
     const flock = typeFlocks.find((f) => f.id === weightForm.flockId) || typeFlocks[0];
-    weightService.addWeightRecord({
+    await weightService.addWeightRecord({
       ...weightForm,
       flockId: flock?.id || '',
       flockName: flock?.name || 'Flock',
@@ -125,6 +143,7 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     <>
       {/* Add Flock */}
       <Modal isOpen={activeModal === 'flock'} onClose={close} title={`Add ${poultryType?.label || ''} Flock`}>
+        {limitError && <p role="alert" className="mb-3 p-3 bg-red-50 text-red-800 rounded-lg text-sm">{limitError} <Link to="/settings/subscription" className="font-bold underline">Upgrade Plan</Link></p>}
         <form onSubmit={handleAddFlock} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Flock Name</label>

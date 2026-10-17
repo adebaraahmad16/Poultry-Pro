@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bird, Facebook, Twitter, Instagram, Linkedin, Youtube } from 'lucide-react';
+import { Bird, Facebook, Twitter, Instagram, Linkedin, Youtube } from '../common/Icons';
 
 const COLUMNS = [
   {
@@ -24,8 +24,6 @@ const COLUMNS = [
   {
     title: 'Business',
     links: [
-      { label: 'Advertise With Us', href: '#advertise' },
-      { label: 'Partnerships', href: '#advertise' },
       { label: 'Contact Us', href: '#' },
     ],
   },
@@ -98,7 +96,7 @@ export default function LandingFooter() {
           <p className="text-xs text-slate-500">
             © {new Date().getFullYear()} PoultryPro. All rights reserved.
           </p>
-          <p className="text-xs text-slate-500">Smart Management. Healthier Flocks. Better Profits.</p>
+          <div className="text-xs text-slate-400 text-center sm:text-right"><p>Smart Management. Healthier Flocks. Better Profits.</p><a href="/images/poultry/credits.html" className="mt-1 inline-block underline hover:text-white">Photo credits</a></div>
         </div>
       </div>
     </footer>

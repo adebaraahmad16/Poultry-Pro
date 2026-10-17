@@ -1,4 +1,5 @@
 import React from 'react';
+import ChartEmptyState from './ChartEmptyState';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 export default function FlockPopulationChart({ flocks }) {
@@ -7,8 +8,10 @@ export default function FlockPopulationChart({ flocks }) {
     Birds: f.currentBirds
   }));
 
+  if (!chartData.length) return <ChartEmptyState>No flocks to display yet.</ChartEmptyState>;
+
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-52 sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />

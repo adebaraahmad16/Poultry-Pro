@@ -8,7 +8,8 @@ import {
   Sparkles,
   Egg as QuailIcon,
   PawPrint
-} from 'lucide-react';
+} from '../components/common/PoultryIcons';
+import { poultryTypeId } from '../../shared/poultryScope';
 
 /**
  * POULTRY TYPE PERSONALIZATION REGISTRY
@@ -26,6 +27,11 @@ import {
  *   salesLabel– default product shown in the Record Sale form
  */
 export const POULTRY_TYPES = [
+  {
+    id:'cockerels',label:'Cockerels',icon:Bird,flockTypes:['Cockerel'],
+    traits:{eggs:false,weight:true,feed:true},salesProduct:'Live Birds',
+    description:'Cockerel population, feeding, growth, health and financial records.',
+  },
   {
     id: 'broilers',
     label: 'Broilers',
@@ -126,7 +132,7 @@ export const POULTRY_TYPE_MAP = POULTRY_TYPES.reduce((acc, t) => {
 
 /** Resolve a flock.type string (e.g. "Broiler") to its poultry type config. */
 export const getPoultryTypeByFlockType = (flockType) =>
-  POULTRY_TYPES.find((t) => t.flockTypes.includes(flockType)) || null;
+  POULTRY_TYPE_MAP[poultryTypeId(flockType)] || null;
 
 /** Ordered list of bird-type options for flock forms (all types). */
 export const ALL_FLOCK_TYPE_OPTIONS = POULTRY_TYPES.flatMap((t) => t.flockTypes);

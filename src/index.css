@@ -3,9 +3,26 @@
 @tailwind utilities;
 
 @layer base {
+  html, body, #root { min-width: 0; margin: 0; }
+  img, video { max-width: 100%; }
   body {
     font-family: 'Inter', sans-serif;
   }
+}
+
+.farmer-workspace main, .admin-workspace main { overflow-wrap: anywhere; }
+.farmer-workspace .grid > *, .admin-workspace .grid > *,
+.farmer-workspace .recharts-wrapper, .admin-workspace .recharts-wrapper { min-width: 0; }
+.farmer-workspace .overflow-x-auto, .admin-workspace .overflow-x-auto { max-width: 100%; overscroll-behavior-x: contain; }
+.farmer-workspace .recharts-responsive-container, .admin-workspace .recharts-responsive-container { min-width: 0; max-width: 100%; overflow: hidden; }
+.farmer-workspace input, .farmer-workspace select, .farmer-workspace textarea,
+.admin-workspace input, .admin-workspace select, .admin-workspace textarea { max-width: 100%; min-width: 0; }
+@media (max-width: 639px) {
+  .farmer-workspace main button, .admin-workspace main button { min-height: 40px; }
+  .farmer-workspace input, .farmer-workspace select, .farmer-workspace textarea,
+  .admin-workspace input, .admin-workspace select, .admin-workspace textarea { font-size: 16px; }
+  .farmer-workspace main .grid-cols-1.sm\:grid-cols-2,
+  .farmer-workspace main .grid-cols-1.sm\:grid-cols-3 { grid-template-columns: minmax(0,1fr); }
 }
 
 /* Custom modern scrollbar styling */

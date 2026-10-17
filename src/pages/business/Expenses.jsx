@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Receipt, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Receipt, Plus, Trash2 } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { expenseService } from '../../services/businessService';
 import DataTable from '../../components/common/DataTable';
@@ -8,6 +9,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
 
 export default function Expenses() {
+  const navigate = useNavigate();
   const { expenses, refreshAllData } = useFarm();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -72,7 +74,7 @@ export default function Expenses() {
         </div>
 
         <button
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => navigate('/daily-records?category=expenses')}
           className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />

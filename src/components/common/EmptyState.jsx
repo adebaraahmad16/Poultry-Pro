@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from './Icons';
 
 export default function EmptyState({ icon: Icon, title, description, actionText, onAction }) {
   return (

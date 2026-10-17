@@ -1,8 +1,9 @@
 import React from 'react';
+import DailyRecordsSummary from '../daily/DailyRecordsSummary';
 import {
   Bird, Egg, Wheat, DollarSign, Scale, TrendingUp, Activity,
   AlertTriangle, ShieldAlert, Calendar, Plus
-} from 'lucide-react';
+} from '../common/Icons';
 import { usePoultryData } from '../../context/FarmContext';
 import StatCard from '../common/StatCard';
 import EggProductionChart from '../charts/EggProductionChart';
@@ -11,7 +12,7 @@ import FlockPopulationChart from '../charts/FlockPopulationChart';
 import WeightTrendChart from '../charts/WeightTrendChart';
 import MortalityChart from '../charts/MortalityChart';
 
-const pct = (v) => `${Number(v || 0).toFixed(1)}%`;
+const pct = (v) => v==null?'Not recorded':`${Number(v).toFixed(1)}%`;
 
 /**
  * Individual poultry-type dashboard — generated dynamically from the type's
@@ -39,6 +40,7 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
     { key: 'sale', label: 'Record Sale', color: 'bg-indigo-600 hover:bg-indigo-700' },
     { key: 'expense', label: 'Add Expense', color: 'bg-slate-800 hover:bg-slate-900' }
   ];
+  const actionButtons=actions.map(a=><button key={a.key} onClick={()=>onQuickAction(a.key)} className={`min-h-11 rounded-xl px-3 py-2 text-xs font-semibold text-white ${a.color}`}><span aria-hidden="true">+ </span>{a.label}</button>);
 
   return (
     <div className="space-y-6">
@@ -59,19 +61,11 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
         </div>
 
         {/* Poultry-specific quick actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          {actions.map((a) => (
-            <button
-              key={a.key}
-              onClick={() => onQuickAction(a.key === 'feed' ? 'expense' : a.key)}
-              className={`px-3.5 py-2 ${a.color} text-white font-medium text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              {a.label}
-            </button>
-          ))}
-        </div>
+        <div className="hidden flex-wrap items-center gap-2 sm:flex">{actionButtons}</div>
+        <details className="w-full sm:hidden"><summary className="min-h-11 cursor-pointer rounded-lg border bg-slate-50 p-3 text-sm font-semibold">Farm actions</summary><div className="mt-3 grid grid-cols-2 gap-2">{actionButtons}</div></details>
       </div>
+
+      <DailyRecordsSummary />
 
       {!hasFlocks && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -126,10 +120,10 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
           color="indigo"
         />
         <StatCard
-          title="Feed Stock (Farm-wide)"
+          title="Feed Consumed"
           value={`${stats.feedKg.toLocaleString()} kg`}
           icon={Wheat}
-          subtitle="Shared feed inventory"
+          subtitle={`Recorded consumption for ${poultryType.label.toLowerCase()}`}
           color="amber"
         />
         <StatCard
@@ -163,9 +157,9 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
           <p className="text-[10px] text-slate-400">{traits.eggs ? 'All recorded collections' : 'Not tracked for this type'}</p>
         </div>
         <div className="border-l border-slate-800 pl-4">
-          <p className="text-[11px] font-medium text-slate-400 uppercase">Feed Consumption Stock</p>
+          <p className="text-[11px] font-medium text-slate-400 uppercase">Feed Consumed</p>
           <p className="text-xl font-extrabold text-emerald-400 mt-1">{stats.feedKg.toLocaleString()} kg</p>
-          <p className="text-[10px] text-slate-400">Available in store</p>
+          <p className="text-[10px] text-slate-400">Saved feeding records for this type</p>
         </div>
         <div className="border-l border-slate-800 pl-4">
           <p className="text-[11px] font-medium text-slate-400 uppercase">Flocks</p>
@@ -232,7 +226,7 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
           <RevenueVsExpenseChart sales={scoped.sales} expenses={scoped.expenses} />
         </div>
 
-        <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className={`${traits.eggs && traits.weight ? 'lg:col-span-2 ' : ''}bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs`}>
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-slate-800 text-base">{poultryType.label} Flock Population</h3>
@@ -265,7 +259,7 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
             </div>
           ))}
           {!hasFlocks && (
-            <p className="text-xs text-slate-400 col-span-2 text-center py-4">
+            <p className="text-xs text-slate-400 sm:col-span-2 text-center py-4">
               No {poultryType.label.toLowerCase()} flocks yet — add your first {poultryType.label.toLowerCase()} flock to start tracking.
             </p>
           )}

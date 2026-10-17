@@ -1,16 +1,18 @@
+import { checkedFetch } from './planCatalog';
 import { getItem, setItem, KEYS } from './storageService';
 import { API_BASE_URL } from './apiConfig';
 
 export const salesService = {
   getSales: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/sales`);
+      const res = await checkedFetch(`${API_BASE_URL}/sales`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.SALES, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, loading sales locally:', err);
     }
     return getItem(KEYS.SALES, []);
@@ -18,7 +20,7 @@ export const salesService = {
 
   createSale: async (sale) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/sales`, {
+      const res = await checkedFetch(`${API_BASE_URL}/sales`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sale)
@@ -30,6 +32,7 @@ export const salesService = {
         return newSale;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, saving sale locally:', err);
     }
 
@@ -53,12 +56,13 @@ export const salesService = {
 
   updateSaleStatus: async (id, paymentStatus) => {
     try {
-      await fetch(`${API_BASE_URL}/sales/${id}/status`, {
+      await checkedFetch(`${API_BASE_URL}/sales/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentStatus })
       });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error updating sale status:', err);
     }
     const sales = getItem(KEYS.SALES, []);
@@ -68,8 +72,9 @@ export const salesService = {
 
   deleteSale: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/sales/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/sales/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const sales = getItem(KEYS.SALES, []);
@@ -82,13 +87,14 @@ export const salesService = {
 export const customerService = {
   getCustomers: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/customers`);
+      const res = await checkedFetch(`${API_BASE_URL}/customers`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.CUSTOMERS, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, loading customers locally:', err);
     }
     return getItem(KEYS.CUSTOMERS, []);
@@ -96,7 +102,7 @@ export const customerService = {
 
   createCustomer: async (customer) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/customers`, {
+      const res = await checkedFetch(`${API_BASE_URL}/customers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(customer)
@@ -108,6 +114,7 @@ export const customerService = {
         return newCustomer;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, saving customer locally:', err);
     }
 
@@ -125,8 +132,9 @@ export const customerService = {
 
   deleteCustomer: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/customers/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/customers/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const customers = getItem(KEYS.CUSTOMERS, []);
@@ -139,13 +147,14 @@ export const customerService = {
 export const expenseService = {
   getExpenses: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/expenses`);
+      const res = await checkedFetch(`${API_BASE_URL}/expenses`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.EXPENSES, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, loading expenses locally:', err);
     }
     return getItem(KEYS.EXPENSES, []);
@@ -153,7 +162,7 @@ export const expenseService = {
 
   createExpense: async (exp) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/expenses`, {
+      const res = await checkedFetch(`${API_BASE_URL}/expenses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(exp)
@@ -165,6 +174,7 @@ export const expenseService = {
         return newExp;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, saving expense locally:', err);
     }
 
@@ -182,8 +192,9 @@ export const expenseService = {
 
   deleteExpense: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/expenses/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/expenses/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const expenses = getItem(KEYS.EXPENSES, []);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown } from './Icons';
 
 export default function StatCard({ title, value, trend, isPositive = true, icon: Icon, subtitle, color = 'green' }) {
   const colorStyles = {

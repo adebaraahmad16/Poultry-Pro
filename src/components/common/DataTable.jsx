@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search } from './Icons';
 
 export default function DataTable({ columns, data, searchPlaceholder = "Search records...", emptyTitle = "No records found", onAdd, addText }) {
   const [searchTerm, setSearchTerm] = useState("");

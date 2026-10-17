@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import apiRoutes from './routes/apiRoutes.js';
+import dailyRecordRoutes from './routes/dailyRecordRoutes.js';
 
 dotenv.config();
 
@@ -17,6 +19,8 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api', subscriptionRoutes);
+app.use('/api/daily-records', dailyRecordRoutes);
 app.use('/api', apiRoutes);
 
 app.listen(PORT, () => {

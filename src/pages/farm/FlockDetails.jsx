@@ -1,21 +1,23 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bird, Layers, Egg, ShieldCheck, HeartPulse, Activity, DollarSign } from 'lucide-react';
+import { ArrowLeft, Bird, Layers, Egg, ShieldCheck, HeartPulse, Activity, DollarSign } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import StatCard from '../../components/common/StatCard';
 import Badge from '../../components/common/Badge';
+import { recordSummary, eggEligible } from '../../../shared/dailyRecords';
 
 export default function FlockDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { flocks, eggs, mortality, vaccinations, sales, expenses } = useFarm();
+  const { flocks, eggs, mortality, vaccinations, sales, expenses, dailyRecords } = useFarm();
 
-  const flock = flocks.find((f) => f.id === id) || flocks[0];
+  const flock = flocks.find((f) => f.id === id);
 
   if (!flock) {
     return (
       <div className="p-8 text-center">
-        <p className="text-slate-500">Flock not found.</p>
+        <h1 className="text-lg font-semibold text-slate-700">Flock not found.</h1>
+        <p className="mt-2 text-sm text-slate-500">This flock is unavailable in the selected poultry view.</p>
         <button onClick={() => navigate('/farm/flocks')} className="mt-4 px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl">
           Back to Flocks
         </button>
@@ -30,7 +32,7 @@ export default function FlockDetails() {
   const flockExpenses = expenses.filter((e) => e.flockId === flock.id);
 
   const totalMortalityCount = flockMortality.reduce((sum, m) => sum + (m.count || 0), 0);
-  const mortalityRate = (((flock.initialBirds - flock.currentBirds) / flock.initialBirds) * 100).toFixed(2);
+  const mortalityRate = flock.initialBirds>0?(totalMortalityCount/flock.initialBirds*100).toFixed(2):'0.00';
 
   return (
     <div className="space-y-6 pb-12">
@@ -66,7 +68,7 @@ export default function FlockDetails() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard title="Current Live Birds" value={flock.currentBirds.toLocaleString()} icon={Bird} subtitle={`Initial: ${flock.initialBirds.toLocaleString()}`} color="green" />
         <StatCard title="Mortality Count" value={totalMortalityCount} icon={HeartPulse} subtitle={`Rate: ${mortalityRate}%`} color="amber" />
-        <StatCard title="Total Egg Yield Logs" value={flockEggs.length} icon={Egg} subtitle="Recorded collections" color="blue" />
+        <StatCard title="Total Egg Yield Logs" value={eggEligible(flock.type)?flockEggs.length:'Not applicable'} icon={Egg} subtitle="Recorded collections" color="blue" />
         <StatCard title="Direct Flock Sales" value={`₦${flockSales.reduce((s, x) => s + (x.totalAmount || 0), 0).toLocaleString()}`} icon={DollarSign} subtitle={`${flockSales.length} transactions`} color="indigo" />
       </div>
 
@@ -77,28 +79,9 @@ export default function FlockDetails() {
           Flock Activity & Health Log Timeline
         </h3>
 
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-800">Vaccination Administered</p>
-              <p className="text-xs text-slate-600">Gumboro booster administered successfully by vet manager.</p>
-              <span className="text-[10px] text-slate-400 mt-1 block">Scheduled Date: 2026-08-15</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
-              <Egg className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-800">Peak Production Reached</p>
-              <p className="text-xs text-slate-600">Lay rate hit 88% efficiency across all pen cages.</p>
-              <span className="text-[10px] text-slate-400 mt-1 block">2026-08-25</span>
-            </div>
-          </div>
+        <div className="space-y-3">
+          {dailyRecords.filter(r=>r.flockId===flock.id).sort((a,b)=>b.date.localeCompare(a.date)).map(r=><article key={r.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm"><p className="font-semibold">{r.date} · {r.category}</p><p className="mt-1 text-slate-600">{recordSummary(r)}</p></article>)}
+          {!dailyRecords.some(r=>r.flockId===flock.id)&&<p className="text-sm text-slate-500">No saved activity records for this flock.</p>}
         </div>
       </div>
     </div>

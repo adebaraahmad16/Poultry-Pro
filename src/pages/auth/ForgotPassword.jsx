@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bird, Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Bird, Mail, ArrowLeft, CheckCircle2 } from '../../components/common/Icons';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');

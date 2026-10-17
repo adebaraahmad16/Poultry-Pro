@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Check } from './Icons';
 import { POULTRY_TYPES } from '../../constants/poultryTypes';
 
 /**

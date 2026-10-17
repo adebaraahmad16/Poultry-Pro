@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { TrendingDown, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingDown, Plus, Trash2, AlertTriangle } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { healthService } from '../../services/healthService';
 import DataTable from '../../components/common/DataTable';
@@ -8,6 +9,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
 
 export default function Mortality() {
+  const navigate = useNavigate();
   const { mortality, flocks, refreshAllData } = useFarm();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -74,7 +76,7 @@ export default function Mortality() {
         </div>
 
         <button
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => navigate('/daily-records?category=mortality')}
           className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />

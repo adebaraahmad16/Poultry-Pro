@@ -1,10 +1,11 @@
+import { request, authHeaders, checkedFetch } from './planCatalog';
 import { getItem, setItem, KEYS } from './storageService';
 import { API_BASE_URL } from './apiConfig';
 
 export const flockService = {
   getAll: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/flocks`);
+      const res = await checkedFetch(`${API_BASE_URL}/flocks`, {headers:authHeaders()});
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.FLOCKS, data);
@@ -22,43 +23,14 @@ export const flockService = {
   },
   
   create: async (flockData) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/flocks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(flockData)
-      });
-      if (res.ok) {
-        const newFlock = await res.json();
-        const flocks = getItem(KEYS.FLOCKS, []);
-        setItem(KEYS.FLOCKS, [newFlock, ...flocks]);
-        return newFlock;
-      }
-    } catch (err) {
-      console.warn('API unavailable, saving locally:', err);
-    }
-
+    const newFlock = await request('/flocks',{method:'POST',body:JSON.stringify(flockData)});
     const flocks = getItem(KEYS.FLOCKS, []);
-    const newFlock = {
-      ...flockData,
-      id: `flock-${Date.now()}`,
-      currentBirds: Number(flockData.initialBirds),
-      initialBirds: Number(flockData.initialBirds),
-      totalCost: Number(flockData.initialBirds) * Number(flockData.costPerBird || 0),
-      status: flockData.status || 'Active',
-      healthStatus: flockData.healthStatus || 'Healthy',
-      dateAcquired: flockData.dateAcquired || new Date().toISOString().split('T')[0]
-    };
-    setItem(KEYS.FLOCKS, [newFlock, ...flocks]);
+    setItem(KEYS.FLOCKS,[newFlock,...flocks]);
     return newFlock;
   },
 
   delete: async (id) => {
-    try {
-      await fetch(`${API_BASE_URL}/flocks/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      console.warn('API error:', err);
-    }
+    await request(`/flocks/${id}`,{method:'DELETE'});
     const flocks = getItem(KEYS.FLOCKS, []);
     const updated = flocks.filter((f) => f.id !== id);
     setItem(KEYS.FLOCKS, updated);

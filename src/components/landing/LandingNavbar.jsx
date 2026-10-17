@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bird, Menu, X, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Bird, Menu, X, LayoutDashboard } from '../common/Icons';
 import { useAuth } from '../../context/AuthContext';
 
 const NAV_LINKS = [
@@ -9,7 +9,6 @@ const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Poultry Types', href: '#poultry-types' },
   { label: 'Pricing', href: '#pricing' },
-  { label: 'Advertise With Us', href: '#advertise' },
   { label: 'About', href: '#faq' },
 ];
 

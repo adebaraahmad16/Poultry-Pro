@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Pill, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Pill, Plus, Trash2 } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { healthService } from '../../services/healthService';
 import DataTable from '../../components/common/DataTable';
@@ -7,6 +8,7 @@ import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 
 export default function Medication() {
+  const navigate = useNavigate();
   const { medications, flocks, refreshAllData } = useFarm();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -73,7 +75,7 @@ export default function Medication() {
         </div>
 
         <button
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => navigate('/daily-records?category=health')}
           className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />

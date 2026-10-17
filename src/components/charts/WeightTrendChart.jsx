@@ -1,4 +1,5 @@
 import React from 'react';
+import ChartEmptyState from './ChartEmptyState';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 export default function WeightTrendChart({ weights }) {
@@ -10,15 +11,11 @@ export default function WeightTrendChart({ weights }) {
     }));
 
   if (chartData.length === 0) {
-    return (
-      <div className="w-full h-72 flex items-center justify-center text-xs text-slate-400 bg-slate-50 rounded-xl">
-        No weight records yet — record bird weights to see growth trends.
-      </div>
-    );
+    return <ChartEmptyState>No weight records yet. Record bird weights to see growth trends.</ChartEmptyState>;
   }
 
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-52 sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />

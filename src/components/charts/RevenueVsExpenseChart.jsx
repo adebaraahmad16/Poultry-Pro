@@ -1,4 +1,5 @@
 import React from 'react';
+import ChartEmptyState from './ChartEmptyState';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 export default function RevenueVsExpenseChart({ sales, expenses }) {
@@ -19,8 +20,10 @@ export default function RevenueVsExpenseChart({ sales, expenses }) {
     };
   });
 
+  if (!sales.some(record => dates.includes(record.date)) && !expenses.some(record => dates.includes(record.date))) return <ChartEmptyState>No sales or expense records in the last 7 days.</ChartEmptyState>;
+
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-52 sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layers, Plus, Trash2, Eye, Filter } from 'lucide-react';
+import { Layers, Plus, Trash2, Eye, Filter } from '../../components/common/Icons';
 import { useFarm, usePoultryData } from '../../context/FarmContext';
 import { flockService } from '../../services/flockService';
 import { POULTRY_TYPE_MAP, ALL_FLOCK_TYPE_OPTIONS } from '../../constants/poultryTypes';
+import { usePoultry } from '../../context/PoultryContext';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
 
 export default function Flocks() {
-  const { flocks, currentPlan, canAddFlock, canAddBirds, metrics, refreshAllData } = useFarm();
+  const { flocks, currentPlan, canAddFlock, canAddBirds, metrics, refreshAllData, isSubscriptionExpired, activeFlocksCount } = useFarm();
   const { selectedTypes } = usePoultryData();
+  const {activeType}=usePoultry();
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState('All');
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -18,13 +20,13 @@ export default function Flocks() {
   const [limitError, setLimitError] = useState('');
 
   // Bird type options limited to the farmer's selected poultry types
-  const flockTypeOptions = selectedTypes.length > 0
+  const flockTypeOptions = activeType ? activeType.flockTypes : selectedTypes.length > 0
     ? selectedTypes.flatMap((t) => t.flockTypes)
     : ALL_FLOCK_TYPE_OPTIONS;
 
   const [form, setForm] = useState({
     name: '',
-    type: flockTypeOptions[0] || 'Broiler',
+    type: flockTypeOptions[0] || '',
     breed: 'Isa Brown',
     initialBirds: 250,
     costPerBird: 1000,
@@ -36,8 +38,10 @@ export default function Flocks() {
   const filteredFlocks = flocks.filter((f) => filterType === 'All' || f.type === filterType);
 
   const handleOpenAdd = () => {
-    if (!canAddFlock()) {
-      setLimitError(`Your ${currentPlan.name} plan is limited to ${currentPlan.limits.maxFlocks} flocks. Upgrade to Basic (₦5,000/mo) for up to 10 flocks or Pro (₦15,000/mo) for unlimited flocks.`);
+    if (isSubscriptionExpired) {
+      setLimitError(`Your 14-day free trial or subscription has expired. You can view all existing flocks and records safely, but must activate a plan to create new flocks.`);
+    } else if (!canAddFlock()) {
+      setLimitError(`Your ${currentPlan.name} plan is limited to ${currentPlan.limits.maxFlocks} active flocks (${activeFlocksCount}/${currentPlan.limits.maxFlocks} used). Upgrade your plan to expand your capacity.`);
     } else {
       setLimitError('');
     }
@@ -46,17 +50,21 @@ export default function Flocks() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (isSubscriptionExpired) {
+      setLimitError(`Subscription or trial expired. Please activate your subscription to add new flocks.`);
+      return;
+    }
     if (!canAddFlock()) {
-      setLimitError(`Flock creation limit reached for your ${currentPlan.name} plan (${currentPlan.limits.maxFlocks} flocks max). Please upgrade to add more flocks.`);
+      setLimitError(`Flock creation limit reached for your ${currentPlan.name} plan (${currentPlan.limits.maxFlocks} active flocks max). Please upgrade to Pro or Enterprise to add more flocks.`);
       return;
     }
 
     if (!canAddBirds(form.initialBirds)) {
-      setLimitError(`Adding ${form.initialBirds} birds would exceed your ${currentPlan.name} plan capacity (${metrics.totalBirds + Number(form.initialBirds)} / ${currentPlan.limits.maxBirds} max birds). Upgrade to Basic (₦5,000/mo) for up to 5,000 birds.`);
+      setLimitError(`Adding ${form.initialBirds} birds would exceed your ${currentPlan.name} plan capacity of ${currentPlan.limits.maxBirds?.toLocaleString()} birds (current: ${metrics.totalBirds.toLocaleString()}, would become: ${(metrics.totalBirds + Number(form.initialBirds)).toLocaleString()}). Upgrade your plan to expand bird capacity.`);
       return;
     }
 
-    await flockService.create(form);
+    try { await flockService.create(form); } catch(e) { setLimitError(e.message); return; }
     refreshAllData();
     setIsAddOpen(false);
     setLimitError('');
@@ -204,11 +212,11 @@ export default function Flocks() {
               type="button"
               onClick={() => {
                 setIsAddOpen(false);
-                navigate('/settings');
+                navigate('/settings/subscription');
               }}
               className="mt-3 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition-colors"
             >
-              Go to Subscription Settings →
+              Upgrade Plan
             </button>
           </div>
         )}

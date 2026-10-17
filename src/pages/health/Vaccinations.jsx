@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Syringe, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Syringe, Plus, Trash2, CheckCircle2 } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { healthService } from '../../services/healthService';
 import DataTable from '../../components/common/DataTable';
@@ -11,32 +12,36 @@ export default function Vaccinations() {
   const { vaccinations, flocks, refreshAllData } = useFarm();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [error, setError] = useState('');
 
   const [form, setForm] = useState({
     vaccine: '',
     flockId: flocks[0]?.id || '',
     scheduledDate: new Date().toISOString().split('T')[0],
-    administeredBy: 'Dr. Folorunsho',
+    administeredBy: '',
     notes: ''
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     const flockObj = flocks.find((f) => f.id === form.flockId) || flocks[0];
-    healthService.addVaccination({ ...form, flockName: flockObj?.name || 'Layer Flock' });
+    try { await healthService.addVaccination({ ...form, flockName: flockObj?.name || 'Layer Flock' }); }
+    catch(e) { setError(e.message); return; }
     refreshAllData();
     setIsAddOpen(false);
   };
 
-  const toggleStatus = (id, currentStatus) => {
+  const toggleStatus = async (id, currentStatus) => {
     const nextStatus = currentStatus === 'Completed' ? 'Upcoming' : 'Completed';
-    healthService.updateVaccinationStatus(id, nextStatus);
+    try { await healthService.updateVaccinationStatus(id, nextStatus); }
+    catch(e) { setError(e.message); return; }
     refreshAllData();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      healthService.deleteVaccination(deletingId);
+      try { await healthService.deleteVaccination(deletingId); }
+      catch(e) { setError(e.message); setDeletingId(null); return; }
       refreshAllData();
       setDeletingId(null);
     }
@@ -68,6 +73,8 @@ export default function Vaccinations() {
 
   return (
     <div className="space-y-6 pb-12">
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <Link to="/daily-records?category=health&healthType=Vaccination" className="inline-block rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">Record a completed vaccination in Daily Records</Link>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">

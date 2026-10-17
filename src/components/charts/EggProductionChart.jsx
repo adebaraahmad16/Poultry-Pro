@@ -1,4 +1,5 @@
 import React from 'react';
+import ChartEmptyState from './ChartEmptyState';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 export default function EggProductionChart({ data }) {
@@ -9,8 +10,10 @@ export default function EggProductionChart({ data }) {
     Broken: d.brokenEggs
   }));
 
+  if (!chartData.length) return <ChartEmptyState>No egg production records yet.</ChartEmptyState>;
+
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-52 sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />

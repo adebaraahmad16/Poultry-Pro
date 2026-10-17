@@ -1,6 +1,6 @@
 import React from 'react';
 import Modal from './Modal';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from './Icons';
 
 export default function ConfirmModal({ isOpen, onClose, onConfirm, title = "Confirm Delete", message, confirmText = "Delete", isDanger = true }) {
   return (

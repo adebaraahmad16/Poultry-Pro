@@ -1,12 +1,15 @@
+import { usePlanCatalog } from '../../components/subscriptions/usePlanCatalog';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bird, Check, ArrowRight, Building, Layers, CheckCircle2 } from 'lucide-react';
+import { Bird, Check, ArrowRight, Building, Layers, CheckCircle2 } from '../../components/common/Icons';
 import { farmProfileService } from '../../services/managementService';
 import { flockService } from '../../services/flockService';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import { POULTRY_TYPE_MAP, ALL_FLOCK_TYPE_OPTIONS } from '../../constants/poultryTypes';
+import { subscriptionService } from '../../services/subscriptionService';
 
 export default function Onboarding() {
+  usePlanCatalog();
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
 
@@ -26,6 +29,9 @@ export default function Onboarding() {
     return Array.isArray(farm?.poultryTypes) ? farm.poultryTypes : [];
   });
 
+  const sub = subscriptionService.getSubscription();
+  const currentPlan = subscriptionService.getPlanDetails(sub.planId);
+
   // Bird type options are limited to the farmer's selected poultry types
   const flockTypeOptions = poultryTypes.length > 0
     ? poultryTypes.map((id) => POULTRY_TYPE_MAP[id]).filter(Boolean).flatMap((t) => t.flockTypes)
@@ -33,7 +39,7 @@ export default function Onboarding() {
 
   const [firstFlock, setFirstFlock] = useState({
     name: '',
-    type: 'Broiler',
+    type: flockTypeOptions[0] || '',
     breed: '',
     initialBirds: '',
     dateAcquired: new Date().toISOString().split('T')[0],
@@ -50,19 +56,28 @@ export default function Onboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flockTypeOptions.join(',')]);
 
-  const handleNextStep1 = (e) => {
+  const handleNextStep1 = async (e) => {
     e.preventDefault();
     if (poultryTypes.length === 0) {
       alert('Please select at least one poultry type you manage.');
       return;
     }
-    farmProfileService.updateFarm({ ...farmInfo, poultryTypes });
+    if (currentPlan.limits.maxPoultryTypes !== Infinity && poultryTypes.length > currentPlan.limits.maxPoultryTypes) {
+      alert(`Your ${currentPlan.name} plan supports up to ${currentPlan.limits.maxPoultryTypes} poultry type(s). Please reduce selections or upgrade your plan.`);
+      return;
+    }
+    try { await farmProfileService.updateFarm({ ...farmInfo, poultryTypes }); } catch(e) { alert(e.message); return; }
     setStep(2);
   };
 
-  const handleNextStep2 = (e) => {
+  const handleNextStep2 = async (e) => {
     e.preventDefault();
-    flockService.create(firstFlock);
+    const birdCheck = subscriptionService.checkBirdCapacity(0, Number(firstFlock.initialBirds));
+    if (!birdCheck.allowed) {
+      alert(birdCheck.message);
+      return;
+    }
+    try { await flockService.create(firstFlock); } catch(e) { alert(e.message); return; }
     setStep(3);
   };
 

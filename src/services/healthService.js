@@ -1,3 +1,4 @@
+import { checkedFetch } from './planCatalog';
 import { getItem, setItem, KEYS } from './storageService';
 import { flockService } from './flockService';
 import { API_BASE_URL } from './apiConfig';
@@ -6,13 +7,14 @@ export const healthService = {
   // Mortality
   getMortalityRecords: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/mortality`);
+      const res = await checkedFetch(`${API_BASE_URL}/mortality`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.MORTALITY, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, using local mortality records:', err);
     }
     return getItem(KEYS.MORTALITY, []);
@@ -20,7 +22,7 @@ export const healthService = {
   
   recordMortality: async (data) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/mortality`, {
+      const res = await checkedFetch(`${API_BASE_URL}/mortality`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -33,6 +35,7 @@ export const healthService = {
         return newRecord;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, saving mortality locally:', err);
     }
 
@@ -53,8 +56,9 @@ export const healthService = {
 
   deleteMortalityRecord: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/mortality/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/mortality/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const records = getItem(KEYS.MORTALITY, []);
@@ -66,13 +70,14 @@ export const healthService = {
   // Vaccinations
   getVaccinations: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/vaccinations`);
+      const res = await checkedFetch(`${API_BASE_URL}/vaccinations`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.VACCINATIONS, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, using local vaccinations:', err);
     }
     return getItem(KEYS.VACCINATIONS, []);
@@ -80,7 +85,7 @@ export const healthService = {
 
   addVaccination: async (vac) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/vaccinations`, {
+      const res = await checkedFetch(`${API_BASE_URL}/vaccinations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(vac)
@@ -92,6 +97,7 @@ export const healthService = {
         return newVac;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, saving vaccination locally:', err);
     }
 
@@ -108,12 +114,13 @@ export const healthService = {
 
   updateVaccinationStatus: async (id, status) => {
     try {
-      await fetch(`${API_BASE_URL}/vaccinations/${id}/status`, {
+      await checkedFetch(`${API_BASE_URL}/vaccinations/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error updating vaccination status:', err);
     }
     const vacs = getItem(KEYS.VACCINATIONS, []);
@@ -123,8 +130,9 @@ export const healthService = {
 
   deleteVaccination: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/vaccinations/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/vaccinations/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const vacs = getItem(KEYS.VACCINATIONS, []);
@@ -136,13 +144,14 @@ export const healthService = {
   // Medications
   getMedications: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/medications`);
+      const res = await checkedFetch(`${API_BASE_URL}/medications`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.MEDICATIONS, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, using local medications:', err);
     }
     return getItem(KEYS.MEDICATIONS, []);
@@ -150,7 +159,7 @@ export const healthService = {
 
   addMedication: async (med) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/medications`, {
+      const res = await checkedFetch(`${API_BASE_URL}/medications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(med)
@@ -162,6 +171,7 @@ export const healthService = {
         return newMed;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, saving medication locally:', err);
     }
 
@@ -178,8 +188,9 @@ export const healthService = {
 
   deleteMedication: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/medications/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/medications/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const meds = getItem(KEYS.MEDICATIONS, []);

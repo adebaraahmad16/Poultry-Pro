@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, MapPin, Users, Layers, Bird, Calendar, Edit3, ShieldCheck } from 'lucide-react';
+import { Building2, MapPin, Users, Layers, Bird, Calendar, Edit3, ShieldCheck } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { farmProfileService } from '../../services/managementService';
 import Modal from '../../components/common/Modal';
@@ -12,12 +12,12 @@ export default function FarmOverview() {
     location: farm.location || '',
     type: farm.type || '',
     size: farm.size || '',
-    currency: farm.currency || '₦'
+    currency: farm.currency || 'â‚¦'
   });
 
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    farmProfileService.updateFarm(formData);
+    try { await farmProfileService.updateFarm(formData); } catch(e) { alert(e.message); return; }
     refreshAllData();
     setIsEditOpen(false);
   };
@@ -70,7 +70,7 @@ export default function FarmOverview() {
             <span className="text-xs font-semibold uppercase">Total Flocks</span>
           </div>
           <p className="text-2xl font-extrabold text-slate-900">{flocks.length}</p>
-          <p className="text-xs text-slate-500 mt-1">Layer & Broiler Batches</p>
+          <p className="text-xs text-slate-500 mt-1">Flocks in the selected poultry view</p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
@@ -79,7 +79,7 @@ export default function FarmOverview() {
             <span className="text-xs font-semibold uppercase">Live Bird Population</span>
           </div>
           <p className="text-2xl font-extrabold text-slate-900">{metrics.totalBirds.toLocaleString()}</p>
-          <p className="text-xs text-slate-500 mt-1">Housed across 5 Pens</p>
+          <p className="text-xs text-slate-500 mt-1">{new Set(flocks.map(f=>f.pen).filter(Boolean)).size} recorded pens</p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
@@ -88,7 +88,7 @@ export default function FarmOverview() {
             <span className="text-xs font-semibold uppercase">Farm Workers</span>
           </div>
           <p className="text-2xl font-extrabold text-slate-900">{workers.length}</p>
-          <p className="text-xs text-slate-500 mt-1">Active staff on duty</p>
+          <p className="text-xs text-slate-500 mt-1">Registered farm workers</p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
@@ -96,8 +96,8 @@ export default function FarmOverview() {
             <Calendar className="w-5 h-5 text-amber-600" />
             <span className="text-xs font-semibold uppercase">Established</span>
           </div>
-          <p className="text-2xl font-extrabold text-slate-900">{farm.createdAt || '2024-01-15'}</p>
-          <p className="text-xs text-slate-500 mt-1">Fully Registered</p>
+          <p className="text-2xl font-extrabold text-slate-900">{farm.createdAt||farm.created_at?String(farm.createdAt||farm.created_at).slice(0,10):'Not recorded'}</p>
+          <p className="text-xs text-slate-500 mt-1">Farm account creation date</p>
         </div>
       </div>
 
@@ -123,12 +123,12 @@ export default function FarmOverview() {
           </div>
           <div>
             <span className="text-xs font-semibold text-slate-400 uppercase">Primary Currency</span>
-            <p className="text-slate-800 font-semibold mt-0.5">Nigerian Naira (₦)</p>
+            <p className="text-slate-800 font-semibold mt-0.5">{farm.currency || 'Not recorded'}</p>
           </div>
           <div>
             <span className="text-xs font-semibold text-slate-400 uppercase">Health Compliance</span>
             <p className="text-emerald-700 font-semibold mt-0.5 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4" /> Fully Vaccinated & Compliant
+              {farm.healthCompliance || 'Not recorded'}
             </p>
           </div>
         </div>

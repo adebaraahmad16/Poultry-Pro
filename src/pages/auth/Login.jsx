@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bird, Mail, Lock, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Bird, Mail, Lock, ArrowRight, ArrowLeft } from '../../components/common/Icons';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const { login, sessionMessage } = useAuth();
+  const [error,setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login(email, password);
-    navigate('/dashboard');
+    try { await login(email, password); navigate('/dashboard'); } catch(e) { setError(e.message); }
   };
 
   return (
@@ -30,6 +30,7 @@ export default function Login() {
           <p className="mt-1 text-sm text-slate-500">Sign in to manage your poultry farm</p>
         </div>
 
+        {(error || sessionMessage) && <p role="alert" className="mt-5 p-3 rounded-lg bg-amber-50 text-amber-900 text-sm">{error || sessionMessage}</p>}
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Email Address</label>

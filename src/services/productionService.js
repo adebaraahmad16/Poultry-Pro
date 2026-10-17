@@ -1,16 +1,18 @@
+import { checkedFetch } from './planCatalog';
 import { getItem, setItem, KEYS } from './storageService';
 import { API_BASE_URL } from './apiConfig';
 
 export const eggService = {
   getAll: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/eggs`);
+      const res = await checkedFetch(`${API_BASE_URL}/eggs`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.EGGS, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error, using local storage:', err);
     }
     return getItem(KEYS.EGGS, []);
@@ -18,7 +20,7 @@ export const eggService = {
   
   createRecord: async (record) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/eggs`, {
+      const res = await checkedFetch(`${API_BASE_URL}/eggs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(record)
@@ -30,6 +32,7 @@ export const eggService = {
         return newRecord;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
 
@@ -56,8 +59,9 @@ export const eggService = {
 
   deleteRecord: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/eggs/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/eggs/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const records = getItem(KEYS.EGGS, []);
@@ -70,13 +74,14 @@ export const eggService = {
 export const feedService = {
   getInventory: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/feed`);
+      const res = await checkedFetch(`${API_BASE_URL}/feed`);
       if (res.ok) {
         const data = await res.json();
         setItem(KEYS.FEED, data);
         return data;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     return getItem(KEYS.FEED, []);
@@ -84,7 +89,7 @@ export const feedService = {
   
   addFeedItem: async (item) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/feed`, {
+      const res = await checkedFetch(`${API_BASE_URL}/feed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
@@ -96,6 +101,7 @@ export const feedService = {
         return newFeed;
       }
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
 
@@ -114,12 +120,13 @@ export const feedService = {
 
   recordUsage: async (feedId, bagsUsed) => {
     try {
-      await fetch(`${API_BASE_URL}/feed/${feedId}/usage`, {
+      await checkedFetch(`${API_BASE_URL}/feed/${feedId}/usage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bagsUsed })
       });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
 
@@ -137,8 +144,9 @@ export const feedService = {
 
   deleteFeedItem: async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/feed/${id}`, { method: 'DELETE' });
+      await checkedFetch(`${API_BASE_URL}/feed/${id}`, { method: 'DELETE' });
     } catch (err) {
+      if (err.serverRejected) throw err;
       console.warn('API error:', err);
     }
     const feeds = getItem(KEYS.FEED, []);

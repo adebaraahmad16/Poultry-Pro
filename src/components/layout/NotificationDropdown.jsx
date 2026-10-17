@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, CheckCheck, Trash2, AlertTriangle, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, AlertTriangle, Info, CheckCircle2, AlertCircle } from '../common/Icons';
 import { notificationService } from '../../services/managementService';
 import { useFarm } from '../../context/FarmContext';
 
@@ -37,7 +37,7 @@ export default function NotificationDropdown({ isOpen, onClose }) {
   };
 
   return (
-    <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
+    <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto mt-3 sm:w-96 max-h-[75dvh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-200 z-50">
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-slate-600" />

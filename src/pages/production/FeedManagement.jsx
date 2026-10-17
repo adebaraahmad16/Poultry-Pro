@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Wheat, Plus, MinusCircle, Trash2, AlertTriangle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Wheat, Plus, MinusCircle, Trash2, AlertTriangle } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { feedService } from '../../services/productionService';
 import DataTable from '../../components/common/DataTable';
@@ -8,7 +9,9 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
 
 export default function FeedManagement() {
-  const { feeds, refreshAllData } = useFarm();
+  const navigate = useNavigate();
+  const { feeds, dailyRecords, refreshAllData } = useFarm();
+  const consumption = dailyRecords.filter(r=>r.category==='feed'&&r.status==='Recorded');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isUsageOpen, setIsUsageOpen] = useState(false);
   const [selectedFeedId, setSelectedFeedId] = useState(null);
@@ -48,8 +51,8 @@ export default function FeedManagement() {
     }
   };
 
-  const totalBags = feeds.reduce((s, f) => s + (f.quantityBags || 0), 0);
-  const totalKg = totalBags * 25;
+  const totalBags = feeds.reduce((s, f) => s + Number(f.quantityBags || 0), 0);
+  const totalKg = feeds.reduce((s, f) => s + Number(f.quantityBags || 0) * Number(f.bagWeightKg || 25), 0);
 
   const columns = [
     { header: 'Feed Name', accessor: 'name' },
@@ -60,7 +63,7 @@ export default function FeedManagement() {
     },
     {
       header: 'Stock (kg)',
-      render: (r) => <span className="font-semibold text-slate-600">{(r.quantityBags * 25).toLocaleString()} kg</span>
+      render: (r) => <span className="font-semibold text-slate-600">{(Number(r.quantityBags) * Number(r.bagWeightKg || 25)).toLocaleString()} kg</span>
     },
     {
       header: 'Price / Bag',
@@ -81,8 +84,7 @@ export default function FeedManagement() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              setSelectedFeedId(r.id);
-              setIsUsageOpen(true);
+              navigate('/daily-records?category=feed');
             }}
             className="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-semibold"
           >
@@ -106,7 +108,7 @@ export default function FeedManagement() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
             <Wheat className="w-6 h-6 text-emerald-600" />
-            Feed Inventory & Usage
+            Feed Consumption & Shared Inventory
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">Manage feed stock types, log daily pen feeding, and track low-stock thresholds.</p>
         </div>
@@ -120,6 +122,8 @@ export default function FeedManagement() {
         </button>
       </div>
 
+      <Link to="/daily-records?category=feed" className="inline-block rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">Record daily feeding and view consumption history</Link>
+      <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6"><h2 className="text-lg font-bold">Selected Poultry Feed Records</h2><p className="mt-1 text-sm text-slate-500">Consumption belongs to the selected poultry type. Stock below is shared across this farm.</p><div className="mt-3 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Date</th><th className="p-2">Feed type</th><th className="p-2">Consumed</th></tr></thead><tbody>{consumption.map(r=><tr key={r.id} className="border-t"><td className="p-2">{r.date}</td><td className="p-2">{r.values.feedType}</td><td className="p-2">{Number(r.values.consumedKg).toLocaleString()} kg</td></tr>)}</tbody></table></div>{!consumption.length&&<p className="mt-3 text-sm text-slate-500">No feeding records for this selection.</p>}</section>
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">

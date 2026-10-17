@@ -1,17 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { initializeStorage, getItem, setItem } from '../services/storageService';
-import { flockService } from '../services/flockService';
-import { eggService, feedService } from '../services/productionService';
-import { healthService } from '../services/healthService';
-import { salesService, customerService, expenseService, inventoryService } from '../services/businessService';
-import { workerService, taskService, notificationService, farmProfileService } from '../services/managementService';
-import { weightService } from '../services/weightService';
-import { PLANS, PLAN_DETAILS } from '../constants/plans';
+import { useAuth } from './AuthContext';
+import { getSessionToken } from '../services/sessionService.js';
+import { usePlanCatalog } from '../components/subscriptions/usePlanCatalog';
+import { request } from '../services/planCatalog';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { inventoryService } from '../services/businessService';
+import { taskService, notificationService } from '../services/managementService';
+import { PLANS } from '../constants/plans';
 import { POULTRY_TYPE_MAP, getPoultryTypeByFlockType } from '../constants/poultryTypes';
+
+import { subscriptionService } from '../services/subscriptionService';
+import { localDate } from '../../shared/dailyRecords';
+import { availableTypeIds, poultryTypeId, scopeFarmData, selectionKey, restoreSelection } from '../../shared/poultryScope';
+import { setSelectedFarmId, setSelectedPoultryType } from '../services/farmScope';
 
 const FarmContext = createContext();
 
 export const FarmProvider = ({ children }) => {
+  usePlanCatalog();
+  const { isLoggedIn, loading: authLoading, user } = useAuth();
   const [farm, setFarm] = useState({});
   const [flocks, setFlocks] = useState([]);
   const [feeds, setFeeds] = useState([]);
@@ -26,88 +32,137 @@ export const FarmProvider = ({ children }) => {
   const [workers, setWorkers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [weightRecords, setWeightRecords] = useState([]);
+  const [dailyRecords, setDailyRecords] = useState([]);
+  const refreshing = useRef(false);
   const [notifications, setNotifications] = useState([]);
-
-  // Active Subscription Plan State (saved in localStorage)
-  const [currentPlanId, setCurrentPlanId] = useState(() => {
-    return getItem('poultrypro_current_plan') || PLANS.FREE;
-  });
-
-  const currentPlan = PLAN_DETAILS[currentPlanId] || PLAN_DETAILS[PLANS.FREE];
-
-  const updatePlan = (planId) => {
-    if (PLAN_DETAILS[planId]) {
-      setCurrentPlanId(planId);
-      setItem('poultrypro_current_plan', planId);
-    }
+  const [accessibleFarms,setAccessibleFarms]=useState([]);
+  const [selectedFarmId,updateSelectedFarmId]=useState('');
+  const [dataLoading,setDataLoading]=useState(true);
+  const [dataError,setDataError]=useState('');
+  const [loadedScope,setLoadedScope]=useState('');
+  const loadedScopeRef=useRef('');loadedScopeRef.current=loadedScope;
+  const refreshScope=useRef('');
+  const [selection,setSelection]=useState({key:'',id:'all'});
+  const scopeId=`${user?.id||''}:${selectedFarmId||user?.farmId||''}`;
+  const scopeRef=useRef(scopeId);scopeRef.current=scopeId;
+  const types=availableTypeIds(farm,flocks);
+  const preferenceKey=selectionKey(user?.id,selectedFarmId||user?.farmId);
+  const activeTypeId=loadedScope===scopeId?restoreSelection(selection.key===preferenceKey?selection.id:localStorage.getItem(preferenceKey),types):'all';
+  setSelectedPoultryType(activeTypeId);
+  const selectPoultryType=id=>{
+    const valid=poultryTypeId(id);
+    if(valid!=='all'&&!types.includes(valid)) return;
+    setSelection({key:preferenceKey,id:valid});localStorage.setItem(preferenceKey,valid);
   };
+  const selectFarm=id=>{
+    if(!accessibleFarms.some(f=>f.id===id)) return;
+    const nextKey=selectionKey(user.id,id);
+    setSelection({key:nextKey,id:activeTypeId});
+    setSelectedFarmId(id);updateSelectedFarmId(id);setDataLoading(true);setLoadedScope('');
+  };
+  useEffect(()=>{
+    setSelectedFarmId(user?.farmId||'');updateSelectedFarmId(user?.farmId||'');
+    setLoadedScope('');setAccessibleFarms([]);setDataLoading(!!isLoggedIn);
+    return()=>setSelectedFarmId('');
+  },[user?.id,isLoggedIn]);
+
+  // Active Subscription & 14-Day Free Trial State
+  const [subscription, setSubscription] = useState(() => subscriptionService.getSubscription());
+
+  const currentPlanId = subscription?.planId || PLANS.STARTER;
+  const currentPlan = subscriptionService.getPlanDetails(currentPlanId);
+
+  const updatePlan = (planId,billingCycle = 'monthly') => subscriptionService.switchPlan(planId,billingCycle);
+  const toggleAutoRenewal = async () => {
+    const updated = await request('/subscription/auto-renew',{method:'PATCH',body:JSON.stringify({autoRenew:!subscription.autoRenew})});
+    subscriptionService.saveSubscription(updated); setSubscription(updated); return updated;
+  };
+  useEffect(() => {
+    const changed = () => setSubscription(subscriptionService.getSubscription());
+    window.addEventListener('subscription_updated',changed);
+    return () => window.removeEventListener('subscription_updated',changed);
+  },[isLoggedIn,authLoading,user?.id]);
 
   const refreshAllData = useCallback(async () => {
-    initializeStorage();
-    const loadedFarm = await farmProfileService.fetchFarm();
-    setFarm(loadedFarm || farmProfileService.getFarm());
-
-    // Fetch asynchronously from Express API + MySQL, with local storage fallback
-    const loadedFlocks = await flockService.getAll();
-    setFlocks(loadedFlocks || []);
-
-    const loadedFeeds = await feedService.getInventory();
-    setFeeds(loadedFeeds || []);
-
-    const loadedEggs = await eggService.getAll();
-    setEggs(loadedEggs || []);
-
-    const loadedMortality = await healthService.getMortalityRecords();
-    setMortality(loadedMortality || []);
-
-    const loadedVaccinations = await healthService.getVaccinations();
-    setVaccinations(loadedVaccinations || []);
-
-    const loadedMedications = await healthService.getMedications();
-    setMedications(loadedMedications || []);
-
-    const loadedSales = await salesService.getSales();
-    setSales(loadedSales || []);
-
-    const loadedCustomers = await customerService.getCustomers();
-    setCustomers(loadedCustomers || []);
-
-    const loadedExpenses = await expenseService.getExpenses();
-    setExpenses(loadedExpenses || []);
-
-    setInventory(inventoryService.getInventory());
-    setWorkers(workerService.getWorkers());
-    setTasks(taskService.getTasks());
-    setWeightRecords(weightService.getWeightRecords());
-    setNotifications(notificationService.getNotifications());
-  }, []);
-
+    if(authLoading || !isLoggedIn || !getSessionToken()) return;
+    const farmId=selectedFarmId||user.farmId;
+    const identity=`${user.id}:${farmId}`, token=getSessionToken();
+    if(refreshScope.current===identity)return;
+    refreshScope.current=identity;refreshing.current=true;
+    if(loadedScopeRef.current!==identity)setDataLoading(true);
+    setDataError('');
+    const headers={'X-Farm-Id':farmId,'X-Poultry-Type':'all'};
+    const valid=()=>getSessionToken()===token&&scopeRef.current===identity;
+    try {
+      const [profile,flockRows,feedRows,eggRows,deathRows,vaccineRows,medicationRows,saleRows,expenseRows,customerRows,daily,farmRows,sub,workerRows]=await Promise.all([
+        request('/farm',{headers}),request('/flocks',{headers}),request('/feed',{headers}),
+        request('/eggs',{headers}),request('/mortality',{headers}),request('/vaccinations',{headers}),
+        request('/medications',{headers}),request('/sales',{headers}),request('/expenses',{headers}),
+        request('/customers',{headers}),request(`/daily-records?farmId=${encodeURIComponent(farmId)}`,{headers}),
+        request('/daily-records/farms',{headers}),request('/subscription/current',{headers}),request('/workers',{headers}),
+      ]);
+      if(!valid()) return;
+      setFarm(profile);setFlocks(flockRows);setFeeds(feedRows);setEggs(eggRows);setMortality(deathRows);
+      setVaccinations(vaccineRows);setMedications(medicationRows);setSales(saleRows);setExpenses(expenseRows);
+      setCustomers(customerRows);setDailyRecords(daily.records);setAccessibleFarms(farmRows);setSubscription(sub);
+      setWorkers(workerRows);setInventory(inventoryService.getInventory());setTasks(taskService.getTasks());setNotifications(notificationService.getNotifications());
+      setWeightRecords(daily.records.filter(r=>r.category==='weight'&&r.status==='Recorded').map(r=>({...r.values,id:r.id,flockId:r.flockId,date:r.date})));
+      setLoadedScope(identity);
+      const key=selectionKey(user.id,farmId),available=availableTypeIds(profile,flockRows);
+      setSelection(current=>{
+        const id=restoreSelection(current.key===key?current.id:localStorage.getItem(key),available);
+        localStorage.setItem(key,id);return {key,id};
+      });
+    } catch(error) { if(valid()){setLoadedScope('');setDataError(error.message);} }
+    finally { if(valid())setDataLoading(false);if(refreshScope.current===identity){refreshScope.current='';refreshing.current=false;} }
+  },[isLoggedIn,authLoading,user?.id,selectedFarmId]);
   useEffect(() => {
-    refreshAllData();
+    refreshAllData().catch(error => { if(error.status !== 401) console.error(error); });
 
     const handleStorageUpdate = () => {
-      refreshAllData();
+      // API read caches also emit storage-update; do not recursively refetch them.
+      if (refreshing.current) return;
+      refreshAllData().catch(error => { if(error.status !== 401) console.error(error); });
     };
 
     window.addEventListener('storage-update', handleStorageUpdate);
-    return () => window.removeEventListener('storage-update', handleStorageUpdate);
+    window.addEventListener('daily-records-updated',handleStorageUpdate);
+    return () => {window.removeEventListener('storage-update', handleStorageUpdate);window.removeEventListener('daily-records-updated',handleStorageUpdate);};
   }, [refreshAllData]);
 
   // Metrics
   const totalBirds = flocks.reduce((sum, f) => sum + (Number(f.currentBirds) || 0), 0);
   const totalEggsToday = eggs
-    .filter((e) => e.date === new Date().toISOString().split('T')[0])
+    .filter((e) => e.date === localDate())
     .reduce((sum, e) => sum + (Number(e.goodEggs) || 0), 0);
   const totalFeedKg = feeds.reduce((sum, f) => sum + (Number(f.quantityBags) || 0) * (Number(f.bagWeightKg) || 25), 0);
   const totalRevenue = sales.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
   const totalExpensesAmount = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   const netProfit = totalRevenue - totalExpensesAmount;
 
-  // Plan Limit Checks
-  const canAddFlock = () => flocks.length < currentPlan.limits.maxFlocks;
-  const canAddBirds = (additionalBirds = 0) => (totalBirds + Number(additionalBirds)) <= currentPlan.limits.maxBirds;
-  const canAddWorker = () => workers.length < currentPlan.limits.maxUsers;
-  const canExportPdf = () => currentPlan.limits.pdfExport;
+  // Active flocks count for limit check
+  const activeFlocksCount = flocks.filter(f => f.status !== 'Sold' && f.status !== 'Closed').length;
+
+  // Plan Limit Checks with subscription status enforcement
+  const canAddFlock = () => {
+    if (subscriptionService.isExpired(subscription)) return false;
+    return activeFlocksCount < currentPlan.limits.maxFlocks;
+  };
+  const canAddBirds = (additionalBirds = 0) => {
+    if (subscriptionService.isExpired(subscription)) return false;
+    return (totalBirds + Number(additionalBirds)) <= currentPlan.limits.maxBirds;
+  };
+  const canAddWorker = () => {
+    if (subscriptionService.isExpired(subscription)) return false;
+    return workers.length < currentPlan.limits.maxUsers;
+  };
+  const canAddPoultryType = (additionalTypes = 1) => {
+    if (subscriptionService.isExpired(subscription)) return false;
+    // Farm's current poultry types count
+    const count = Array.isArray(farm?.poultryTypes) ? farm.poultryTypes.length : 0;
+    return (count + additionalTypes) <= currentPlan.limits.maxPoultryTypes;
+  };
+  const canExportPdf = () => currentPlan.limits.dataExport;
 
   // POULTRY-TYPE SCOPING HELPERS
   // Each poultry type owns its flocks; records are attributed to a poultry type
@@ -127,10 +182,11 @@ export const FarmProvider = ({ children }) => {
     const eggsFor = eggs.filter((e) => flockIds.has(e.flockId));
     const mortalityFor = mortality.filter((m) => flockIds.has(m.flockId));
     const weightsFor = weightRecords.filter((w) => flockIds.has(w.flockId));
-    const salesFor = sales.filter((s) => s.flockId && flockIds.has(s.flockId));
-    const expensesFor = expenses.filter((e) => e.flockId && flockIds.has(e.flockId));
+    const belongs=r=>r.flockId?flockIds.has(r.flockId):poultryTypeId(r.poultryType)===typeId;
+    const salesFor = sales.filter(belongs);
+    const expensesFor = expenses.filter(belongs);
     const feedsFor = feeds; // feed inventory is farm-wide
-    return { flocks: typeFlocks, eggs: eggsFor, mortality: mortalityFor, weights: weightsFor, sales: salesFor, expenses: expensesFor, feeds: feedsFor };
+    return { flocks: typeFlocks, eggs: eggsFor, mortality: mortalityFor, weights: weightsFor, sales: salesFor, expenses: expensesFor, feeds: feedsFor, dailyRecords:dailyRecords.filter(belongs) };
   };
 
   /** Aggregate KPIs for one poultry type from its scoped records. */
@@ -139,13 +195,13 @@ export const FarmProvider = ({ children }) => {
     const totalBirds = d.flocks.reduce((sum, f) => sum + (Number(f.currentBirds) || 0), 0);
     const initialBirds = d.flocks.reduce((sum, f) => sum + (Number(f.initialBirds) || 0), 0);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDate();
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const monthAgo = new Date();
     monthAgo.setMonth(monthAgo.getMonth() - 1);
-    const weekAgoStr = weekAgo.toISOString().split('T')[0];
-    const monthAgoStr = monthAgo.toISOString().split('T')[0];
+    const weekAgoStr = localDate(weekAgo);
+    const monthAgoStr = localDate(monthAgo);
 
     const eggsToday = d.eggs.filter((e) => e.date === today).reduce((sum, e) => sum + (Number(e.goodEggs) || 0), 0);
     const eggsWeek = d.eggs.filter((e) => e.date >= weekAgoStr).reduce((sum, e) => sum + (Number(e.goodEggs) || 0), 0);
@@ -158,7 +214,7 @@ export const FarmProvider = ({ children }) => {
     const revenue = d.sales.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
     const expenseTotal = d.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-    const feedKg = d.feeds.reduce((sum, f) => sum + (Number(f.quantityBags) || 0) * (Number(f.bagWeightKg) || 25), 0);
+    const feedKg = d.dailyRecords.filter(r=>r.category==='feed'&&r.status==='Recorded').reduce((n,r)=>n+Number(r.values.consumedKg||0),0);
 
     const weightPoints = [...d.weights].sort((a, b) => a.date.localeCompare(b.date));
     const latestWeight = weightPoints.length > 0 ? weightPoints[weightPoints.length - 1].averageWeightKg : null;
@@ -166,7 +222,10 @@ export const FarmProvider = ({ children }) => {
     const weightGain = latestWeight !== null && firstWeight !== null ? latestWeight - firstWeight : null;
 
     // Production rate: eggs today vs laying-age females (approximated by total birds)
-    const productionRate = totalBirds > 0 && eggsToday > 0 ? (eggsToday / totalBirds) * 100 : 0;
+    const eggDays=new Map();
+    d.dailyRecords.filter(r=>r.category==='eggs'&&r.date===today&&r.status==='Recorded'&&r.values.layingHens>0).forEach(r=>{const p=eggDays.get(r.flockId)||{hens:r.values.layingHens,eggs:0};p.eggs+=r.values.totalEggs;eggDays.set(r.flockId,p);});
+    const hens=[...eggDays.values()].reduce((n,p)=>n+p.hens,0);
+    const productionRate = hens>0?[...eggDays.values()].reduce((n,p)=>n+p.eggs,0)/hens*100:null;
 
     return {
       totalBirds,
@@ -192,6 +251,9 @@ export const FarmProvider = ({ children }) => {
   return (
     <FarmContext.Provider
       value={{
+        accessibleFarms,selectedFarmId:selectedFarmId||user?.farmId,selectFarm,
+        activeTypeId,selectPoultryType,availableTypeIds:types,
+        dataLoading:dataLoading||loadedScope!==scopeId,dataError,dataReady:loadedScope===scopeId,
         farm,
         flocks,
         feeds,
@@ -206,15 +268,26 @@ export const FarmProvider = ({ children }) => {
         workers,
         tasks,
         weightRecords,
+        dailyRecords,
         notifications,
         currentPlan,
         currentPlanId,
+        subscription,
+        setSubscription,
         updatePlan,
+        toggleAutoRenewal,
+        remainingTrialDays: subscriptionService.getRemainingTrialDays(subscription),
+        isTrial: subscription?.status === 'trial',
+        isSubscriptionExpired: subscriptionService.isExpired(subscription),
+        canPerformPaidAction: () => subscriptionService.canPerformPaidAction(subscription),
+        subscriptionService,
         planLimits: currentPlan.limits,
         canAddFlock,
         canAddBirds,
         canAddWorker,
+        canAddPoultryType,
         canExportPdf,
+        activeFlocksCount,
         getFlockPoultryTypeId,
         scopedDataFor,
         computeTypeStats,
@@ -234,7 +307,14 @@ export const FarmProvider = ({ children }) => {
   );
 };
 
-export const useFarm = () => useContext(FarmContext);
+export const useRawFarm = () => useContext(FarmContext);
+export const useFarm = () => {
+  const raw=useRawFarm();
+  const empty={...raw,farm:{},flocks:[],feeds:[],eggs:[],mortality:[],vaccinations:[],medications:[],sales:[],expenses:[],weightRecords:[],dailyRecords:[]};
+  const data=raw.dataReady?scopeFarmData(raw,raw.activeTypeId):empty;
+  const totalBirds=data.flocks.reduce((n,f)=>n+Number(f.currentBirds||0),0),revenue=data.sales.reduce((n,r)=>n+Number(r.totalAmount||0),0),expenses=data.expenses.reduce((n,r)=>n+Number(r.amount||0),0);
+  return {...data,metrics:{...raw.metrics,totalBirds,totalRevenue:revenue,totalExpensesAmount:expenses,netProfit:revenue-expenses,totalEggsToday:data.eggs.filter(r=>r.date===localDate()).reduce((n,r)=>n+Number(r.goodEggs||0),0)}};
+};
 
 /**
  * Hook for poultry-type–aware components.
@@ -244,28 +324,9 @@ export const useFarm = () => useContext(FarmContext);
  * exposes the currently active type, and provides scoped data + stats for it.
  */
 export const usePoultryData = () => {
-  const farm = useFarm();
-  const { farm: profile, flocks } = farm;
-
-  // Determine which poultry types this farmer manages
-  let selectedTypeIds = Array.isArray(profile?.poultryTypes) ? profile.poultryTypes : [];
-
-  // Migration: derive from existing flocks if the profile has none saved yet
-  if (selectedTypeIds.length === 0 && flocks.length > 0) {
-    const derived = new Set();
-    flocks.forEach((f) => {
-      const typeId = farm.getFlockPoultryTypeId(f);
-      if (typeId) derived.add(typeId);
-    });
-    selectedTypeIds = Array.from(derived);
-  }
-
-  const selectedTypes = selectedTypeIds.map((id) => POULTRY_TYPE_MAP[id]).filter(Boolean);
-
-  // IDs of poultry types that actually have flocks recorded (for "All Poultry" breakdown)
-  const presentTypeIds = Array.from(
-    new Set(flocks.map((f) => farm.getFlockPoultryTypeId(f)).filter(Boolean))
-  );
-
-  return { ...farm, selectedTypeIds, selectedTypes, presentTypeIds };
+  const raw=useRawFarm(),scoped=useFarm();
+  const selectedTypeIds=raw.dataReady?availableTypeIds(raw.farm,raw.flocks):[];
+  const selectedTypes=selectedTypeIds.map(id=>POULTRY_TYPE_MAP[id]).filter(Boolean);
+  const presentTypeIds=[...new Set(raw.flocks.map(f=>poultryTypeId(f.type)).filter(Boolean))];
+  return {...scoped,selectedTypeIds,selectedTypes,presentTypeIds};
 };

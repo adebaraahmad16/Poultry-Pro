@@ -1,6 +1,7 @@
 import React from 'react';
+import DailyRecordsSummary from '../daily/DailyRecordsSummary';
 import { Link } from 'react-router-dom';
-import { Bird, DollarSign, Egg, Wheat, LayoutGrid, PlusCircle, Sparkles } from 'lucide-react';
+import { Bird, DollarSign, Egg, Wheat, LayoutGrid, PlusCircle, Sparkles } from '../common/Icons';
 import { usePoultryData } from '../../context/FarmContext';
 import StatCard from '../common/StatCard';
 import RevenueVsExpenseChart from '../charts/RevenueVsExpenseChart';
@@ -28,11 +29,13 @@ export default function AllPoultryDashboard() {
           <LayoutGrid className="w-3.5 h-3.5" />
           Farm Overview — All Poultry
         </div>
-        <h2 className="text-xl font-extrabold">{farm.name || 'My Poultry Farm'}</h2>
+        <h1 className="text-xl font-extrabold">{farm.name || 'My Poultry Farm'}</h1>
         <p className="text-xs text-slate-300 mt-1">
           Managing {breakdownIds.length} poultry type{breakdownIds.length !== 1 ? 's' : ''} across {flocks.length} active flock{flocks.length !== 1 ? 's' : ''}
         </p>
       </div>
+
+      <DailyRecordsSummary />
 
       {/* Fresh Farm Welcome Callout when no flocks exist */}
       {flocks.length === 0 && (

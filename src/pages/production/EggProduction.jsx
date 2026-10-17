@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Egg, Plus, Trash2, Calendar, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Egg, Plus, Trash2, Calendar, TrendingUp } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { eggService } from '../../services/productionService';
 import DataTable from '../../components/common/DataTable';
@@ -8,7 +9,17 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import EggProductionChart from '../../components/charts/EggProductionChart';
 
 export default function EggProduction() {
-  const { eggs, flocks, refreshAllData } = useFarm();
+  const navigate = useNavigate();
+  const { eggs, flocks, sales, dailyRecords, refreshAllData } = useFarm();
+  const eggStock = eggs.reduce((n,r)=>n+Number(r.goodEggs||0),0)-sales.filter(s=>s.product==='Eggs').reduce((n,s)=>n+Number(s.quantity||0),0);
+  const measuredDays = new Map();
+  dailyRecords.filter(r=>r.category==='eggs'&&r.status==='Recorded'&&r.values.layingHens>0).forEach(r=>{
+    const key=`${r.date}:${r.flockId}`;
+    const day=measuredDays.get(key)||{eggs:0,hens:r.values.layingHens};
+    day.eggs+=r.values.totalEggs;measuredDays.set(key,day);
+  });
+  const hens=[...measuredDays.values()].reduce((n,d)=>n+d.hens,0);
+  const layRate=hens?[...measuredDays.values()].reduce((n,d)=>n+d.eggs,0)/hens*100:null;
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -84,7 +95,7 @@ export default function EggProduction() {
         </div>
 
         <button
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => navigate('/daily-records?category=eggs')}
           className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
@@ -108,11 +119,12 @@ export default function EggProduction() {
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
           <span className="text-xs font-semibold text-slate-400 uppercase">Average Daily Lay Rate</span>
-          <p className="text-3xl font-extrabold text-slate-900 mt-1">88.4%</p>
-          <p className="text-xs text-emerald-600 font-semibold mt-1">High efficiency range</p>
+          <p className="text-3xl font-extrabold text-slate-900 mt-1">{layRate==null?'Not recorded':`${layRate.toFixed(1)}%`}</p>
+          <p className="text-xs text-slate-500 mt-1">Based on saved laying-hen measurements</p>
         </div>
       </div>
 
+      <div className="rounded-xl border border-green-200 bg-green-50 p-4"><p className="text-sm font-semibold text-green-900">Available egg inventory: {eggStock.toLocaleString()} eggs</p><p className="mt-1 text-xs text-green-800">Recorded saleable production less egg sales.</p></div>
       {/* Production Chart */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
         <h3 className="font-bold text-slate-800 text-base mb-4">Daily Yield Trend</h3>

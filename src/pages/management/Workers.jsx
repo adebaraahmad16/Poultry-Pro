@@ -1,5 +1,6 @@
+import { Link } from 'react-router-dom';
 import React, { useState } from 'react';
-import { UserCheck, Plus, Trash2, Phone, Mail } from 'lucide-react';
+import { UserCheck, Plus, Trash2, Phone, Mail } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { workerService } from '../../services/managementService';
 import DataTable from '../../components/common/DataTable';
@@ -9,6 +10,7 @@ import Badge from '../../components/common/Badge';
 
 export default function Workers() {
   const { workers, refreshAllData } = useFarm();
+  const [limitError,setLimitError] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -20,16 +22,16 @@ export default function Workers() {
     assignedPen: 'House 1 & 2'
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    workerService.addWorker(form);
+    try { await workerService.addWorker(form); setLimitError(''); } catch(e) { setLimitError(e.message); return; }
     refreshAllData();
     setIsAddOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      workerService.deleteWorker(deletingId);
+      try { await workerService.deleteWorker(deletingId); } catch(e) { setLimitError(e.message); return; }
       refreshAllData();
       setDeletingId(null);
     }
@@ -54,6 +56,7 @@ export default function Workers() {
 
   return (
     <div className="space-y-6 pb-12">
+      {limitError && <p role="alert" className="p-3 rounded-lg bg-red-50 text-red-800">{limitError} <Link to="/settings/subscription" className="underline font-bold">Upgrade Plan</Link></p>}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
@@ -75,6 +78,7 @@ export default function Workers() {
       <DataTable columns={columns} data={workers} searchPlaceholder="Search workers..." emptyTitle="No workers found" />
 
       <Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title="Add Staff Member">
+        {limitError && <p role="alert" className="mb-3 text-red-700">{limitError} <Link to="/settings/subscription" className="underline">Upgrade Plan</Link></p>}
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Full Name</label>

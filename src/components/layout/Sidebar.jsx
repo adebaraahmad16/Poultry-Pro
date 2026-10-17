@@ -21,8 +21,9 @@ import {
   Settings,
   LogOut,
   ChevronRight
-} from 'lucide-react';
+} from '../common/Icons';
 import { useAuth } from '../../context/AuthContext';
+import { NotebookPen as DailyRecordsIcon } from '../common/Icons';
 
 export default function Sidebar({ className = "" }) {
   const { logout } = useAuth();
@@ -37,7 +38,8 @@ export default function Sidebar({ className = "" }) {
     {
       title: "Overview",
       items: [
-        { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard }
+        { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+        { name: "Daily Records", path: "/daily-records", icon: DailyRecordsIcon }
       ]
     },
     {
@@ -95,7 +97,7 @@ export default function Sidebar({ className = "" }) {
   ];
 
   return (
-    <aside className={`w-64 bg-slate-900 text-slate-300 flex flex-col h-screen border-r border-slate-800 ${className}`}>
+    <aside className={`w-64 bg-slate-900 text-slate-300 flex flex-col h-dvh border-r border-slate-800 ${className}`}>
       {/* Brand Logo */}
       <div className="p-5 flex items-center gap-3 border-b border-slate-800">
         <img 

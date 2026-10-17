@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, Trash2, Phone, Mail, MapPin } from 'lucide-react';
+import { Users, Plus, Trash2, Phone, Mail, MapPin } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { customerService } from '../../services/businessService';
 import DataTable from '../../components/common/DataTable';

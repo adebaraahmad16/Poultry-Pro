@@ -1,10 +1,27 @@
+import { usePlanCatalog } from '../../components/subscriptions/usePlanCatalog';
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Bird, Mail, Lock, User, Phone, Home, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Bird, Mail, Lock, User, Phone, Home, ArrowRight, ArrowLeft, Check, Sparkles } from '../../components/common/Icons';
 import { useAuth } from '../../context/AuthContext';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
+import { PLANS, PLAN_DETAILS } from '../../constants/plans';
+import { subscriptionService, createInitialSubscription } from '../../services/subscriptionService';
 
 export default function Register() {
+  const [searchParams] = useSearchParams();
+  const { plans, loading: plansLoading, error: plansError } = usePlanCatalog();
+  const planParam = searchParams.get('plan')?.toLowerCase();
+  const initialPlan = (planParam === 'starter' || planParam === 'basic')
+    ? (PLANS.BASIC || PLANS.STARTER)
+    : planParam === 'enterprise'
+    ? PLANS.ENTERPRISE
+    : PLANS.PROFESSIONAL;
+
+  const initialCycle = searchParams.get('cycle')?.toLowerCase() === 'annual' ? 'annual' : 'monthly';
+
+  const [selectedPlan, setSelectedPlan] = useState(initialPlan);
+  const [billingCycle, setBillingCycle] = useState(initialCycle);
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -17,7 +34,18 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const planInfo = PLAN_DETAILS[selectedPlan] || PLAN_DETAILS[PLANS.STARTER];
+  const maxAllowedTypes = planInfo.limits.maxPoultryTypes;
+
+  const handlePoultryTypesChange = (newTypes) => {
+    if (maxAllowedTypes !== Infinity && newTypes.length > maxAllowedTypes) {
+      alert(`The ${planInfo.name} plan supports up to ${maxAllowedTypes} poultry type${maxAllowedTypes > 1 ? 's' : ''}. Switch to ${selectedPlan === PLANS.STARTER ? 'Pro' : 'Enterprise'} to add more.`);
+      return;
+    }
+    setPoultryTypes(newTypes);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match");
@@ -27,13 +55,21 @@ export default function Register() {
       alert("Please select at least one poultry type.");
       return;
     }
-    register({ ...formData, poultryTypes });
-    navigate('/onboarding');
+    if (maxAllowedTypes !== Infinity && poultryTypes.length > maxAllowedTypes) {
+      alert(`Your selected ${planInfo.name} plan allows up to ${maxAllowedTypes} poultry type(s).`);
+      return;
+    }
+
+    try {
+      await register({ ...formData, poultryTypes, planId: selectedPlan, billingCycle });
+      navigate('/onboarding');
+    } catch(e) { alert(e.message); }
+
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-12">
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl max-w-lg w-full p-8">
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl max-w-2xl w-full p-6 sm:p-8">
         <div className="text-center">
           <Link to="/" title="Go to Landing Page" className="inline-block hover:scale-105 transition-transform">
             <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto mb-4 shadow-md shadow-emerald-600/25">
@@ -41,10 +77,102 @@ export default function Register() {
             </div>
           </Link>
           <h2 className="text-2xl font-extrabold text-slate-900">Create PoultryPro Account</h2>
-          <p className="mt-1 text-sm text-slate-500">Start digitizing your poultry farm operations today</p>
+          <p className="mt-1 text-sm text-slate-500">Includes 14-day unconditional free trial • No credit card required</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        {plansLoading && <p role="status">Loading available plans…</p>}
+        {plansError && <p role="alert" className="text-red-700">{plansError}</p>}
+        {/* Plan Selection Section */}
+        <div className="mt-6 p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">1. Select Your Subscription Plan</span>
+              <span className="text-[11px] text-slate-500">Your 14-day trial gives full access to your selected plan</span>
+            </div>
+            {/* Billing Cycle Toggle */}
+            <div className="inline-flex items-center p-0.5 bg-white border border-slate-200 rounded-lg text-xs self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                  billingCycle === 'monthly' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('annual')}
+                className={`px-2.5 py-1 rounded-md font-bold transition-all flex items-center gap-1 ${
+                  billingCycle === 'annual' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Annual</span>
+                <span className={`text-[10px] px-1 py-0.2 rounded font-extrabold ${billingCycle === 'annual' ? 'bg-white text-emerald-700' : 'bg-emerald-100 text-emerald-800'}`}>Annual</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {plans.filter(p => p.status === 'Active').map(raw => {
+              const planKey = raw.id.toUpperCase();
+              const p = PLAN_DETAILS[planKey];
+              const isSelected = selectedPlan === planKey;
+              const isPopular = planKey === PLANS.PROFESSIONAL;
+              const price = billingCycle === 'annual' ? p.annualPriceFormatted : p.priceFormatted;
+              const period = billingCycle === 'annual' ? '/yr' : '/mo';
+
+              return (
+                <div
+                  key={planKey}
+                  onClick={() => {
+                    setSelectedPlan(planKey);
+                    // trim poultry types if downgrading to starter/professional
+                    if (p.limits.maxPoultryTypes !== Infinity && poultryTypes.length > p.limits.maxPoultryTypes) {
+                      setPoultryTypes(poultryTypes.slice(0, p.limits.maxPoultryTypes));
+                    }
+                  }}
+                  className={`cursor-pointer p-3.5 rounded-xl border transition-all relative flex flex-col justify-between ${
+                    isSelected
+                      ? 'bg-white border-emerald-600 ring-2 ring-emerald-600/20 shadow-sm'
+                      : 'bg-white/80 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {isPopular && (
+                    <span className="absolute -top-2 right-2 px-2 py-0.5 bg-emerald-600 text-white font-extrabold text-[9px] rounded-full uppercase tracking-wider">
+                      Most Popular
+                    </span>
+                  )}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-black text-slate-900">{p.name}</span>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300'}`}>
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                    </div>
+                    <div className="mt-1">
+                      <span className="text-base font-extrabold text-slate-900">{price}</span>
+                      <span className="text-[11px] text-slate-500 font-medium">{period}</span>
+                    </div>
+                    <div className="mt-2 text-[11px] text-slate-600 space-y-0.5">
+                      <p className="font-semibold text-slate-800">• {p.limits.maxFlocks === Infinity ? 'Unlimited flocks' : `Up to ${p.limits.maxFlocks} flocks`}</p>
+                      <p>• {p.limits.maxBirds === Infinity ? 'Unlimited birds' : `Up to ${p.limits.maxBirds.toLocaleString()} birds`}</p>
+                      <p>• {p.limits.maxPoultryTypes === Infinity ? 'Unlimited types' : `${p.limits.maxPoultryTypes} poultry type`}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200/70">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>14-day free trial on <strong>{planInfo.name}</strong> will activate automatically upon registration.</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">2. Account & Farm Details</span>
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Full Name</label>
             <div className="relative">
@@ -138,7 +266,15 @@ export default function Register() {
           </div>
 
           <div className="pt-2">
-            <PoultryTypeSelect selected={poultryTypes} onChange={setPoultryTypes} columns="grid-cols-2 sm:grid-cols-3" />
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                Select Poultry Types
+              </span>
+              <span className="text-xs font-bold text-emerald-700">
+                Allowed on {planInfo.name}: {maxAllowedTypes === Infinity ? 'Unlimited' : `Up to ${maxAllowedTypes}`}
+              </span>
+            </div>
+            <PoultryTypeSelect selected={poultryTypes} onChange={handlePoultryTypesChange} columns="grid-cols-2 sm:grid-cols-3" />
           </div>
 
           <button

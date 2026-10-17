@@ -1,134 +1,18 @@
-export const PLANS = {
-  FREE: 'FREE',
-  BASIC: 'BASIC',
-  PRO: 'PRO',
-};
-
-export const PLAN_DETAILS = {
-  [PLANS.FREE]: {
-    id: PLANS.FREE,
-    name: 'Free',
-    badge: 'Free',
-    tagline: 'Ideal for smallholder backyard farmers',
-    priceNgn: 0,
-    priceFormatted: '₦0',
-    period: 'forever',
-    popular: false,
-    limits: {
-      maxFlocks: 2,
-      maxBirds: 500,
-      maxFarms: 1,
-      maxUsers: 1,
-      inventoryAccess: 'Limited',
-      reportsAccess: 'Basic',
-      analyticsAccess: 'Basic',
-      notificationsAccess: 'Basic',
-      pdfExport: false,
-      staffManagement: false,
-      multipleFarms: false,
-    },
-    features: [
-      '2 Flocks (Batch groups)',
-      'Up to 500 Birds',
-      '1 Farm & 1 User',
-      'Egg Production & Feed Tracking',
-      'Health Records & Mortality Tracking',
-      'Sales & Expense Logging',
-      'Basic Reports & Analytics',
-    ],
-    cta: 'Get Started Free',
-  },
-  [PLANS.BASIC]: {
-    id: PLANS.BASIC,
-    name: 'Basic',
-    badge: 'Basic',
-    tagline: 'Perfect for growing commercial poultry operations',
-    priceNgn: 5000,
-    priceFormatted: '₦5,000',
-    period: 'per month',
-    popular: true,
-    limits: {
-      maxFlocks: 10,
-      maxBirds: 5000,
-      maxFarms: 1,
-      maxUsers: 3,
-      inventoryAccess: 'Full',
-      reportsAccess: 'Advanced',
-      analyticsAccess: 'Full',
-      notificationsAccess: 'Full',
-      pdfExport: true,
-      staffManagement: true,
-      multipleFarms: false,
-    },
-    features: [
-      'Up to 10 Flocks (Batch groups)',
-      'Up to 5,000 Birds',
-      '1 Farm & Up to 3 Staff Users',
-      'Full Inventory Management',
-      'Advanced Profit & Loss Reports',
-      'PDF Export & Download',
-      'Staff Account Management',
-      'Full Health & Mortality Alerts',
-    ],
-    cta: 'Upgrade to Basic',
-  },
-  [PLANS.PRO]: {
-    id: PLANS.PRO,
-    name: 'Pro Enterprise',
-    badge: 'Pro',
-    tagline: 'For commercial farms & multi-site managers',
-    priceNgn: 15000,
-    priceFormatted: '₦15,000',
-    period: 'per month',
-    popular: false,
-    limits: {
-      maxFlocks: Infinity,
-      maxBirds: Infinity,
-      maxFarms: 3,
-      maxUsers: 10,
-      inventoryAccess: 'Full',
-      reportsAccess: 'Advanced',
-      analyticsAccess: 'Advanced',
-      notificationsAccess: 'Full',
-      pdfExport: true,
-      staffManagement: true,
-      multipleFarms: true,
-    },
-    features: [
-      'Unlimited Flocks & Birds',
-      'Up to 3 Multiple Farms',
-      'Up to 10 Staff Users & Roles',
-      'Full Inventory & Feed Automation',
-      'Advanced Analytics & Forecasts',
-      'PDF & CSV Exporters',
-      'Priority Vet & Support Line',
-    ],
-    cta: 'Upgrade to Pro',
-  },
-};
-
-export const FLOCK_DEFINITION = {
-  title: 'What is a Flock in PoultryPro?',
-  description:
-    'A flock is a distinct batch or group of birds managed together (e.g., Broiler Batch A — 500 birds, Layer Batch B — 750 birds), not individual single birds. On the Free plan, managing 2 flocks allows up to 500 total birds across both batches.',
-  examples: [
-    { label: 'Broiler Batch A', count: 250, type: 'Broiler' },
-    { label: 'Layer Batch B', count: 250, type: 'Layer' },
-  ],
-};
-
-export const FEATURE_COMPARISON_MATRIX = [
-  { feature: 'Flocks Limit', free: '2 flocks', basic: '10 flocks', pro: 'Unlimited' },
-  { feature: 'Bird Limit', free: 'Up to 500', basic: 'Up to 5,000', pro: 'Unlimited' },
-  { feature: 'Farms Limit', free: '1 Farm', basic: '1 Farm', pro: 'Up to 3 Farms' },
-  { feature: 'Users / Staff', free: '1 User', basic: '3 Users', pro: '10 Users' },
-  { feature: 'Egg Production', free: '✓', basic: '✓', pro: '✓' },
-  { feature: 'Feed Management', free: '✓', basic: '✓', pro: '✓' },
-  { feature: 'Health & Mortality', free: '✓', basic: '✓', pro: '✓' },
-  { feature: 'Sales & Expenses', free: '✓', basic: '✓', pro: '✓' },
-  { feature: 'Inventory Management', free: 'Limited', basic: '✓ Full', pro: '✓ Full' },
-  { feature: 'Reports & Analytics', free: 'Basic', basic: 'Advanced', pro: 'Advanced' },
-  { feature: 'PDF Export', free: '—', basic: '✓ Enabled', pro: '✓ Enabled' },
-  { feature: 'Staff Account Management', free: '—', basic: '✓ Enabled', pro: '✓ Enabled' },
-  { feature: 'Multiple Farms Management', free: '—', basic: '—', pro: '✓ Enabled' },
-];
+import { DEFAULT_PLANS, normalizePlanId, presentPlan } from '../../shared/subscriptionPlans.js';
+export const PLANS = { BASIC: 'BASIC', STARTER: 'BASIC', FREE: 'BASIC', PROFESSIONAL: 'PROFESSIONAL', ENTERPRISE: 'ENTERPRISE', PRO: 'ENTERPRISE' };
+export const PLAN_DETAILS = {};
+export function applyPlanCatalog(plans) {
+ for (const raw of plans) {
+  const p = presentPlan(raw,plans);
+  const limits = Object.fromEntries(['maxFlocks','maxBirds','maxPoultryTypes','maxUsers','maxFarms'].map(k => [k, p[k] ?? Infinity]));
+  Object.assign(limits, p.capabilities, { pdfExport: p.capabilities.dataExport, reportsAccess: p.id === 'basic' ? 'Basic' : 'Advanced', analyticsAccess: p.id === 'basic' ? 'Basic' : 'Full', inventoryAccess: 'Full', notificationsAccess: 'Full' });
+  const detail = { ...p, id: p.id.toUpperCase(), limits, priceNgn: p.monthlyPrice, annualPriceNgn: p.annualPrice, priceFormatted: `₦${p.monthlyPrice.toLocaleString()}`, annualPriceFormatted: `₦${p.annualPrice.toLocaleString()}`, popular: p.isMostPopular, badge: p.name, tagline: p.description };
+  PLAN_DETAILS[p.id] = detail; PLAN_DETAILS[p.id.toUpperCase()] = detail;
+ }
+ for (const alias of ['STARTER','FREE','starter','free']) PLAN_DETAILS[alias] = PLAN_DETAILS.BASIC;
+ PLAN_DETAILS.PRO = PLAN_DETAILS.ENTERPRISE;
+}
+applyPlanCatalog(DEFAULT_PLANS);
+export const getAllPlans = () => ['basic','professional','enterprise'].map(id => PLAN_DETAILS[id]);
+export const getPlanLimits = id => (PLAN_DETAILS[normalizePlanId(id)] || PLAN_DETAILS.BASIC).limits;
+export const isFeatureAllowed = (id, key) => Boolean(getPlanLimits(id)[key]);

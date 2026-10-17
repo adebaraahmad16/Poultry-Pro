@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { DollarSign, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { DollarSign, Plus, Trash2 } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { salesService } from '../../services/businessService';
 import DataTable from '../../components/common/DataTable';
@@ -8,6 +9,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
 
 export default function Sales() {
+  const navigate = useNavigate();
   const { sales, customers, flocks, refreshAllData } = useFarm();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -89,11 +91,11 @@ export default function Sales() {
             <DollarSign className="w-6 h-6 text-emerald-600" />
             Sales & Revenue Management
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">Record sales of eggs, live broilers, spent layers, and poultry manure.</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Record product sales and payments for the selected poultry type.</p>
         </div>
 
         <button
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => navigate('/daily-records?category=sales')}
           className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckSquare, Plus, Trash2, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckSquare, Plus, Trash2, Clock, CheckCircle2, AlertCircle } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { taskService } from '../../services/managementService';
 import Modal from '../../components/common/Modal';

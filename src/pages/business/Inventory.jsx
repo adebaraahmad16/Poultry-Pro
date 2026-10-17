@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Plus, Trash2 } from 'lucide-react';
+import { Package, Plus, Trash2 } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 import { inventoryService } from '../../services/businessService';
 import DataTable from '../../components/common/DataTable';

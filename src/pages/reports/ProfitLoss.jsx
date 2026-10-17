@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChart, TrendingUp, TrendingDown, DollarSign, Receipt, BarChart2 } from 'lucide-react';
+import { PieChart, TrendingUp, TrendingDown, DollarSign, Receipt, BarChart2 } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
 
 export default function ProfitLoss() {

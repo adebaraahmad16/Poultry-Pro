@@ -1,4 +1,5 @@
 import React from 'react';
+import ChartEmptyState from './ChartEmptyState';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 export default function MortalityChart({ mortality }) {
@@ -13,11 +14,13 @@ export default function MortalityChart({ mortality }) {
     const count = mortality
       .filter((m) => m.date === date)
       .reduce((sum, m) => sum + (Number(m.count) || 0), 0);
-    return { date: date.split('-').slice(1).join('/'), Deaths: count };
+    return { date: date.split('-').slice(1).join('/'), Deaths: mortality.some(m=>m.date===date)?count:null };
   });
 
+  if (!chartData.some(day => day.Deaths !== null)) return <ChartEmptyState>No mortality records in the last 7 days.</ChartEmptyState>;
+
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-52 sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />

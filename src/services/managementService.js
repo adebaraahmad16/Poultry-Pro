@@ -1,28 +1,14 @@
+import { request, authHeaders, checkedFetch } from './planCatalog';
 import { getItem, setItem, KEYS } from './storageService';
 import { API_BASE_URL } from './apiConfig';
 
 export const workerService = {
-  getWorkers: () => getItem(KEYS.WORKERS, []),
-
-  addWorker: (worker) => {
-    const workers = getItem(KEYS.WORKERS, []);
-    const newWorker = {
-      ...worker,
-      id: `wrk-${Date.now()}`,
-      status: 'Active',
-      startDate: worker.startDate || new Date().toISOString().split('T')[0]
-    };
-    const updated = [newWorker, ...workers];
-    setItem(KEYS.WORKERS, updated);
-    return newWorker;
-  },
-
-  deleteWorker: (id) => {
-    const workers = getItem(KEYS.WORKERS, []);
-    const updated = workers.filter((w) => w.id !== id);
-    setItem(KEYS.WORKERS, updated);
-    return true;
-  }
+ getWorkers: async () => {
+  try {const workers = await request('/workers'); setItem(KEYS.WORKERS,workers); return workers;}
+  catch(e) { console.warn(e.message); return getItem(KEYS.WORKERS,[]); }
+ },
+ addWorker: async worker => { const saved = await request('/workers',{method:'POST',body:JSON.stringify(worker)}); setItem(KEYS.WORKERS,[saved,...getItem(KEYS.WORKERS,[])]); return saved; },
+ deleteWorker: async id => { await request(`/workers/${id}`,{method:'DELETE'}); setItem(KEYS.WORKERS,getItem(KEYS.WORKERS,[]).filter(w => w.id !== id)); }
 };
 
 export const taskService = {
@@ -79,7 +65,7 @@ export const farmProfileService = {
   getFarm: () => getItem(KEYS.FARM, {}),
   fetchFarm: async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/farm`);
+      const res = await checkedFetch(`${API_BASE_URL}/farm`,{headers:authHeaders()});
       if (res.ok) {
         const data = await res.json();
         if (data && data.name) {
@@ -96,7 +82,8 @@ export const farmProfileService = {
   },
   getUser: () => getItem(KEYS.USER, {}),
 
-  updateFarm: (data) => {
+  updateFarm: async (data) => {
+    await request('/farm',{method:'PUT',body:JSON.stringify({...getItem(KEYS.FARM,{}),...data})});
     const current = getItem(KEYS.FARM, {});
     const updated = { ...current, ...data };
     setItem(KEYS.FARM, updated);
