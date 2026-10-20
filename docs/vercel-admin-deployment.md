@@ -20,7 +20,7 @@ The failing resource is the initial page document, before React executes. No `ve
 
 In the existing Vercel project, set **Settings > Environment Variables > `VITE_API_BASE_URL`** to the actual HTTPS backend API URL, including `/api`. Apply it to Production and to Preview if preview deployments should connect to that backend. `VITE_BACKEND_URL` remains a supported legacy alias, but `VITE_API_BASE_URL` takes precedence. Never use localhost in a deployed frontend. Vite embeds these values at build time, so changing the variable requires a new deployment.
 
-No real production backend URL is present in the repository or deployed bundle. Do not substitute an invented hostname. If using `/api` on the same origin instead, first provision the real backend/proxy; this repository does not host Express as a Vercel function.
+For current API configuration and the environment-variable mismatch diagnosis, see [frontend API configuration](frontend-api-configuration.md). The frontend requires the actual separate backend HTTPS URL; relative `/api` is rejected because this project does not provision a backend proxy. The old local configuration contained a backend hostname whose live deployment has not been verified.
 
 Backend-only environment variables remain on the backend host: `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, and the existing database/payment settings. Do not expose them as `VITE_*` variables. Deploy the backend update containing `GET /api/auth/admin/session` before the updated frontend. The endpoint verifies the signed JWT and admin role, returns no-store session metadata, and rejects farmer/invalid/expired tokens.
 

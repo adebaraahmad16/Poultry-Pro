@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { apiConfigurationError, normalizeApiBaseUrl } from '../apiConfig.js';
+import { apiConfigurationError, normalizeApiBaseUrl, configuredApiBase } from '../apiConfig.js';
 const origin = 'https://poultry-pro-pi.vercel.app';
-for (const bad of [undefined, '', 'http://localhost:5000/api', 'https://127.0.0.1/api', 'http://backend.example.test/api', 'https://[invalid']) {
+for (const bad of [undefined, '', ' ', '/api', 'backend.example.test', '//backend.example.test', 'https://localhost/api', 'https://127.1/api', 'https://127.0.0.2/api', 'https://[::1]/api', 'https://dev.localhost/api', 'https://0.0.0.0/api', 'http://localhost:5000/api', 'https://127.0.0.1/api', 'http://backend.example.test/api', 'https://[invalid', 'https://user:password@backend.example.test/api', 'https://backend.example.test?token=abc', 'https://backend.example.test/#api']) {
   assert.match(apiConfigurationError(bad,true,origin), /VITE_API_BASE_URL/);
 }
 assert.equal(apiConfigurationError('https://backend.example.test/api',true,origin),'');
 assert.equal(apiConfigurationError('https://backend.example.test',true,origin),'');
-assert.equal(apiConfigurationError('/api',true,origin),'');
+assert.match(apiConfigurationError('/api',true,''), /VITE_API_BASE_URL/);
 assert.equal(apiConfigurationError('http://localhost:5000/api',true,'http://localhost:4173'),'');
 assert.equal(apiConfigurationError(undefined,false,origin),'');
+assert.equal(configuredApiBase({VITE_API_URL:' https://legacy.example.test '}),'https://legacy.example.test');
+assert.equal(configuredApiBase({VITE_API_BASE_URL:' ',VITE_BACKEND_URL:'https://backend.example.test'}),'https://backend.example.test');
+assert.equal(configuredApiBase({VITE_API_BASE_URL:'https://canonical.example.test',VITE_BACKEND_URL:'https://old.example.test',VITE_API_URL:'https://legacy.example.test'}),'https://canonical.example.test');
+assert.equal(configuredApiBase({VITE_API_BASE_URL:'http://localhost',VITE_API_URL:'https://legacy.example.test'}),'http://localhost');
 
 // Verify /api is never duplicated or missing
 assert.equal(normalizeApiBaseUrl('https://example.com'), 'https://example.com/api');
