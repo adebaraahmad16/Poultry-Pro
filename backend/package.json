@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "start:render": "node scripts/start-render.mjs",
+    "dev": "node --watch server.js",
     "db:check": "node scripts/check-database.mjs",
     "seed": "node scripts/seed_db.js"
   },
