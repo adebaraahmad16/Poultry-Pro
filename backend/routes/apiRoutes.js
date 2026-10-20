@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { requireSession } from './subscriptionRoutes.js';
-import { normalizePlanId } from '../../shared/subscriptionPlans.js';
+import { normalizePlanId } from '../shared/subscriptionPlans.js';
 import { initializeSubscriptions, readSubscription, readPlans, assertSubscriptionActive, assertUsage } from '../services/subscriptions.js';
 import express from 'express';
 import pool from '../config/db.js';
-import { validDate, localDate } from '../../shared/dailyRecords.js';
-import { POULTRY_SCOPES, poultryTypeId } from '../../shared/poultryScope.js';
+import { validDate, localDate } from '../shared/dailyRecords.js';
+import { POULTRY_SCOPES, poultryTypeId } from '../shared/poultryScope.js';
 import { initializeDailyRecords, mutateRecord, formatDaily, readRecords } from '../services/dailyRecords.js';
 
 const router = express.Router();

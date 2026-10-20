@@ -2,8 +2,8 @@ import express from 'express';
 import pool from '../config/db.js';
 import { requireSession } from './subscriptionRoutes.js';
 import { initializeDailyRecords, availableFarms, authorizeFarm, planFor, readRecords, mutateRecord } from '../services/dailyRecords.js';
-import { recordSummary, CATEGORIES } from '../../shared/dailyRecords.js';
-import { poultryTypeId } from '../../shared/poultryScope.js';
+import { recordSummary, CATEGORIES } from '../shared/dailyRecords.js';
+import { poultryTypeId } from '../shared/poultryScope.js';
 
 const router=express.Router();
 router.use(requireSession);

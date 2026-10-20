@@ -1,5 +1,5 @@
 import pool from '../config/db.js';
-import { DEFAULT_PLANS, normalizePlanId, presentPlan, validatePlan } from '../../shared/subscriptionPlans.js';
+import { DEFAULT_PLANS, normalizePlanId, presentPlan, validatePlan } from '../shared/subscriptionPlans.js';
 let ready;
 export function initializeSubscriptions() {
  if (!ready) ready = (async () => {

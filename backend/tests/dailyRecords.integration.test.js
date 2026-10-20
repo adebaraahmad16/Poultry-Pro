@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import express from 'express';
 import cors from 'cors';
-import { localDate, completion, birdsOnDate, receivedInPeriod } from '../../shared/dailyRecords.js';
+import { localDate, completion, birdsOnDate, receivedInPeriod } from '../shared/dailyRecords.js';
 
 const schema=`poultrypro_daily_test_${randomUUID().replaceAll('-','')}`;
 assert.match(schema,/^poultrypro_daily_test_[a-f0-9]{32}$/);

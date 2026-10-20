@@ -1,4 +1,4 @@
-﻿// Explicit operator migration for accounts that previously existed only in browser storage.
+// Explicit operator migration for accounts that previously existed only in browser storage.
 // Usage: node scripts/import_legacy_subscriptions.js path/to/reviewed-records.json
 // Never reads browser storage, overwrites subscriptions, resets trials, or deletes records.
 import 'dotenv/config';
@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import pool from '../config/db.js';
 import { initializeSubscriptions } from '../services/subscriptions.js';
-import { normalizePlanId, DEFAULT_PLANS } from '../../shared/subscriptionPlans.js';
+import { normalizePlanId, DEFAULT_PLANS } from '../shared/subscriptionPlans.js';
 const file = process.argv[2];
 if (!file) throw new Error('Supply a reviewed JSON file containing an array of {user, farm, subscription} records');
 try {

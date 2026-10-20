@@ -1,8 +1,8 @@
 import { randomUUID, createHash } from 'node:crypto';
 import pool from '../config/db.js';
-import { validateRecord, eggEligible, birdDelta, paymentsFor, validDate } from '../../shared/dailyRecords.js';
+import { validateRecord, eggEligible, birdDelta, paymentsFor, validDate } from '../shared/dailyRecords.js';
 import { readPlans, readSubscription, assertSubscriptionActive, initializeSubscriptions } from './subscriptions.js';
-import { poultryTypeId, POULTRY_SCOPES } from '../../shared/poultryScope.js';
+import { poultryTypeId, POULTRY_SCOPES } from '../shared/poultryScope.js';
 
 let initialized;
 export function initializeDailyRecords() {
