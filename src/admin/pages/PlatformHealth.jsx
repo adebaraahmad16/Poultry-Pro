@@ -67,9 +67,12 @@ export default function PlatformHealth() {
     const updated = [...endpointStatuses];
     for (let i = 0; i < updated.length; i++) {
       const ep = updated[i];
-      const start = performance.now();
       try {
-        const res = await fetch(`${window.location.origin.replace(window.location.port, '5000')}${ep.path}`, {
+        const start = performance.now();
+        const endpointUrl = ep.path.startsWith('/api')
+          ? `${API_BASE_URL}${ep.path.slice(4)}`
+          : `${API_BASE_URL.replace(/\/api$/, '')}${ep.path}`;
+        const res = await fetch(endpointUrl, {
           method: ep.method === 'GET' ? 'GET' : 'GET' // only safe GET for diagnostic
         });
         updated[i] = { ...ep, latency: Math.round(performance.now() - start), tested: true, status: res.ok ? 'ok' : 'warn' };

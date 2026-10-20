@@ -56,9 +56,18 @@ export default app;
 
 // Start the server for local development only
 if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(
       `🚀 PoultryPro Express Backend running on http://localhost:${PORT}`
     );
+  });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `⚠️ Port ${PORT} is already in use. Another backend instance is already running.`
+      );
+    } else {
+      console.error('Server error:', err);
+    }
   });
 }

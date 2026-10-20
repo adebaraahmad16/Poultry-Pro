@@ -12,10 +12,17 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'poultrypro_db',
-  ...(process.env.DB_SSL === 'true' ? {ssl: {
-    rejectUnauthorized: true,
-    ...(process.env.DB_SSL_CA ? {ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n')} : {})
-  }} : {}),
+  ...((() => {
+    const sslVal = String(process.env.DB_SSL || '').toLowerCase();
+    const isSsl = Boolean(sslVal && !['false', '0', 'none', 'off'].includes(sslVal));
+    if (!isSsl) return {};
+    return {
+      ssl: {
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true',
+        ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n') } : {})
+      }
+    };
+  })()),
   connectTimeout: 10000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
