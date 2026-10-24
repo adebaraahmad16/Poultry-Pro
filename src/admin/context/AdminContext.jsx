@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { adminService, initializeAdminStorage } from '../services/adminService';
 import { initialAdminUsers } from '../services/adminMockData';
 import { subscriptionService } from '../../services/subscriptionService';
+import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient.js';
 
 /**
  * Normalises a farmer's subscription field to one of the three canonical plan IDs:
@@ -79,7 +80,6 @@ export const AdminProvider = ({ children }) => {
     setLoading(true);
     setAuthError('');
     setDataError('');
-    const token = localStorage.getItem('poultrypro_admin_token');
     try {
       initializeAdminStorage();
       setFarms(adminService.getFarms());
@@ -92,39 +92,143 @@ export const AdminProvider = ({ children }) => {
       setPlatformSettings(adminService.getSettings());
       setCmsContent(adminService.getCmsContent());
       setSubscriptionSettings(adminService.getSubscriptionSettings());
-      if (!token || !isBackendConfigured()) {
-        // Public registration and pricing also consume the shared server catalog.
-        refreshCatalog().then(setSubscriptionPlans).catch(console.error);
-        setCurrentAdmin(null);
-        setIsAdminLoggedIn(false);
+
+      // Always refresh the plan catalog (uses defaults when Supabase unconfigured)
+      refreshCatalog().then(setSubscriptionPlans).catch(console.error);
+
+      // Load farmers from Supabase if configured
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          // Check if the current user is an admin via Supabase auth
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            // Verify admin role from profiles table
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role, full_name, email')
+              .eq('id', session.user.id)
+              .single();
+
+            if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+              const superAdmin = initialAdminUsers[0];
+              const adminObj = {
+                ...superAdmin,
+                email: profile.email || superAdmin.email,
+                name: profile.full_name || superAdmin.name,
+                lastLogin: new Date().toLocaleString(),
+              };
+              adminService.setCurrentAdmin(adminObj);
+              setCurrentAdmin(adminObj);
+              setIsAdminLoggedIn(true);
+
+              // Load farmers from profiles table
+              const { data: farmersData, error: farmersError } = await supabase
+                .from('profiles')
+                .select(`
+                  id, full_name, email, phone, role, created_at, farm_id,
+                  farms (id, name, location, poultry_types),
+                  farm_subscriptions (plan_id, status, billing_cycle, trial_ends_at, current_period_end, auto_renew)
+                `)
+                .eq('role', 'farmer')
+                .order('created_at', { ascending: false });
+
+              if (!farmersError && Array.isArray(farmersData)) {
+                const mapped = farmersData.map(f => {
+                  const farm = Array.isArray(f.farms) ? f.farms[0] : f.farms;
+                  const sub = Array.isArray(f.farm_subscriptions) ? f.farm_subscriptions[0] : f.farm_subscriptions;
+                  const planId = (sub?.plan_id || 'basic').toUpperCase();
+                  const subStatus = sub?.status || 'trial';
+                  return {
+                    id: f.id,
+                    fullName: f.full_name,
+                    email: f.email,
+                    phone: f.phone,
+                    status: 'Active',
+                    dateJoined: f.created_at?.split('T')[0] || '',
+                    farmId: f.farm_id || farm?.id,
+                    farmName: farm?.name || 'My Farm',
+                    location: farm?.location || '',
+                    poultryTypes: farm?.poultry_types || [],
+                    planId,
+                    subscription: planId,
+                    subscriptionStatus: subStatus === 'trial' ? 'Trial' : subStatus === 'active' ? 'Active' : subStatus === 'expired' ? 'Expired' : 'Trial',
+                    billingCycle: sub?.billing_cycle || 'monthly',
+                    subscriptionData: sub ? {
+                      planId,
+                      status: subStatus,
+                      trialEndsAt: sub.trial_ends_at,
+                      renewalDate: sub.current_period_end,
+                      autoRenew: sub.auto_renew,
+                    } : null,
+                  };
+                });
+                setFarmers(mapped);
+              }
+            } else {
+              // Not an admin — clear admin state
+              setCurrentAdmin(null);
+              setIsAdminLoggedIn(false);
+              setFarmers([]);
+            }
+          } else {
+            // No session
+            const cachedAdmin = adminService.getCurrentAdmin();
+            if (cachedAdmin) {
+              setCurrentAdmin(cachedAdmin);
+              setIsAdminLoggedIn(true);
+            } else {
+              setCurrentAdmin(null);
+              setIsAdminLoggedIn(false);
+            }
+            setFarmers([]);
+          }
+        } catch (supaErr) {
+          console.warn('Supabase admin data load error:', supaErr.message);
+          setDataError('Could not load farmer data from Supabase.');
+          setFarmers([]);
+        }
+      } else if (!isBackendConfigured()) {
+        // Neither Supabase nor backend configured — no farmer data
+        const cachedAdmin = adminService.getCurrentAdmin();
+        if (cachedAdmin) {
+          setCurrentAdmin(cachedAdmin);
+          setIsAdminLoggedIn(true);
+        }
         setFarmers([]);
-        return;
+      } else {
+        // Legacy: Express backend fallback
+        const token = localStorage.getItem('poultrypro_admin_token');
+        if (!token) {
+          setCurrentAdmin(null);
+          setIsAdminLoggedIn(false);
+          setFarmers([]);
+        } else {
+          try {
+            const { admin } = await request('/auth/admin/session', { headers: { Authorization: `Bearer ${token}` } });
+            if (localStorage.getItem('poultrypro_admin_token') !== token) return;
+            const profile = { ...adminService.getCurrentAdmin(), id: admin.id, email: admin.email, role: 'Super Admin' };
+            setCurrentAdmin(profile);
+            setIsAdminLoggedIn(true);
+            const results = await Promise.allSettled([
+              request('/subscription/subscribers', { headers: { Authorization: `Bearer ${token}` } }),
+            ]);
+            if (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) setFarmers(results[0].value);
+            else setFarmers([]);
+          } catch (error) {
+            if ([401, 403].includes(error.status)) {
+              localStorage.removeItem('poultrypro_admin_token');
+              adminService.clearCurrentAdmin();
+            }
+            setCurrentAdmin(null);
+            setIsAdminLoggedIn(false);
+            setFarmers([]);
+          }
+        }
       }
-      // Cached profile data never grants access: verify the signed server session.
-      const { admin } = await request('/auth/admin/session', {headers:{Authorization:`Bearer ${token}`}});
-      if (localStorage.getItem('poultrypro_admin_token') !== token) return;
-      const profile = {...adminService.getCurrentAdmin(), id:admin.id, email:admin.email, role:'Super Admin'};
-      setCurrentAdmin(profile);
-      setIsAdminLoggedIn(true);
-      const results = await Promise.allSettled([
-        request('/subscription/subscribers', {headers:{Authorization:`Bearer ${token}`}}),
-        refreshCatalog()
-      ]);
-      if (localStorage.getItem('poultrypro_admin_token') !== token) return;
-      if (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) setFarmers(results[0].value);
-      else setFarmers([]);
-      if (results[1].status === 'fulfilled') setSubscriptionPlans(results[1].value);
-      const failed = results.find(result => result.status === 'rejected');
-      if (failed) setDataError(failed.reason.message || 'Admin data could not be loaded. Please retry.');
-      else if (!Array.isArray(results[0].value)) setDataError('The backend returned an invalid farmer list. Please retry.');
     } catch (error) {
-      if (localStorage.getItem('poultrypro_admin_token') !== token) return;
       setCurrentAdmin(null);
       setIsAdminLoggedIn(false);
-      if ([401,403].includes(error.status)) {
-        localStorage.removeItem('poultrypro_admin_token');
-        adminService.clearCurrentAdmin();
-      } else setAuthError(error.message || 'Unable to verify administrator access. Please retry.');
+      setAuthError(error.message || 'Unable to verify administrator access. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -151,8 +255,41 @@ export const AdminProvider = ({ children }) => {
 
   // Auth Actions
   const loginAdmin = async (email, password) => {
-    const result = await request('/auth/admin/login',{method:'POST',body:JSON.stringify({email,password})});
-    localStorage.setItem('poultrypro_admin_token',result.token);
+    if (isSupabaseConfigured() && supabase) {
+      // Use Supabase for admin login
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+
+      // Verify this user has admin role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, full_name, email')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+        await supabase.auth.signOut();
+        throw new Error('Access denied. This account does not have admin privileges.');
+      }
+
+      const superAdmin = initialAdminUsers[0];
+      const adminObj = {
+        ...superAdmin,
+        email: email || superAdmin.email,
+        name: profile.full_name || superAdmin.name,
+        lastLogin: new Date().toLocaleString(),
+      };
+      adminService.setCurrentAdmin(adminObj);
+      setCurrentAdmin(adminObj);
+      setIsAdminLoggedIn(true);
+      await refreshAllAdminData();
+      adminService.logAction('Super Admin Signed In', `${adminObj.name} logged into Admin Panel`);
+      return true;
+    }
+
+    // Legacy Express backend fallback
+    const result = await request('/auth/admin/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    localStorage.setItem('poultrypro_admin_token', result.token);
 
     const superAdmin = initialAdminUsers[0];
     const adminObj = {
@@ -160,7 +297,6 @@ export const AdminProvider = ({ children }) => {
       email: email || superAdmin.email,
       lastLogin: new Date().toLocaleString()
     };
-
     adminService.setCurrentAdmin(adminObj);
     setCurrentAdmin(adminObj);
     setIsAdminLoggedIn(true);
@@ -276,9 +412,40 @@ export const AdminProvider = ({ children }) => {
   };
 
   const updateFarmerSubscription = async (farmerId, action, data = {}) => {
-    const headers = {Authorization:`Bearer ${localStorage.getItem('poultrypro_admin_token') || ''}`};
-    await request(`/subscription/subscribers/${farmerId}`,{method:'PATCH',headers,body:JSON.stringify({action,data})});
-    setFarmers(await request('/subscription/subscribers',{headers}));
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        if (action === 'extendTrial') {
+          const days = data.days || 14;
+          const newTrialEnd = new Date(Date.now() + days * 86400000).toISOString();
+          await supabase
+            .from('farm_subscriptions')
+            .update({ trial_ends_at: newTrialEnd, status: 'trial' })
+            .eq('user_id', farmerId);
+        } else if (action === 'changePlan') {
+          await supabase
+            .from('farm_subscriptions')
+            .update({ plan_id: (data.planId || 'BASIC').toLowerCase(), status: 'active' })
+            .eq('user_id', farmerId);
+        } else if (action === 'cancel') {
+          await supabase
+            .from('farm_subscriptions')
+            .update({ status: 'cancelled' })
+            .eq('user_id', farmerId);
+        }
+        await refreshAllAdminData();
+        return;
+      } catch (err) {
+        console.warn('Supabase updateFarmerSubscription error:', err);
+      }
+    }
+
+    const headers = { Authorization: `Bearer ${localStorage.getItem('poultrypro_admin_token') || ''}` };
+    try {
+      await request(`/subscription/subscribers/${farmerId}`, { method: 'PATCH', headers, body: JSON.stringify({ action, data }) });
+      setFarmers(await request('/subscription/subscribers', { headers }));
+    } catch (err) {
+      console.warn('Backend updateFarmerSubscription error:', err);
+    }
   };
 
   // ─── Real Aggregated Platform Statistics ─────────────────────────────────

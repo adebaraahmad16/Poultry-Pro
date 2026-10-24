@@ -1,201 +1,78 @@
-import { checkedFetch } from './planCatalog';
+/**
+ * healthService — mortality, vaccinations, medications.
+ * Delegates mutations to Supabase with localStorage fallback.
+ */
 import { getItem, setItem, KEYS } from './storageService';
 import { flockService } from './flockService';
-import { API_BASE_URL } from './apiConfig';
+import { mortalityMutations, vaccinationMutations, medicationMutations } from './supabase/mutationService.js';
+import { getSelectedFarmId } from './farmScope.js';
 
 export const healthService = {
   // Mortality
-  getMortalityRecords: async () => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/mortality`);
-      if (res.ok) {
-        const data = await res.json();
-        setItem(KEYS.MORTALITY, data);
-        return data;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, using local mortality records:', err);
-    }
-    return getItem(KEYS.MORTALITY, []);
-  },
-  
-  recordMortality: async (data) => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/mortality`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (res.ok) {
-        const newRecord = await res.json();
-        const records = getItem(KEYS.MORTALITY, []);
-        setItem(KEYS.MORTALITY, [newRecord, ...records]);
-        flockService.recordMortality(data.flockId, data.count);
-        return newRecord;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, saving mortality locally:', err);
-    }
+  getMortalityRecords: () => getItem(KEYS.MORTALITY, []),
 
-    const records = getItem(KEYS.MORTALITY, []);
-    const newRecord = {
+  recordMortality: async (data) => {
+    const farmId = getSelectedFarmId();
+    const record = await mortalityMutations.create(farmId, {
       ...data,
-      id: `mort-${Date.now()}`,
       count: Number(data.count),
-      date: data.date || new Date().toISOString().split('T')[0]
-    };
-    const updated = [newRecord, ...records];
-    setItem(KEYS.MORTALITY, updated);
-    
+      date: data.date || new Date().toISOString().split('T')[0],
+    });
     // Deduct birds from target flock
     flockService.recordMortality(data.flockId, data.count);
-    return newRecord;
+    return record;
+  },
+
+  updateMortalityRecord: async (id, data) => {
+    const farmId = getSelectedFarmId();
+    return mortalityMutations.update(farmId, id, data);
   },
 
   deleteMortalityRecord: async (id) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/mortality/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error:', err);
-    }
-    const records = getItem(KEYS.MORTALITY, []);
-    const updated = records.filter((r) => r.id !== id);
-    setItem(KEYS.MORTALITY, updated);
-    return true;
+    const farmId = getSelectedFarmId();
+    return mortalityMutations.delete(farmId, id);
   },
 
   // Vaccinations
-  getVaccinations: async () => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/vaccinations`);
-      if (res.ok) {
-        const data = await res.json();
-        setItem(KEYS.VACCINATIONS, data);
-        return data;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, using local vaccinations:', err);
-    }
-    return getItem(KEYS.VACCINATIONS, []);
-  },
+  getVaccinations: () => getItem(KEYS.VACCINATIONS, []),
 
   addVaccination: async (vac) => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/vaccinations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vac)
-      });
-      if (res.ok) {
-        const newVac = await res.json();
-        const vacs = getItem(KEYS.VACCINATIONS, []);
-        setItem(KEYS.VACCINATIONS, [newVac, ...vacs]);
-        return newVac;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, saving vaccination locally:', err);
-    }
+    const farmId = getSelectedFarmId();
+    return vaccinationMutations.create(farmId, { ...vac, status: vac.status || 'Upcoming' });
+  },
 
-    const vacs = getItem(KEYS.VACCINATIONS, []);
-    const newVac = {
-      ...vac,
-      id: `vac-${Date.now()}`,
-      status: vac.status || 'Upcoming'
-    };
-    const updated = [newVac, ...vacs];
-    setItem(KEYS.VACCINATIONS, updated);
-    return newVac;
+  updateVaccination: async (id, vac) => {
+    const farmId = getSelectedFarmId();
+    return vaccinationMutations.update(farmId, id, vac);
   },
 
   updateVaccinationStatus: async (id, status) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/vaccinations/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error updating vaccination status:', err);
-    }
+    const farmId = getSelectedFarmId();
     const vacs = getItem(KEYS.VACCINATIONS, []);
-    const updated = vacs.map((v) => (v.id === id ? { ...v, status } : v));
-    setItem(KEYS.VACCINATIONS, updated);
+    const existing = vacs.find(v => v.id === id);
+    if (existing) return vaccinationMutations.update(farmId, id, { ...existing, status });
   },
 
   deleteVaccination: async (id) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/vaccinations/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error:', err);
-    }
-    const vacs = getItem(KEYS.VACCINATIONS, []);
-    const updated = vacs.filter((v) => v.id !== id);
-    setItem(KEYS.VACCINATIONS, updated);
-    return true;
+    const farmId = getSelectedFarmId();
+    return vaccinationMutations.delete(farmId, id);
   },
 
   // Medications
-  getMedications: async () => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/medications`);
-      if (res.ok) {
-        const data = await res.json();
-        setItem(KEYS.MEDICATIONS, data);
-        return data;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, using local medications:', err);
-    }
-    return getItem(KEYS.MEDICATIONS, []);
-  },
+  getMedications: () => getItem(KEYS.MEDICATIONS, []),
 
   addMedication: async (med) => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/medications`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(med)
-      });
-      if (res.ok) {
-        const newMed = await res.json();
-        const meds = getItem(KEYS.MEDICATIONS, []);
-        setItem(KEYS.MEDICATIONS, [newMed, ...meds]);
-        return newMed;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, saving medication locally:', err);
-    }
+    const farmId = getSelectedFarmId();
+    return medicationMutations.create(farmId, { ...med, cost: Number(med.cost || 0) });
+  },
 
-    const meds = getItem(KEYS.MEDICATIONS, []);
-    const newMed = {
-      ...med,
-      id: `med-${Date.now()}`,
-      cost: Number(med.cost || 0)
-    };
-    const updated = [newMed, ...meds];
-    setItem(KEYS.MEDICATIONS, updated);
-    return newMed;
+  updateMedication: async (id, med) => {
+    const farmId = getSelectedFarmId();
+    return medicationMutations.update(farmId, id, med);
   },
 
   deleteMedication: async (id) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/medications/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error:', err);
-    }
-    const meds = getItem(KEYS.MEDICATIONS, []);
-    const updated = meds.filter((m) => m.id !== id);
-    setItem(KEYS.MEDICATIONS, updated);
-    return true;
-  }
+    const farmId = getSelectedFarmId();
+    return medicationMutations.delete(farmId, id);
+  },
 };

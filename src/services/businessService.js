@@ -1,206 +1,65 @@
-import { checkedFetch } from './planCatalog';
+/**
+ * businessService — sales, customers, expenses, inventory.
+ * Delegates mutations to Supabase with localStorage fallback.
+ */
 import { getItem, setItem, KEYS } from './storageService';
-import { API_BASE_URL } from './apiConfig';
+import { saleMutations, customerMutations, expenseMutations } from './supabase/mutationService.js';
+import { getSelectedFarmId } from './farmScope.js';
 
 export const salesService = {
-  getSales: async () => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/sales`);
-      if (res.ok) {
-        const data = await res.json();
-        setItem(KEYS.SALES, data);
-        return data;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, loading sales locally:', err);
-    }
-    return getItem(KEYS.SALES, []);
-  },
+  getSales: () => getItem(KEYS.SALES, []),
 
   createSale: async (sale) => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/sales`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sale)
-      });
-      if (res.ok) {
-        const newSale = await res.json();
-        const sales = getItem(KEYS.SALES, []);
-        setItem(KEYS.SALES, [newSale, ...sales]);
-        return newSale;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, saving sale locally:', err);
-    }
-
-    const sales = getItem(KEYS.SALES, []);
-    const qty = Number(sale.quantity);
-    const unitPrice = Number(sale.unitPrice);
-    const totalAmount = qty * unitPrice;
-
-    const newSale = {
-      ...sale,
-      id: `sale-${Date.now()}`,
-      quantity: qty,
-      unitPrice: unitPrice,
-      totalAmount,
-      date: sale.date || new Date().toISOString().split('T')[0]
-    };
-    const updated = [newSale, ...sales];
-    setItem(KEYS.SALES, updated);
-    return newSale;
+    const farmId = getSelectedFarmId();
+    return saleMutations.create(farmId, sale);
   },
 
   updateSaleStatus: async (id, paymentStatus) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/sales/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentStatus })
-      });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error updating sale status:', err);
-    }
-    const sales = getItem(KEYS.SALES, []);
-    const updated = sales.map((s) => (s.id === id ? { ...s, paymentStatus } : s));
-    setItem(KEYS.SALES, updated);
+    const farmId = getSelectedFarmId();
+    return saleMutations.update(farmId, id, { paymentStatus });
   },
 
   deleteSale: async (id) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/sales/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error:', err);
-    }
-    const sales = getItem(KEYS.SALES, []);
-    const updated = sales.filter((s) => s.id !== id);
-    setItem(KEYS.SALES, updated);
-    return true;
+    const farmId = getSelectedFarmId();
+    return saleMutations.delete(farmId, id);
   }
 };
 
 export const customerService = {
-  getCustomers: async () => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/customers`);
-      if (res.ok) {
-        const data = await res.json();
-        setItem(KEYS.CUSTOMERS, data);
-        return data;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, loading customers locally:', err);
-    }
-    return getItem(KEYS.CUSTOMERS, []);
-  },
+  getCustomers: () => getItem(KEYS.CUSTOMERS, []),
 
   createCustomer: async (customer) => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/customers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customer)
-      });
-      if (res.ok) {
-        const newCustomer = await res.json();
-        const customers = getItem(KEYS.CUSTOMERS, []);
-        setItem(KEYS.CUSTOMERS, [newCustomer, ...customers]);
-        return newCustomer;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, saving customer locally:', err);
-    }
+    const farmId = getSelectedFarmId();
+    return customerMutations.create(farmId, customer);
+  },
 
-    const customers = getItem(KEYS.CUSTOMERS, []);
-    const newCustomer = {
-      ...customer,
-      id: `cust-${Date.now()}`,
-      totalPurchases: Number(customer.totalPurchases || 0),
-      outstandingBalance: Number(customer.outstandingBalance || 0)
-    };
-    const updated = [newCustomer, ...customers];
-    setItem(KEYS.CUSTOMERS, updated);
-    return newCustomer;
+  updateCustomer: async (id, customer) => {
+    const farmId = getSelectedFarmId();
+    return customerMutations.update(farmId, id, customer);
   },
 
   deleteCustomer: async (id) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/customers/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error:', err);
-    }
-    const customers = getItem(KEYS.CUSTOMERS, []);
-    const updated = customers.filter((c) => c.id !== id);
-    setItem(KEYS.CUSTOMERS, updated);
-    return true;
+    const farmId = getSelectedFarmId();
+    return customerMutations.delete(farmId, id);
   }
 };
 
 export const expenseService = {
-  getExpenses: async () => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/expenses`);
-      if (res.ok) {
-        const data = await res.json();
-        setItem(KEYS.EXPENSES, data);
-        return data;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, loading expenses locally:', err);
-    }
-    return getItem(KEYS.EXPENSES, []);
-  },
+  getExpenses: () => getItem(KEYS.EXPENSES, []),
 
   createExpense: async (exp) => {
-    try {
-      const res = await checkedFetch(`${API_BASE_URL}/expenses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(exp)
-      });
-      if (res.ok) {
-        const newExp = await res.json();
-        const expenses = getItem(KEYS.EXPENSES, []);
-        setItem(KEYS.EXPENSES, [newExp, ...expenses]);
-        return newExp;
-      }
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error, saving expense locally:', err);
-    }
+    const farmId = getSelectedFarmId();
+    return expenseMutations.create(farmId, exp);
+  },
 
-    const expenses = getItem(KEYS.EXPENSES, []);
-    const newExp = {
-      ...exp,
-      id: `exp-${Date.now()}`,
-      amount: Number(exp.amount),
-      date: exp.date || new Date().toISOString().split('T')[0]
-    };
-    const updated = [newExp, ...expenses];
-    setItem(KEYS.EXPENSES, updated);
-    return newExp;
+  updateExpense: async (id, exp) => {
+    const farmId = getSelectedFarmId();
+    return expenseMutations.update(farmId, id, exp);
   },
 
   deleteExpense: async (id) => {
-    try {
-      await checkedFetch(`${API_BASE_URL}/expenses/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      if (err.serverRejected) throw err;
-      console.warn('API error:', err);
-    }
-    const expenses = getItem(KEYS.EXPENSES, []);
-    const updated = expenses.filter((e) => e.id !== id);
-    setItem(KEYS.EXPENSES, updated);
-    return true;
+    const farmId = getSelectedFarmId();
+    return expenseMutations.delete(farmId, id);
   }
 };
 
@@ -219,6 +78,7 @@ export const inventoryService = {
     };
     const updated = [newItem, ...inventory];
     setItem(KEYS.INVENTORY, updated);
+    window.dispatchEvent(new CustomEvent('storage-update', { detail: { key: KEYS.INVENTORY } }));
     return newItem;
   },
 
@@ -226,6 +86,7 @@ export const inventoryService = {
     const inventory = getItem(KEYS.INVENTORY, []);
     const updated = inventory.filter((i) => i.id !== id);
     setItem(KEYS.INVENTORY, updated);
+    window.dispatchEvent(new CustomEvent('storage-update', { detail: { key: KEYS.INVENTORY } }));
     return true;
   }
 };

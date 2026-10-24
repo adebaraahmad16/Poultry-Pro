@@ -1,124 +1,97 @@
-﻿# PoultryPro Local Setup & Running Guide (Windows + XAMPP)
+# PoultryPro Setup & Deployment Guide
 
-This guide explains how to run the PoultryPro Farm Management System completely locally on Windows using XAMPP MySQL.
-
----
-
-## 1. Prerequisites
-
-1. **XAMPP** installed (typically at `C:\xampp`)
-2. **Node.js** (v18 or higher recommended)
-3. **Git** (optional, for version control)
+This guide covers setup and running options for PoultryPro:
+1. **Supabase Cloud Backend (Recommended & Production-Ready)** — Allows farmers to register, log in, record farm activities, and use PoultryPro online from anywhere without requiring a running local PC.
+2. **Local MySQL (XAMPP) Backend (Legacy / Offline Alternative)** — Optional offline development mode using local Express and XAMPP MySQL.
 
 ---
 
-## 2. Database Setup (XAMPP MySQL)
+## 1. Supabase Cloud Backend Integration (Production & Vercel)
 
-1. Open the **XAMPP Control Panel**.
-2. Click **Start** next to **MySQL** (port 3306).
-3. The database `poultrypro_db` and all 26 required tables have been migrated and seeded.
-   - If you ever need to recreate or reset the database from scratch:
-     ```powershell
-     # In PowerShell:
-     cd C:\Users\USER\Desktop\Poultry-Pro\backend
-     cmd /c "C:\xampp\mysql\bin\mysql.exe -u root poultrypro_db < migrations\001_create_tables.sql"
-     npm run seed
-     ```
+PoultryPro uses Supabase for Authentication, PostgreSQL database with Row Level Security (RLS), and real-time data persistence.
 
----
+### Step 1: Create a Free Supabase Project
+1. Go to [supabase.com](https://supabase.com) and create an account or sign in.
+2. Click **New Project**, choose a project name (e.g. `poultrypro`), set a strong database password, and pick a region close to your users (e.g., EU / Frankfurt or US East).
 
-## 3. Configuration (.env)
+### Step 2: Run Database Migration
+1. In your Supabase Dashboard, open the **SQL Editor** from the left sidebar.
+2. Click **New Query**.
+3. Open `supabase/migrations/20261024_initial_schema.sql` from this repository.
+4. Copy the entire contents of the file, paste it into the Supabase SQL editor, and click **Run**.
+5. All 19 tables, Row Level Security (RLS) policies, helper functions, and default subscription plans (`BASIC`, `PROFESSIONAL`, `ENTERPRISE`) are now created.
 
-The local backend configuration is stored in `backend/.env`:
+### Step 3: Get Your API Credentials
+1. In your Supabase Dashboard, navigate to **Project Settings** > **API**.
+2. Copy the **Project URL** (e.g. `https://xyzcompany.supabase.co`).
+3. Copy the **anon / public** API key.
 
+### Step 4: Configure Local `.env`
+In the project root, edit `.env`:
 ```env
-PORT=5000
-NODE_ENV=development
-
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=poultrypro_db
-DB_SSL=false
-
-FRONTEND_URL=http://localhost:5173
-
-# Admin Account Credentials
-ADMIN_EMAIL=admin@poultrypro.ng
-ADMIN_PASSWORD_HASH=$2a$12$jYMogigGASkvhiWB2Y/LvO4TR1JZvjca5xLwBJGGmMKM/aB64rT8K
-
-# JWT Secret
-JWT_SECRET=b63c788c03166b2680f4f9f7d27e9999a09ddc8fec2db9c6df8bbfef7a641fe8f35cf5dd47d7c18408f65a127ee6dbefd123d573641219ee53896dfa2608fb6f
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-public-key
 ```
 
-Frontend configuration in root `.env`:
-```env
-VITE_API_BASE_URL=http://localhost:5000
-```
+### Step 5: Configure Vercel Deployment
+To deploy PoultryPro on Vercel:
+1. Go to your project on the **Vercel Dashboard**.
+2. Navigate to **Settings** > **Environment Variables**.
+3. Add the following two variables:
+   - `VITE_SUPABASE_URL` = `https://your-project.supabase.co`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` = `your-anon-public-key`
+4. Redeploy the project (**Deployments** > **Redeploy**).
+5. The application will immediately connect to Supabase upon loading, allowing farmers to sign up, sign in, and record data live online.
+
+### Step 6: Create an Admin Account
+To access the PoultryPro Admin Panel (`/admin`):
+1. Register an account through the app's sign-up page (`/register`), or create a user in Supabase under **Authentication** > **Users**.
+2. In the Supabase **SQL Editor**, promote that user to admin:
+   ```sql
+   UPDATE public.profiles
+   SET role = 'super_admin'
+   WHERE email = 'your-admin-email@example.com';
+   ```
+3. Sign in to `/admin/login` with those credentials.
 
 ---
 
-## 4. Running the Application
+## 2. Local MySQL (XAMPP) Backend (Offline Fallback)
 
-### Option A: Start Both Backend and Frontend Together (Recommended)
-From the project root:
-```powershell
-cd C:\Users\USER\Desktop\Poultry-Pro
-npm run dev
-```
-This script will:
-1. Verify the backend is up on port 5000 (starting it automatically if not).
-2. Start the Vite React development server on `http://localhost:5173`.
+If you wish to test with the local Express + XAMPP MySQL backend instead:
 
-### Option B: Run Backend and Frontend in Separate Terminals
-
-**Terminal 1 (Backend with nodemon):**
-```powershell
-cd C:\Users\USER\Desktop\Poultry-Pro\backend
-npm run dev
-```
-Backend will run at: `http://localhost:5000`
-
-**Terminal 2 (Frontend):**
-```powershell
-cd C:\Users\USER\Desktop\Poultry-Pro
-npm run dev:frontend
-```
-Frontend will run at: `http://localhost:5173`
+1. Open the **XAMPP Control Panel** and start **MySQL** (port 3306).
+2. Start the local backend:
+   ```powershell
+   cd backend
+   npm run dev
+   ```
+3. In root `.env`:
+   ```env
+   VITE_API_BASE_URL=http://localhost:5000/api
+   ```
+4. Start the frontend:
+   ```powershell
+   npm run dev:frontend
+   ```
 
 ---
 
-## 5. Verifying Health Endpoints
+## 3. Architecture Overview
 
-- **Backend Express Status:** `http://localhost:5000/health`
-  ```json
-  {"status":"OK","message":"PoultryPro backend is running"}
-  ```
-- **MySQL Database Status:** `http://localhost:5000/health/ready`
-  ```json
-  {"status":"OK","database":"connected"}
-  ```
-
----
-
-## 6. Default Login Credentials
-
-### Administrator Dashboard
-- **URL:** `http://localhost:5173/admin/login`
-- **Email:** `admin@poultrypro.ng`
-- **Password:** `Admin@PoultryPro2024`
-
-### Farmer Dashboard (Demo User)
-- **URL:** `http://localhost:5173/login`
-- **Email:** `ahmad@maillator.com` (or create a new farmer at `/register`)
-- **Password:** As set during registration (or register fresh at `/register`)
-
----
-
-## 7. Key Features Configured Locally
-
-- **XAMPP Local MySQL:** All data (flocks, feeds, eggs, mortality, vaccinations, sales, expenses, subscriptions, users, farms) persists in local MySQL `poultrypro_db`.
-- **Nodemon Hot Reload:** Backend automatically reloads on code modifications.
-- **Local Sandbox Checkout:** Plan switching and subscription payments use a built-in sandbox mock flow that tests database transactions and subscription status transitions without live payment charges.
-- **Daily Records Ledger:** Automatically updates flock bird counts and inventory balances.
+- **Auth**: Handled by `@supabase/supabase-js` auth methods (`signUp`, `signInWithPassword`, `signOut`, `resetPasswordForEmail`).
+- **Database Tables**:
+  - `profiles`: Farmer profile details and user roles (`farmer`, `admin`, `super_admin`).
+  - `farms`: Multi-farm support with poultry types, location, currency, weight units.
+  - `flocks`: Flock management (breed, current birds, mortality, status).
+  - `feed_inventory` & `feed_logs`: Feed stocks, bag weights, daily feed consumption.
+  - `egg_production`: Good eggs, broken eggs, egg collection logs.
+  - `mortality_records`: Daily bird mortality logs.
+  - `vaccinations` & `medications`: Health schedules, status, and administration.
+  - `sales`: Sales records, customer associations, quantity, payment methods.
+  - `expenses`: Farm operational expenditures.
+  - `customers`: Customer directory, outstanding balances.
+  - `workers`: Farm staff accounts and salary records.
+  - `daily_records`: Consolidated daily activity logs.
+  - `subscription_plans` & `farm_subscriptions`: Multi-tier subscription management.
+- **Graceful Fallback**: If Supabase environment variables are missing, PoultryPro automatically operates in local mode using `localStorage` without crashing React or showing white screens.

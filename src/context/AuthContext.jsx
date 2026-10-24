@@ -1,9 +1,9 @@
-import { getSessionToken } from '../services/sessionService.js';
-import { request } from '../services/planCatalog';
-import { subscriptionService } from '../services/subscriptionService';
-import { isBackendConfigured } from '../services/apiConfig';
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { isSupabaseConfigured, supabase } from '../lib/supabaseClient.js';
+import { signIn, signUp, signOut, getProfile, sendPasswordReset, onAuthStateChange } from '../services/supabase/authService.js';
+import { subscriptionService, createInitialSubscription } from '../services/subscriptionService';
 import { initializeStorage, getItem, setItem, KEYS } from '../services/storageService';
+import { PLANS } from '../constants/plans.js';
 
 const AuthContext = createContext();
 
@@ -11,87 +11,177 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  const [sessionMessage,setSessionMessage] = useState('');
+  const [sessionMessage, setSessionMessage] = useState('');
 
   useEffect(() => {
-    let cancelled = false;
     initializeStorage();
-    const expired = event => {
-      setUser(null); setIsLoggedIn(false); setSessionMessage(event.detail); setLoading(false);
-    };
-    window.addEventListener('farmer_session_expired',expired);
 
-    if (!isBackendConfigured()) {
+    // If Supabase is not configured, run in offline/demo mode
+    if (!isSupabaseConfigured() || !supabase) {
       setUser(null);
       setIsLoggedIn(false);
       setLoading(false);
-      return () => {
-        cancelled = true;
-        window.removeEventListener('farmer_session_expired', expired);
-      };
+      return;
     }
 
-    const token = getSessionToken();
-    if (!token) {
-      if(localStorage.getItem(KEYS.IS_LOGGED_IN) === 'true') setSessionMessage('Please sign in again to reconnect your saved account. Your saved records have been retained.');
-      localStorage.setItem(KEYS.IS_LOGGED_IN,'false');
-      setLoading(false);
-    } else {
-      request('/auth/session').then(result => {
-        if(cancelled || getSessionToken() !== token) return;
-        setItem(KEYS.USER,result.user); setUser(result.user); setIsLoggedIn(true);
-        localStorage.setItem(KEYS.IS_LOGGED_IN,'true');
-      }).catch(error => {
-        if(!cancelled) {setIsLoggedIn(false);setUser(null);setSessionMessage(error.status === 401 ? 'Your session has expired. Please sign in again.' : 'Unable to restore your session. Check the backend connection and try signing in again.');}
-      }).finally(() => {if(!cancelled) setLoading(false);});
-    }
-    return () => {cancelled = true;window.removeEventListener('farmer_session_expired',expired);};
+    let cancelled = false;
+
+    // Check initial session on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return;
+      if (session?.user) {
+        try {
+          const profile = await getProfile(session.user.id);
+          if (!cancelled) {
+            setUser(profile);
+            setIsLoggedIn(true);
+            setItem(KEYS.USER, profile);
+            localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
+          }
+        } catch {
+          if (!cancelled) {
+            setUser(null);
+            setIsLoggedIn(false);
+          }
+        }
+      } else {
+        if (!cancelled) {
+          setUser(null);
+          setIsLoggedIn(false);
+          localStorage.setItem(KEYS.IS_LOGGED_IN, 'false');
+        }
+      }
+      if (!cancelled) setLoading(false);
+    });
+
+    // Listen to ongoing auth changes
+    const unsubscribe = onAuthStateChange(async (session) => {
+      if (cancelled) return;
+      if (session?.user) {
+        try {
+          const profile = await getProfile(session.user.id);
+          if (!cancelled) {
+            setUser(profile);
+            setIsLoggedIn(true);
+            setItem(KEYS.USER, profile);
+            localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
+          }
+        } catch {
+          if (!cancelled) {
+            setUser(null);
+            setIsLoggedIn(false);
+          }
+        }
+      } else {
+        if (!cancelled) {
+          setUser(null);
+          setIsLoggedIn(false);
+          localStorage.setItem(KEYS.IS_LOGGED_IN, 'false');
+        }
+      }
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
+  /**
+   * Login with email + password via Supabase.
+   */
   const login = async (email, password) => {
-    const result = await request('/auth/login', { method:'POST', body:JSON.stringify({email,password}) });
+    if (!isSupabaseConfigured() || !supabase) {
+      throw new Error('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to your environment.');
+    }
     setSessionMessage('');
-    localStorage.setItem('poultrypro_token',result.token);
-    const sub = await request('/subscription/current');
-    subscriptionService.saveSubscription(sub);
-    setItem(KEYS.USER,result.user);
-    localStorage.setItem(KEYS.IS_LOGGED_IN,'true'); setUser(result.user); setIsLoggedIn(true);
+    const { user: profile } = await signIn(email, password);
+
+    // Restore or initialise local subscription state
+    const localSub = subscriptionService.getSubscription();
+    if (!localSub || localSub.status === 'trial') {
+      // subscription is managed server-side; local copy is a UI cache
+    }
+
+    setItem(KEYS.USER, profile);
+    localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
+    setUser(profile);
+    setIsLoggedIn(true);
     return true;
   };
 
+  /**
+   * Register a new farmer via Supabase.
+   */
   const register = async (formData) => {
-    const result = await request('/auth/register',{method:'POST',body:JSON.stringify(formData)});
+    if (!isSupabaseConfigured() || !supabase) {
+      throw new Error('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to your environment.');
+    }
     setSessionMessage('');
-    localStorage.setItem('poultrypro_token',result.token);
-    subscriptionService.saveSubscription(await request('/subscription/current'));
-    const newUser = result.user;
-    setItem(KEYS.USER, newUser);
 
-    // Update farm profile: name + selected poultry types
+    const { user: newUser, subscription } = await signUp({
+      fullName: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+      phone: formData.phone,
+      farmName: formData.farmName,
+      poultryTypes: formData.poultryTypes,
+      planId: formData.planId || PLANS.BASIC,
+      billingCycle: formData.billingCycle || 'monthly',
+    });
+
+    // Cache the subscription locally for immediate use
+    if (subscription) {
+      subscriptionService.saveSubscription(subscription);
+    }
+
+    // Update local farm profile cache
     const currentFarm = getItem(KEYS.FARM, {});
     const updatedFarm = {
       ...currentFarm,
       name: formData.farmName || 'My Farm',
-      poultryTypes: Array.isArray(formData.poultryTypes) ? formData.poultryTypes : []
+      poultryTypes: Array.isArray(formData.poultryTypes) ? formData.poultryTypes : [],
     };
     setItem(KEYS.FARM, updatedFarm);
 
+    setItem(KEYS.USER, newUser);
     localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
     setUser(newUser);
     setIsLoggedIn(true);
     return true;
   };
 
-  const logout = () => {
-    localStorage.removeItem('poultrypro_token');
+  /**
+   * Log out the current farmer.
+   */
+  const logout = async () => {
+    await signOut();
     localStorage.setItem(KEYS.IS_LOGGED_IN, 'false');
     setIsLoggedIn(false);
     setUser(null);
+    setSessionMessage('');
+  };
+
+  /**
+   * Send password reset email.
+   */
+  const forgotPassword = async (email) => {
+    await sendPasswordReset(email);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, loading, login, register, logout, sessionMessage }}>
+    <AuthContext.Provider value={{
+      user,
+      isLoggedIn,
+      loading,
+      login,
+      register,
+      logout,
+      forgotPassword,
+      sessionMessage,
+      isSupabaseReady: isSupabaseConfigured(),
+    }}>
       {children}
     </AuthContext.Provider>
   );

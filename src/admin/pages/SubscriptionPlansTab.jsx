@@ -1,15 +1,27 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import PlanCards from '../../components/subscriptions/PlanCards';
 import { usePlanCatalog } from '../../components/subscriptions/usePlanCatalog';
 import { FEATURE_LABELS, LIMIT_KEYS, validatePlan } from '../../../shared/subscriptionPlans.js';
-import { request, savePlan } from '../../services/planCatalog';
+import { savePlan } from '../../services/planCatalog';
+import { useAdmin } from '../context/AdminContext';
 export default function SubscriptionPlansTab() {
- const {plans,loading,error,retry} = usePlanCatalog();
- const [cycle,setCycle] = useState('monthly');
- const [editing,setEditing] = useState(null), [draft,setDraft] = useState(null);
- const [confirm,setConfirm] = useState(null), [busy,setBusy] = useState(false), [message,setMessage] = useState('');
- const [subscribers,setSubscribers] = useState([]), [view,setView] = useState(null);
- React.useEffect(() => { request('/subscription/subscribers',{ headers: { Authorization:`Bearer ${localStorage.getItem('poultrypro_admin_token') || ''}` } }).then(setSubscribers).catch(e => setMessage(e.message)); },[]);
+ const { plans, loading, error, retry } = usePlanCatalog();
+ const { farmers } = useAdmin();
+ const [cycle, setCycle] = useState('monthly');
+ const [editing, setEditing] = useState(null), [draft, setDraft] = useState(null);
+ const [confirm, setConfirm] = useState(null), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+ const [subscribers, setSubscribers] = useState([]);
+ const [view, setView] = useState(null);
+
+ React.useEffect(() => {
+   if (farmers && farmers.length) {
+     setSubscribers(farmers);
+   } else {
+     request('/subscription/subscribers', { headers: { Authorization: `Bearer ${localStorage.getItem('poultrypro_admin_token') || ''}` } })
+       .then(setSubscribers)
+       .catch(() => setSubscribers([]));
+   }
+ }, [farmers]);
  const edit = p => { setEditing(p); setDraft(structuredClone(p)); setMessage(''); };
  const review = e => { e.preventDefault(); try { validatePlan(draft); setConfirm(draft); } catch(e) { setMessage(e.message); } };
  const save = async () => {
