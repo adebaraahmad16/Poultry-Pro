@@ -44,21 +44,22 @@ export async function refreshCatalog() {
     try {
       const { data, error } = await supabase.from('subscription_plans').select('*');
       if (!error && Array.isArray(data) && data.length) {
-        const mapped = data.map(row => ({
+        const raw = data.map(row => ({
           id: row.id,
           name: row.name,
-          description: row.description,
-          monthlyPrice: Number(row.monthly_price),
-          annualPrice: Number(row.annual_price),
-          flockLimit: row.max_flocks,
-          birdLimit: row.max_birds,
-          poultryTypeLimit: row.max_poultry_types,
-          staffLimit: row.max_users,
-          locationLimit: row.max_farms,
+          description: row.description || '',
+          monthlyPrice: Number(row.monthly_price) || 0,
+          annualPrice: Number(row.annual_price) || 0,
+          maxFlocks: row.max_flocks,
+          maxBirds: row.max_birds,
+          maxPoultryTypes: row.max_poultry_types,
+          maxUsers: row.max_users,
+          maxFarms: row.max_farms,
           capabilities: row.capabilities || {},
-          status: row.status,
-          popular: row.is_most_popular,
+          status: row.status || 'Active',
+          isMostPopular: Boolean(row.is_most_popular),
         }));
+        const mapped = raw.map(p => presentPlan(p, raw));
         catalog = mapped;
         applyPlanCatalog(mapped);
         window.dispatchEvent(new CustomEvent('admin_plans_updated', { detail: mapped }));

@@ -115,11 +115,12 @@ export default function Register() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {plans.filter(p => p.status === 'Active').map(raw => {
-              const planKey = raw.id.toUpperCase();
-              const p = PLAN_DETAILS[planKey];
+            {(plans || []).filter(p => p && p.status === 'Active').map(raw => {
+              const planKey = (raw.id || '').toUpperCase();
+              const p = PLAN_DETAILS[planKey] || PLAN_DETAILS[PLANS.STARTER] || PLAN_DETAILS.BASIC;
+              if (!p) return null;
               const isSelected = selectedPlan === planKey;
-              const isPopular = raw.id.toLowerCase() === 'professional' || planKey === PLANS.PROFESSIONAL;
+              const isPopular = raw.id?.toLowerCase() === 'professional' || planKey === PLANS.PROFESSIONAL;
               const price = billingCycle === 'annual' ? p.annualPriceFormatted : p.priceFormatted;
               const period = billingCycle === 'annual' ? '/yr' : '/mo';
               const theme = getPlanTheme(raw.id);
