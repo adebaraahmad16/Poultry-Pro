@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js",
+    "dev": "nodemon server.js",
     "db:check": "node scripts/check-database.mjs",
     "seed": "node scripts/seed_db.js"
   },
@@ -17,5 +17,8 @@
     "express": "^4.21.1",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.11.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

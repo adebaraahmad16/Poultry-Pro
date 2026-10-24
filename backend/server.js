@@ -60,23 +60,39 @@ app.use('/api', subscriptionRoutes);
 app.use('/api/daily-records', dailyRecordRoutes);
 app.use('/api', apiRoutes);
 
-// Export Express app for Vercel
-export default app;
+// 404 Handler for unhandled routes
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.method} ${req.originalUrl} not found`
+  });
+});
 
-// Start the server for local development only
-if (!process.env.VERCEL) {
-  const server = app.listen(PORT, () => {
-    console.log(
-      `🚀 PoultryPro Express Backend running on http://localhost:${PORT}`
+// Centralized Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
+// Start local Express server
+const server = app.listen(PORT, () => {
+  console.log(
+    `🚀 PoultryPro Express Backend running on http://localhost:${PORT}`
+  );
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `⚠️ Port ${PORT} is already in use. Another backend instance is already running.`
     );
-  });
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(
-        `⚠️ Port ${PORT} is already in use. Another backend instance is already running.`
-      );
-    } else {
-      console.error('Server error:', err);
-    }
-  });
-}
+  } else {
+    console.error('Server error:', err);
+  }
+});
+
+export default app;
