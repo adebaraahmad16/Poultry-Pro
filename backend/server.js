@@ -36,8 +36,18 @@ app.get('/health/ready', async (req, res) => {
       status: 'OK',
       database: 'connected'
     });
+
   } catch (error) {
-    console.error('Database health check failed:', error.message);
+
+    // Retrieve original database error
+    const originalError = error.cause || error;
+
+    console.error('Database health check failed:', {
+      code: originalError.code,
+      message: originalError.message,
+      errno: originalError.errno,
+      sqlState: originalError.sqlState
+    });
 
     res.status(503).json({
       status: 'unavailable',
@@ -45,7 +55,6 @@ app.get('/health/ready', async (req, res) => {
     });
   }
 });
-
 // API Routes
 app.use('/api', subscriptionRoutes);
 app.use('/api/daily-records', dailyRecordRoutes);
