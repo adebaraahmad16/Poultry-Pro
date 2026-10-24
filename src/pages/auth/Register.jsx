@@ -32,6 +32,7 @@ export default function Register() {
     confirmPassword: ''
   });
   const [poultryTypes, setPoultryTypes] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -48,6 +49,8 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match");
       return;
@@ -61,11 +64,19 @@ export default function Register() {
       return;
     }
 
+    setSubmitting(true);
     try {
       await register({ ...formData, poultryTypes, planId: selectedPlan, billingCycle });
       navigate('/onboarding');
-    } catch(e) { alert(e.message); }
-
+    } catch(e) { 
+      if (e.message?.toLowerCase().includes('rate limit') || e.message?.includes('429')) {
+        alert("Registration rate limit reached. Please wait a minute or disable email confirmation in Supabase settings.");
+      } else {
+        alert(e.message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -282,10 +293,13 @@ export default function Register() {
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-6"
+            disabled={submitting}
+            className={`w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-6 ${
+              submitting ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
           >
-            Continue to Farm Setup
-            <ArrowRight className="w-4 h-4" />
+            {submitting ? 'Creating Account…' : 'Continue to Farm Setup'}
+            {!submitting && <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
 
