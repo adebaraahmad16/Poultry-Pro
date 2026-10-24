@@ -1,4 +1,5 @@
 import { request, refreshCatalog } from '../../services/planCatalog';
+import { isBackendConfigured } from '../../services/apiConfig';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { adminService, initializeAdminStorage } from '../services/adminService';
 import { initialAdminUsers } from '../services/adminMockData';
@@ -91,7 +92,7 @@ export const AdminProvider = ({ children }) => {
       setPlatformSettings(adminService.getSettings());
       setCmsContent(adminService.getCmsContent());
       setSubscriptionSettings(adminService.getSubscriptionSettings());
-      if (!token) {
+      if (!token || !isBackendConfigured()) {
         // Public registration and pricing also consume the shared server catalog.
         refreshCatalog().then(setSubscriptionPlans).catch(console.error);
         setCurrentAdmin(null);

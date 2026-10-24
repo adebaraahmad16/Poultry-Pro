@@ -5,6 +5,7 @@ import { Bird, Mail, Lock, User, Phone, Home, ArrowRight, ArrowLeft, Check, Spar
 import { useAuth } from '../../context/AuthContext';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import { PLANS, PLAN_DETAILS } from '../../constants/plans';
+import { getPlanTheme } from '../../constants/planThemes';
 import { subscriptionService, createInitialSubscription } from '../../services/subscriptionService';
 
 export default function Register() {
@@ -118,9 +119,10 @@ export default function Register() {
               const planKey = raw.id.toUpperCase();
               const p = PLAN_DETAILS[planKey];
               const isSelected = selectedPlan === planKey;
-              const isPopular = planKey === PLANS.PROFESSIONAL;
+              const isPopular = raw.id.toLowerCase() === 'professional' || planKey === PLANS.PROFESSIONAL;
               const price = billingCycle === 'annual' ? p.annualPriceFormatted : p.priceFormatted;
               const period = billingCycle === 'annual' ? '/yr' : '/mo';
+              const theme = getPlanTheme(raw.id);
 
               return (
                 <div
@@ -132,30 +134,30 @@ export default function Register() {
                       setPoultryTypes(poultryTypes.slice(0, p.limits.maxPoultryTypes));
                     }
                   }}
-                  className={`cursor-pointer p-3.5 rounded-xl border transition-all relative flex flex-col justify-between ${
-                    isSelected
-                      ? 'bg-white border-emerald-600 ring-2 ring-emerald-600/20 shadow-sm'
-                      : 'bg-white/80 border-slate-200 hover:border-slate-300'
+                  className={`cursor-pointer p-3.5 rounded-xl border transition-all duration-200 relative flex flex-col justify-between ${
+                    isSelected ? theme.cardSelected : theme.card
                   }`}
                 >
                   {isPopular && (
-                    <span className="absolute -top-2 right-2 px-2 py-0.5 bg-emerald-600 text-white font-extrabold text-[9px] rounded-full uppercase tracking-wider">
+                    <span className="absolute -top-2.5 right-2 px-2 py-0.5 bg-[#2563EB] text-white font-extrabold text-[9px] rounded-full uppercase tracking-wider shadow-xs">
                       Most Popular
                     </span>
                   )}
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-black text-slate-900">{p.name}</span>
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300'}`}>
+                      <span className={`text-sm font-black ${theme.title}`}>{p.name}</span>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                        isSelected ? theme.checkbox : theme.checkboxInactive
+                      }`}>
                         {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                       </div>
                     </div>
                     <div className="mt-1">
-                      <span className="text-base font-extrabold text-slate-900">{price}</span>
-                      <span className="text-[11px] text-slate-500 font-medium">{period}</span>
+                      <span className={`text-base font-extrabold ${theme.title}`}>{price}</span>
+                      <span className={`text-[11px] font-medium ml-1 ${theme.muted}`}>{period}</span>
                     </div>
-                    <div className="mt-2 text-[11px] text-slate-600 space-y-0.5">
-                      <p className="font-semibold text-slate-800">• {p.limits.maxFlocks === Infinity ? 'Unlimited flocks' : `Up to ${p.limits.maxFlocks} flocks`}</p>
+                    <div className={`mt-2 text-[11px] space-y-0.5 ${theme.body}`}>
+                      <p className={`font-semibold ${theme.title}`}>• {p.limits.maxFlocks === Infinity ? 'Unlimited flocks' : `Up to ${p.limits.maxFlocks} flocks`}</p>
                       <p>• {p.limits.maxBirds === Infinity ? 'Unlimited birds' : `Up to ${p.limits.maxBirds.toLocaleString()} birds`}</p>
                       <p>• {p.limits.maxPoultryTypes === Infinity ? 'Unlimited types' : `${p.limits.maxPoultryTypes} poultry type`}</p>
                     </div>

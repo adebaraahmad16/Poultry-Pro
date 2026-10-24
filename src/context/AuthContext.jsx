@@ -1,6 +1,7 @@
 import { getSessionToken } from '../services/sessionService.js';
 import { request } from '../services/planCatalog';
 import { subscriptionService } from '../services/subscriptionService';
+import { isBackendConfigured } from '../services/apiConfig';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeStorage, getItem, setItem, KEYS } from '../services/storageService';
 
@@ -20,6 +21,17 @@ export const AuthProvider = ({ children }) => {
       setUser(null); setIsLoggedIn(false); setSessionMessage(event.detail); setLoading(false);
     };
     window.addEventListener('farmer_session_expired',expired);
+
+    if (!isBackendConfigured()) {
+      setUser(null);
+      setIsLoggedIn(false);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+        window.removeEventListener('farmer_session_expired', expired);
+      };
+    }
+
     const token = getSessionToken();
     if (!token) {
       if(localStorage.getItem(KEYS.IS_LOGGED_IN) === 'true') setSessionMessage('Please sign in again to reconnect your saved account. Your saved records have been retained.');

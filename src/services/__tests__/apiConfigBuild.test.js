@@ -20,11 +20,7 @@ try {
     for (const name of keys) process.env[name] = '';
     process.env[key] = value;
     process.env.VERCEL = '1';
-    if (value.startsWith('https:')) {
-      assert.doesNotThrow(() => viteConfig({ command: 'build', mode: 'production' }));
-    } else {
-      assert.throws(() => viteConfig({ command: 'build', mode: 'production' }), /VITE_API_BASE_URL/);
-    }
+    assert.doesNotThrow(() => viteConfig({ command: 'build', mode: 'production' }));
     const result = await build({
       configFile: false, envDir: false, logLevel: 'silent',
       build: {
@@ -37,8 +33,11 @@ try {
     if (value.startsWith('https:')) {
       assert.equal(config.API_CONFIGURATION_ERROR, '');
       assert.equal(config.API_BASE_URL, `${value.replace(/\/+$/, '').replace(/\/api$/, '')}/api`);
+      assert.equal(config.isBackendConfigured(), true);
     } else {
-      assert.match(config.API_CONFIGURATION_ERROR, /VITE_API_BASE_URL/);
+      // In deployed production, empty or localhost backend falls back safely to frontend-only mode
+      assert.equal(config.API_BASE_URL, '');
+      assert.equal(config.isBackendConfigured(), false);
     }
   }
 } finally {

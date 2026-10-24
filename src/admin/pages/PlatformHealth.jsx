@@ -4,7 +4,7 @@ import {
   Database, Wifi, Clock, Zap, Shield, BarChart3, HardDrive,
   TrendingUp, TrendingDown, Globe, Lock, Eye, AlertCircle
 } from '../../components/common/Icons';
-import { API_BASE_URL, API_CONFIGURATION_ERROR } from '../../services/apiConfig';
+import { API_BASE_URL, API_CONFIGURATION_ERROR, isBackendConfigured } from '../../services/apiConfig';
 
 const UPTIME_HISTORY = [
   { day: 'Mon', uptime: 100 },
@@ -49,9 +49,14 @@ export default function PlatformHealth() {
 
   const checkHealth = async () => {
     setBackendStatus('checking');
+    if (API_CONFIGURATION_ERROR || !isBackendConfigured()) {
+      setBackendStatus('offline');
+      setLatencyMs(null);
+      setLastChecked(new Date().toLocaleTimeString());
+      return;
+    }
     const start = performance.now();
     try {
-      if (API_CONFIGURATION_ERROR) throw new Error(API_CONFIGURATION_ERROR);
       const res = await fetch(`${API_BASE_URL}/flocks`, { method: 'GET' });
       const elapsed = Math.round(performance.now() - start);
       setLatencyMs(elapsed);
@@ -65,11 +70,15 @@ export default function PlatformHealth() {
 
   const runFullDiagnostic = async () => {
     setRunningFull(true);
+    if (!isBackendConfigured() || API_CONFIGURATION_ERROR) {
+      setEndpointStatuses(endpointStatuses.map((e) => ({ ...e, latency: null, tested: true, status: 'offline' })));
+      setRunningFull(false);
+      return;
+    }
     const updated = [...endpointStatuses];
     for (let i = 0; i < updated.length; i++) {
       const ep = updated[i];
       try {
-        if (API_CONFIGURATION_ERROR) throw new Error(API_CONFIGURATION_ERROR);
         const start = performance.now();
         const endpointUrl = ep.path.startsWith('/api')
           ? `${API_BASE_URL}${ep.path.slice(4)}`

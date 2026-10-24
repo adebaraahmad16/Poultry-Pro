@@ -1,11 +1,6 @@
 import React from 'react';
 import { annualSavings, formatLimit } from '../../../shared/subscriptionPlans.js';
-
-const THEMES = {
- basic: {card:'bg-white border-slate-200',title:'text-[#1F2937]',body:'text-slate-600',muted:'text-slate-500',accent:'text-[#15803D]',box:'bg-[#F8FAF9]',button:'bg-[#15803D] hover:bg-green-800 text-white',divider:'border-slate-100',control:'border-slate-200 text-slate-700 hover:bg-slate-50'},
- professional: {card:'bg-[#EFF6FF] border-[#93C5FD] hover:shadow-md hover:border-[#2563EB]',title:'text-[#1E293B]',body:'text-[#1E293B]',muted:'text-slate-600',accent:'text-[#2563EB]',box:'bg-white/70',button:'bg-[#2563EB] hover:bg-blue-700 text-white',divider:'border-blue-200',control:'border-blue-300 text-blue-800 hover:bg-blue-100'},
- enterprise: {card:'bg-[#172554] border-[#172554] hover:shadow-md hover:border-[#FACC15]/60',title:'text-white',body:'text-[#CBD5E1]',muted:'text-[#CBD5E1]',accent:'text-[#FACC15]',box:'bg-white/5 text-[#CBD5E1]',button:'bg-[#FACC15] hover:bg-yellow-300 text-[#172554]',divider:'border-white/20',control:'border-white/30 text-white hover:bg-white/10'},
-};
+import { THEMES } from '../../constants/planThemes.js';
 
 export default function PlanCards({ plans, cycle = 'monthly', onChoose, admin = false, onEdit, onToggle, onView, subscriberCount = () => 0, currentPlanId }) {
  return <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">{plans.filter(p => admin || p.status === 'Active').map(p => {

@@ -2,6 +2,7 @@ import { useAuth } from './AuthContext';
 import { getSessionToken } from '../services/sessionService.js';
 import { usePlanCatalog } from '../components/subscriptions/usePlanCatalog';
 import { request } from '../services/planCatalog';
+import { isBackendConfigured } from '../services/apiConfig';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { inventoryService } from '../services/businessService';
 import { taskService, notificationService } from '../services/managementService';
@@ -84,7 +85,7 @@ export const FarmProvider = ({ children }) => {
   },[isLoggedIn,authLoading,user?.id]);
 
   const refreshAllData = useCallback(async () => {
-    if(authLoading || !isLoggedIn || !getSessionToken()) return;
+    if(authLoading || !isLoggedIn || !getSessionToken() || !isBackendConfigured()) return;
     const farmId=selectedFarmId||user.farmId;
     const identity=`${user.id}:${farmId}`, token=getSessionToken();
     if(refreshScope.current===identity)return;
