@@ -14,13 +14,8 @@ export default function SubscriptionPlansTab() {
  const [view, setView] = useState(null);
 
  React.useEffect(() => {
-   if (farmers && farmers.length) {
-     setSubscribers(farmers);
-   } else {
-     request('/subscription/subscribers', { headers: { Authorization: `Bearer ${localStorage.getItem('poultrypro_admin_token') || ''}` } })
-       .then(setSubscribers)
-       .catch(() => setSubscribers([]));
-   }
+   // Farmers are loaded from Supabase via AdminContext — no legacy backend call needed
+   setSubscribers(farmers && farmers.length ? farmers : []);
  }, [farmers]);
  const edit = p => { setEditing(p); setDraft(structuredClone(p)); setMessage(''); };
  const review = e => { e.preventDefault(); try { validatePlan(draft); setConfirm(draft); } catch(e) { setMessage(e.message); } };
