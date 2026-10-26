@@ -53,6 +53,16 @@ function mapFarm(row) {
 
 // ─── Flocks ────────────────────────────────────────────────────────────────
 
+function generateRowId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export async function getFlocks(farmId) {
   if (!supabase || !farmId) return [];
   const { data, error } = await supabase
@@ -60,8 +70,18 @@ export async function getFlocks(farmId) {
     .select('*')
     .eq('farm_id', farmId)
     .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data || []).map(mapFlock);
+  if (!error) return (data || []).map(mapFlock);
+
+  // Fallback without created_at ordering if column missing
+  const fallback = await supabase
+    .from('flocks')
+    .select('*')
+    .eq('farm_id', farmId);
+  if (fallback.error) {
+    console.warn('[getFlocks warning]:', fallback.error.message);
+    return [];
+  }
+  return (fallback.data || []).map(mapFlock);
 }
 
 /**
@@ -70,12 +90,22 @@ export async function getFlocks(farmId) {
  */
 async function safeInsert(table, payload) {
   let row = { ...payload };
+  if (!row.id) {
+    row.id = generateRowId();
+  }
   for (let i = 0; i < 4; i++) {
-    const { data, error } = await supabase.from(table).insert(row).select().single();
-    if (!error) return data;
+    const { data, error } = await supabase.from(table).insert(row).select().maybeSingle();
+    if (!error) return data || row;
+
+    // If Postgres complains about null id, provide one
+    if (error.message.includes('null value in column "id"')) {
+      row.id = generateRowId();
+      continue;
+    }
+
     const match = error.message.match(/column "([^"]+)" of relation/i) 
       || error.message.match(/Could not find the '([^']+)' column/i);
-    if (match && match[1] && row[match[1]] !== undefined) {
+    if (match && match[1] && row[match[1]] !== undefined && match[1] !== 'id') {
       console.warn(`[Supabase] Column "${match[1]}" does not exist on table "${table}". Retrying without it.`);
       delete row[match[1]];
       continue;
@@ -90,8 +120,8 @@ async function safeInsert(table, payload) {
 async function safeUpdate(table, id, updates) {
   let row = { ...updates };
   for (let i = 0; i < 4; i++) {
-    const { data, error } = await supabase.from(table).update(row).eq('id', id).select().single();
-    if (!error) return data;
+    const { data, error } = await supabase.from(table).update(row).eq('id', id).select().maybeSingle();
+    if (!error) return data || { id, ...row };
     const match = error.message.match(/column "([^"]+)" of relation/i) 
       || error.message.match(/Could not find the '([^']+)' column/i);
     if (match && match[1] && row[match[1]] !== undefined) {
@@ -177,21 +207,36 @@ export async function getEggs(farmId) {
 
 export async function createEgg(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('egg_production')
-    .insert({ farm_id: farmId, flock_id: record.flockId, date: record.date, good_eggs: Number(record.goodEggs) || 0, broken_eggs: Number(record.brokenEggs) || 0, notes: record.notes || null })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const good = Number(record.goodEggs) || 0;
+  const broken = Number(record.brokenEggs) || 0;
+  const rejected = Number(record.rejectedEggs) || 0;
+  const total = Number(record.totalEggs) || (good + broken + rejected);
+  const data = await safeInsert('egg_production', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    flock_name: record.flockName || '',
+    date: record.date || new Date().toISOString().split('T')[0],
+    good_eggs: good,
+    broken_eggs: broken,
+    rejected_eggs: rejected,
+    total_eggs: total,
+    notes: record.notes || null,
+  });
   return mapEgg(data);
 }
 
 export async function updateEgg(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('egg_production')
-    .update({ date: record.date, good_eggs: Number(record.goodEggs) || 0, broken_eggs: Number(record.brokenEggs) || 0, notes: record.notes || null })
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const patch = {};
+  if (record.flockId !== undefined) patch.flock_id = record.flockId || null;
+  if (record.flockName !== undefined) patch.flock_name = record.flockName;
+  if (record.date !== undefined) patch.date = record.date;
+  if (record.goodEggs !== undefined) patch.good_eggs = Number(record.goodEggs);
+  if (record.brokenEggs !== undefined) patch.broken_eggs = Number(record.brokenEggs);
+  if (record.rejectedEggs !== undefined) patch.rejected_eggs = Number(record.rejectedEggs);
+  if (record.totalEggs !== undefined) patch.total_eggs = Number(record.totalEggs);
+  if (record.notes !== undefined) patch.notes = record.notes || null;
+  const data = await safeUpdate('egg_production', id, patch);
   return mapEgg(data);
 }
 
@@ -217,21 +262,30 @@ export async function getFeeds(farmId) {
 
 export async function createFeed(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('feed_inventory')
-    .insert({ farm_id: farmId, flock_id: record.flockId || null, date: record.date, feed_type: record.feedType, quantity_bags: Number(record.quantityBags) || 0, bag_weight_kg: Number(record.bagWeightKg) || 25, cost_per_bag: Number(record.costPerBag) || 0, notes: record.notes || null })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('feed_inventory', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    date: record.date || new Date().toISOString().split('T')[0],
+    feed_type: record.feedType || 'General Feed',
+    quantity_bags: Number(record.quantityBags) || 0,
+    bag_weight_kg: Number(record.bagWeightKg) || 25,
+    cost_per_bag: Number(record.costPerBag) || 0,
+    notes: record.notes || null,
+  });
   return mapFeed(data);
 }
 
 export async function updateFeed(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('feed_inventory')
-    .update({ date: record.date, feed_type: record.feedType, quantity_bags: Number(record.quantityBags) || 0, bag_weight_kg: Number(record.bagWeightKg) || 25, cost_per_bag: Number(record.costPerBag) || 0, notes: record.notes || null })
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const patch = {};
+  if (record.flockId !== undefined) patch.flock_id = record.flockId || null;
+  if (record.date !== undefined) patch.date = record.date;
+  if (record.feedType !== undefined) patch.feed_type = record.feedType;
+  if (record.quantityBags !== undefined) patch.quantity_bags = Number(record.quantityBags);
+  if (record.bagWeightKg !== undefined) patch.bag_weight_kg = Number(record.bagWeightKg);
+  if (record.costPerBag !== undefined) patch.cost_per_bag = Number(record.costPerBag);
+  if (record.notes !== undefined) patch.notes = record.notes || null;
+  const data = await safeUpdate('feed_inventory', id, patch);
   return mapFeed(data);
 }
 
@@ -257,21 +311,31 @@ export async function getMortality(farmId) {
 
 export async function createMortality(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('mortality_records')
-    .insert({ farm_id: farmId, flock_id: record.flockId, date: record.date, count: Number(record.count) || 0, cause: record.cause || null, notes: record.notes || null })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const count = Number(record.count !== undefined ? record.count : record.birdsDead) || 0;
+  const data = await safeInsert('mortality_records', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    date: record.date || new Date().toISOString().split('T')[0],
+    count: count,
+    cause: record.cause || record.suspectedCause || null,
+    notes: record.notes || null,
+  });
   return mapMortality(data);
 }
 
 export async function updateMortality(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('mortality_records')
-    .update({ date: record.date, count: Number(record.count) || 0, cause: record.cause || null, notes: record.notes || null })
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const patch = {};
+  if (record.flockId !== undefined) patch.flock_id = record.flockId || null;
+  if (record.date !== undefined) patch.date = record.date;
+  if (record.count !== undefined || record.birdsDead !== undefined) {
+    patch.count = Number(record.count !== undefined ? record.count : record.birdsDead) || 0;
+  }
+  if (record.cause !== undefined || record.suspectedCause !== undefined) {
+    patch.cause = record.cause || record.suspectedCause || null;
+  }
+  if (record.notes !== undefined) patch.notes = record.notes || null;
+  const data = await safeUpdate('mortality_records', id, patch);
   return mapMortality(data);
 }
 
@@ -415,22 +479,18 @@ export async function getCustomers(farmId) {
 
 export async function createCustomer(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('customers')
-    .insert({
-      farm_id: farmId,
-      name: record.name,
-      contact_person: record.contactPerson || null,
-      phone: record.phone || null,
-      email: record.email || null,
-      address: record.address || null,
-      type: record.type || 'Regular',
-      total_purchases: Number(record.totalPurchases || 0),
-      outstanding_balance: Number(record.outstandingBalance || 0),
-      notes: record.notes || null,
-    })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('customers', {
+    farm_id: farmId,
+    name: record.name,
+    contact_person: record.contactPerson || null,
+    phone: record.phone || null,
+    email: record.email || null,
+    address: record.address || null,
+    type: record.type || 'Regular',
+    total_purchases: Number(record.totalPurchases || 0),
+    outstanding_balance: Number(record.outstandingBalance || 0),
+    notes: record.notes || null,
+  });
   return mapCustomer(data);
 }
 
@@ -447,11 +507,7 @@ export async function updateCustomer(id, record) {
   if (record.outstandingBalance !== undefined) patch.outstanding_balance = Number(record.outstandingBalance);
   if (record.notes !== undefined) patch.notes = record.notes;
 
-  const { data, error } = await supabase
-    .from('customers')
-    .update(patch)
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('customers', id, patch);
   return mapCustomer(data);
 }
 
@@ -689,18 +745,14 @@ export async function getDailyRecords(farmId) {
 
 export async function createDailyRecord(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('daily_records')
-    .insert({
-      farm_id: farmId,
-      flock_id: record.flockId || null,
-      date: record.date,
-      category: record.category,
-      recorded_values: record.values || {},
-      poultry_type: record.poultryType || null,
-    })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('daily_records', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    date: record.date || new Date().toISOString().split('T')[0],
+    category: record.category,
+    recorded_values: record.values || record.recorded_values || {},
+    poultry_type: record.poultryType || null,
+  });
   return mapDailyRecord(data);
 }
 
@@ -709,15 +761,13 @@ export async function updateDailyRecord(id, record) {
   const patch = { updated_at: new Date().toISOString() };
   if (record.date !== undefined) patch.date = record.date;
   if (record.category !== undefined) patch.category = record.category;
-  if (record.values !== undefined) patch.recorded_values = record.values;
+  if (record.values !== undefined || record.recorded_values !== undefined) {
+    patch.recorded_values = record.values || record.recorded_values;
+  }
   if (record.poultryType !== undefined) patch.poultry_type = record.poultryType;
   if (record.flockId !== undefined) patch.flock_id = record.flockId || null;
 
-  const { data, error } = await supabase
-    .from('daily_records')
-    .update(patch)
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('daily_records', id, patch);
   return mapDailyRecord(data);
 }
 

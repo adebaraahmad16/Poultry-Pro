@@ -51,7 +51,7 @@ export async function signUp({ fullName, email, password, phone, farmName, poult
     owner_id: userId,
     name: farmName || 'My Farm',
     poultry_types: Array.isArray(poultryTypes) ? poultryTypes : [],
-  }).select().single();
+  }).select().maybeSingle();
 
   const resolvedFarmId = farmData?.id || farmId;
 
@@ -148,7 +148,7 @@ export async function getProfile(userId) {
     .from('profiles')
     .select('id, full_name, email, phone, role, farm_id')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error || !profile) return { id: userId, role: 'farmer' };
 
