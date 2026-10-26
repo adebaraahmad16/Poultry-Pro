@@ -7,6 +7,7 @@ import { eggService } from '../../services/productionService';
 import { healthService } from '../../services/healthService';
 import { weightService } from '../../services/weightService';
 import { salesService, expenseService } from '../../services/businessService';
+import { useToast } from '../../context/ToastContext';
 
 /**
  * Quick action modals for the poultry dashboards.
@@ -17,6 +18,7 @@ import { salesService, expenseService } from '../../services/businessService';
  */
 export default function QuickActionModals({ activeModal, onClose, poultryType }) {
   const { flocks, scopedDataFor, refreshAllData, canAddFlock, canAddBirds, currentPlan, isSubscriptionExpired } = useFarm();
+  const toast = useToast();
   const [limitError,setLimitError] = useState('');
   const today = new Date().toISOString().split('T')[0];
 
@@ -42,35 +44,47 @@ export default function QuickActionModals({ activeModal, onClose, poultryType })
     onClose();
   };
 
-  const handleSubmit = (fn) => async (e) => {
+  const handleSubmit = (fn, label = 'Record') => async (e) => {
     e.preventDefault();
-    await fn();
-    refreshAllData();
-    close();
+    try {
+      await fn();
+      refreshAllData();
+      toast.success(`${label} saved successfully!`, { title: 'Record Saved' });
+      close();
+    } catch (err) {
+      toast.error(err.message || 'Failed to save record.', { title: 'Save Failed' });
+    }
   };
 
   const handleAddFlock = async (e) => {
     e.preventDefault();
     if (isSubscriptionExpired) {
-      alert('Your subscription or 14-day free trial has expired. Please activate your plan under Settings → Subscription & Billing to add new flocks.');
+      toast.warning('Your subscription or 14-day free trial has expired. Please activate your plan under Settings → Subscription & Billing to add new flocks.', { title: 'Subscription Required' });
       return;
     }
     if (!canAddFlock()) {
-      alert(`Flock creation limit reached on your ${currentPlan?.name || 'current'} plan (${currentPlan?.limits?.maxFlocks} active flocks max). Please upgrade to Pro or Enterprise in Settings to add more flocks.`);
+      toast.warning(`Flock creation limit reached on your ${currentPlan?.name || 'current'} plan (${currentPlan?.limits?.maxFlocks} active flocks max). Please upgrade to Pro or Enterprise in Settings to add more flocks.`, { title: 'Flock Limit Reached' });
       return;
     }
     if (!canAddBirds(flockForm.initialBirds)) {
-      alert(`Adding ${flockForm.initialBirds} birds would exceed your ${currentPlan?.name || 'current'} plan capacity (${currentPlan?.limits?.maxBirds?.toLocaleString()} birds max). Please upgrade your plan in Settings to expand capacity.`);
+      toast.warning(`Adding ${flockForm.initialBirds} birds would exceed your ${currentPlan?.name || 'current'} plan capacity (${currentPlan?.limits?.maxBirds?.toLocaleString()} birds max). Please upgrade your plan in Settings to expand capacity.`, { title: 'Bird Capacity Limit' });
       return;
     }
 
-    try { await flockService.create({
-      ...flockForm,
-      type: poultryType?.flockTypes[0] || flockForm.type,
-      breed: flockForm.breed || poultryType?.label || 'Local',
-      initialBirds: Number(flockForm.initialBirds),
-      costPerBird: Number(flockForm.costPerBird)
-    }); } catch(e) { setLimitError(e.message); return; }
+    try { 
+      await flockService.create({
+        ...flockForm,
+        type: poultryType?.flockTypes[0] || flockForm.type,
+        breed: flockForm.breed || poultryType?.label || 'Local',
+        initialBirds: Number(flockForm.initialBirds),
+        costPerBird: Number(flockForm.costPerBird)
+      }); 
+      toast.success(`Flock "${flockForm.name}" created successfully!`, { title: 'Flock Added' });
+    } catch(e) { 
+      setLimitError(e.message); 
+      toast.error(e.message, { title: 'Failed to Add Flock' });
+      return; 
+    }
     refreshAllData();
     close();
   };

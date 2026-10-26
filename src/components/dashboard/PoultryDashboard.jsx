@@ -1,5 +1,6 @@
 import React from 'react';
 import DailyRecordsSummary from '../daily/DailyRecordsSummary';
+import QuickActionsSection from './QuickActionsSection';
 import {
   Bird, Egg, Wheat, DollarSign, Scale, TrendingUp, Activity,
   AlertTriangle, ShieldAlert, Calendar, Plus
@@ -36,7 +37,9 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
     ...(traits.eggs ? [{ key: 'egg', label: 'Record Eggs', color: 'bg-blue-600 hover:bg-blue-700' }] : []),
     { key: 'feed', label: 'Record Feed', color: 'bg-teal-600 hover:bg-teal-700' },
     { key: 'mortality', label: 'Record Mortality', color: 'bg-rose-600 hover:bg-rose-700' },
-    ...(traits.weight ? [{ key: 'weight', label: 'Record Weight', color: 'bg-amber-600 hover:bg-amber-700' }] : []),
+    { key: 'vaccination', label: 'Vaccination', color: 'bg-sky-600 hover:bg-sky-700' },
+    { key: 'medication', label: 'Medication', color: 'bg-amber-600 hover:bg-amber-700' },
+    ...(traits.weight ? [{ key: 'weight', label: 'Record Weight', color: 'bg-orange-600 hover:bg-orange-700' }] : []),
     { key: 'sale', label: 'Record Sale', color: 'bg-indigo-600 hover:bg-indigo-700' },
     { key: 'expense', label: 'Add Expense', color: 'bg-slate-800 hover:bg-slate-900' }
   ];
@@ -64,6 +67,8 @@ export default function PoultryDashboard({ poultryType, onQuickAction }) {
         <div className="hidden flex-wrap items-center gap-2 sm:flex">{actionButtons}</div>
         <details className="w-full sm:hidden"><summary className="min-h-11 cursor-pointer rounded-lg border bg-slate-50 p-3 text-sm font-semibold">Farm actions</summary><div className="mt-3 grid grid-cols-2 gap-2">{actionButtons}</div></details>
       </div>
+
+      <QuickActionsSection flockId={scoped.flocks[0]?.id} />
 
       <DailyRecordsSummary />
 

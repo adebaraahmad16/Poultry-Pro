@@ -1,41 +1,57 @@
 import React, { useState } from 'react';
 import { Eye, ShieldAlert, CheckCircle2, Send, Phone, Mail, MapPin } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
+import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../context/ConfirmContext';
 import AdminDataTable from '../components/AdminDataTable';
 import StatusBadge from '../components/StatusBadge';
 
 export default function Farmers() {
   const { farmers, updateFarmerStatus, sendNotification } = useAdmin();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [selectedFarmer, setSelectedFarmer] = useState(null);
   const [notifyFarmer, setNotifyFarmer] = useState(null);
   const [notificationMsg, setNotificationMsg] = useState('');
 
-  const handleToggleStatus = (farmer) => {
+  const handleToggleStatus = async (farmer) => {
     const nextStatus = farmer.status === 'Active' ? 'Suspended' : 'Active';
-    const confirmMsg = `Are you sure you want to change ${farmer.fullName}'s account status to ${nextStatus}?`;
-    if (window.confirm(confirmMsg)) {
-      updateFarmerStatus(farmer.id, nextStatus);
-      if (selectedFarmer && selectedFarmer.id === farmer.id) {
-        setSelectedFarmer({ ...selectedFarmer, status: nextStatus });
-      }
+    const ok = await confirm({
+      title: `${nextStatus === 'Suspended' ? 'Suspend' : 'Activate'} Farmer Account?`,
+      message: `Are you sure you want to change ${farmer.fullName}'s account status to ${nextStatus}?`,
+      confirmText: nextStatus === 'Suspended' ? 'Suspend Farmer' : 'Activate Farmer',
+      isDanger: nextStatus === 'Suspended',
+    });
+    if (!ok) return;
+
+    updateFarmerStatus(farmer.id, nextStatus);
+    if (selectedFarmer && selectedFarmer.id === farmer.id) {
+      setSelectedFarmer({ ...selectedFarmer, status: nextStatus });
     }
+    toast.success(`Farmer account status updated to ${nextStatus}.`, { title: 'Status Updated' });
   };
 
-  const handleSendDirectNotification = (e) => {
+  const handleSendDirectNotification = async (e) => {
     e.preventDefault();
     if (!notificationMsg.trim() || !notifyFarmer) return;
 
-    sendNotification({
-      title: `Direct Administrator Notice`,
-      message: notificationMsg,
-      category: 'System',
-      targetAudience: `Farmer: ${notifyFarmer.fullName} (${notifyFarmer.email})`,
-      deliveryChannel: 'In-App & Email'
-    });
+    try {
+      await sendNotification({
+        title: `Direct Administrator Notice`,
+        message: notificationMsg,
+        category: 'System Announcements',
+        priority: 'Important Notice',
+        targetAudience: `Farmer: ${notifyFarmer.fullName} (${notifyFarmer.email})`,
+        targetFarmerId: notifyFarmer.id,
+        deliveryChannel: 'In-App & Email'
+      });
 
-    alert(`Notification dispatched to ${notifyFarmer.fullName}`);
-    setNotificationMsg('');
-    setNotifyFarmer(null);
+      toast.success(`Notification dispatched directly to ${notifyFarmer.fullName}.`, { title: 'Notice Sent' });
+      setNotificationMsg('');
+      setNotifyFarmer(null);
+    } catch (err) {
+      toast.error(err.message || 'Failed to dispatch notification.');
+    }
   };
 
   const columns = [

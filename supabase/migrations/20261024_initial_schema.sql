@@ -86,6 +86,7 @@ ALTER TABLE public.farm_subscriptions ADD COLUMN IF NOT EXISTS user_id UUID REFE
 ALTER TABLE public.farm_subscriptions ADD COLUMN IF NOT EXISTS agreed_price NUMERIC DEFAULT NULL;
 ALTER TABLE public.farm_subscriptions ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days');
 ALTER TABLE public.farm_subscriptions ADD COLUMN IF NOT EXISTS renewal_date TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days');
+ALTER TABLE public.farm_subscriptions ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days');
 ALTER TABLE public.farm_subscriptions ADD COLUMN IF NOT EXISTS auto_renew BOOLEAN DEFAULT TRUE;
 
 -- 5. SUBSCRIPTION ORDERS (Payments & Invoices)
@@ -328,10 +329,23 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   type TEXT DEFAULT 'info',
+  category TEXT DEFAULT 'farm',
+  priority TEXT DEFAULT 'normal',
+  action_url TEXT DEFAULT '',
   time TEXT DEFAULT '',
   is_read BOOLEAN DEFAULT FALSE,
+  read_at TIMESTAMPTZ DEFAULT NULL,
+  related_entity_type TEXT DEFAULT '',
+  related_entity_id TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'farm';
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'normal';
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS action_url TEXT DEFAULT '';
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ DEFAULT NULL;
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS related_entity_type TEXT DEFAULT '';
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS related_entity_id TEXT DEFAULT '';
 
 -- ==============================================================================
 -- SEED CANONICAL SUBSCRIPTION PLANS
@@ -602,7 +616,11 @@ CREATE POLICY "Users manage own notifications" ON public.notifications
 
 -- 20. AUTOMATIC PROFILE CREATION TRIGGER ON AUTH SIGNUP
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, full_name, role)
   VALUES (
@@ -613,10 +631,16 @@ BEGIN
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    full_name = CASE WHEN profiles.full_name = '' THEN EXCLUDED.full_name ELSE profiles.full_name END;
+    full_name = CASE WHEN public.profiles.full_name = '' THEN EXCLUDED.full_name ELSE public.profiles.full_name END;
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Prevent auth creation from failing if profile sync encounters an issue
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+GRANT ALL ON TABLE public.profiles TO postgres, service_role, supabase_auth_admin;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.profiles TO authenticated, anon;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

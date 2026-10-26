@@ -3,23 +3,31 @@ import { Building2, MapPin, Users, Layers, Bird, Calendar, Edit3, ShieldCheck } 
 import { useFarm } from '../../context/FarmContext';
 import { farmProfileService } from '../../services/managementService';
 import Modal from '../../components/common/Modal';
+import { useToast } from '../../context/ToastContext';
 
 export default function FarmOverview() {
   const { farm, flocks, workers, metrics, refreshAllData } = useFarm();
+  const toast = useToast();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: farm.name || '',
     location: farm.location || '',
     type: farm.type || '',
     size: farm.size || '',
-    currency: farm.currency || 'â‚¦'
+    currency: farm.currency || '₦'
   });
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    try { await farmProfileService.updateFarm(formData); } catch(e) { alert(e.message); return; }
-    refreshAllData();
-    setIsEditOpen(false);
+    try { 
+      await farmProfileService.updateFarm(formData); 
+      refreshAllData();
+      setIsEditOpen(false);
+      toast.success('Farm information updated successfully.', { title: 'Farm Updated' });
+    } catch(e) { 
+      toast.error(e.message || 'Failed to update farm profile.', { title: 'Update Failed' }); 
+      return; 
+    }
   };
 
   return (

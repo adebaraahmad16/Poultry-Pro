@@ -12,9 +12,9 @@ export async function getFarm(farmId) {
     .from('farms')
     .select('*')
     .eq('id', farmId)
-    .single();
-  if (error) throw new Error(error.message);
-  return mapFarm(data);
+    .maybeSingle();
+  if (error) { console.warn('getFarm error:', error.message); return null; }
+  return data ? mapFarm(data) : null;
 }
 
 export async function updateFarm(farmId, updates) {
@@ -64,26 +64,54 @@ export async function getFlocks(farmId) {
   return (data || []).map(mapFlock);
 }
 
+/**
+ * Safely inserts a record into Supabase, automatically handling schema variations
+ * by omitting any columns that the remote Postgres table does not support.
+ */
+async function safeInsert(table, payload) {
+  let row = { ...payload };
+  for (let i = 0; i < 4; i++) {
+    const { data, error } = await supabase.from(table).insert(row).select().single();
+    if (!error) return data;
+    const match = error.message.match(/column "([^"]+)" of relation/i) 
+      || error.message.match(/Could not find the '([^']+)' column/i);
+    if (match && match[1] && row[match[1]] !== undefined) {
+      console.warn(`[Supabase] Column "${match[1]}" does not exist on table "${table}". Retrying without it.`);
+      delete row[match[1]];
+      continue;
+    }
+    throw new Error(error.message);
+  }
+}
+
+/**
+ * Safely updates a record in Supabase with auto-recovery for missing columns.
+ */
+async function safeUpdate(table, id, updates) {
+  let row = { ...updates };
+  for (let i = 0; i < 4; i++) {
+    const { data, error } = await supabase.from(table).update(row).eq('id', id).select().single();
+    if (!error) return data;
+    const match = error.message.match(/column "([^"]+)" of relation/i) 
+      || error.message.match(/Could not find the '([^']+)' column/i);
+    if (match && match[1] && row[match[1]] !== undefined) {
+      console.warn(`[Supabase] Column "${match[1]}" does not exist on table "${table}". Retrying without it.`);
+      delete row[match[1]];
+      continue;
+    }
+    throw new Error(error.message);
+  }
+}
+
 export async function createFlock(farmId, flock) {
   if (!supabase || !farmId) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('flocks')
-    .insert({ farm_id: farmId, ...toFlockRow(flock) })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('flocks', { farm_id: farmId, ...toFlockRow(flock) });
   return mapFlock(data);
 }
 
 export async function updateFlock(flockId, updates) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('flocks')
-    .update(toFlockRow(updates))
-    .eq('id', flockId)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('flocks', flockId, toFlockRow(updates));
   return mapFlock(data);
 }
 
@@ -94,18 +122,22 @@ export async function deleteFlock(flockId) {
 }
 
 function toFlockRow(f) {
+  const initial = Number(f.initialBirds) || 0;
+  const current = f.currentBirds !== undefined ? Number(f.currentBirds) : initial;
+  const cost = Number(f.costPerBird) || 0;
   return {
-    name: f.name,
-    type: f.type,
-    breed: f.breed,
-    initial_birds: Number(f.initialBirds) || 0,
-    current_birds: Number(f.currentBirds) || Number(f.initialBirds) || 0,
+    name: f.name || 'Untitled Flock',
+    type: f.type || 'Broilers',
+    breed: f.breed || '',
+    initial_birds: initial,
+    current_birds: current,
     age_weeks: Number(f.ageWeeks) || 0,
-    housing_type: f.housingType,
+    pen: f.housingType || f.pen || '',
     status: f.status || 'Active',
-    acquisition_date: f.acquisitionDate || null,
-    cost_per_bird: Number(f.costPerBird) || 0,
-    notes: f.notes || null,
+    date_acquired: f.acquisitionDate || f.dateAcquired || new Date().toISOString().split('T')[0],
+    cost_per_bird: cost,
+    total_cost: cost * initial,
+    notes: f.notes || '',
   };
 }
 
@@ -120,11 +152,12 @@ function mapFlock(row) {
     initialBirds: row.initial_birds,
     currentBirds: row.current_birds,
     ageWeeks: row.age_weeks,
-    housingType: row.housing_type,
+    housingType: row.housing_type || row.pen || '',
     status: row.status,
-    acquisitionDate: row.acquisition_date,
+    acquisitionDate: row.acquisition_date || row.date_acquired,
     costPerBird: row.cost_per_bird,
-    notes: row.notes,
+    pen: row.pen || '',
+    notes: row.notes || '',
     createdAt: row.created_at,
   };
 }
@@ -257,28 +290,33 @@ function mapMortality(row) {
 
 export async function getVaccinations(farmId) {
   if (!supabase || !farmId) return [];
-  const { data, error } = await supabase.from('vaccinations').select('*').eq('farm_id', farmId).order('date', { ascending: false });
+  // Order by 'date' (patched column) falling back to 'scheduled_date' (original column)
+  const { data, error } = await supabase.from('vaccinations').select('*').eq('farm_id', farmId).order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data || []).map(mapVaccination);
 }
 
 export async function createVaccination(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('vaccinations')
-    .insert({ farm_id: farmId, flock_id: record.flockId, date: record.date, vaccine_name: record.vaccineName, dose: record.dose || null, method: record.method || null, next_due_date: record.nextDueDate || null, notes: record.notes || null })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('vaccinations', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    scheduled_date: record.date || record.scheduledDate || new Date().toISOString().split('T')[0],
+    vaccine: record.vaccineName || record.vaccine || '',
+    status: record.status || 'Scheduled',
+    notes: record.notes || '',
+  });
   return mapVaccination(data);
 }
 
 export async function updateVaccination(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('vaccinations')
-    .update({ date: record.date, vaccine_name: record.vaccineName, dose: record.dose || null, method: record.method || null, next_due_date: record.nextDueDate || null, notes: record.notes || null })
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('vaccinations', id, {
+    scheduled_date: record.date || record.scheduledDate,
+    vaccine: record.vaccineName || record.vaccine,
+    status: record.status,
+    notes: record.notes,
+  });
   return mapVaccination(data);
 }
 
@@ -290,35 +328,56 @@ export async function deleteVaccination(id) {
 
 function mapVaccination(row) {
   if (!row) return null;
-  return { id: row.id, farmId: row.farm_id, flockId: row.flock_id, date: row.date, vaccineName: row.vaccine_name, dose: row.dose, method: row.method, nextDueDate: row.next_due_date, notes: row.notes, createdAt: row.created_at };
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    flockId: row.flock_id,
+    date: row.date || row.scheduled_date,
+    vaccineName: row.vaccine_name || row.vaccine || '',
+    dose: row.dose || '',
+    method: row.method || '',
+    nextDueDate: row.next_due_date,
+    notes: row.notes || '',
+    status: row.status || 'Administered',
+    createdAt: row.created_at,
+  };
 }
 
 // ─── Medications ───────────────────────────────────────────────────────────
 
 export async function getMedications(farmId) {
   if (!supabase || !farmId) return [];
-  const { data, error } = await supabase.from('medications').select('*').eq('farm_id', farmId).order('date', { ascending: false });
+  // Order by created_at since 'date' may not exist yet on older rows
+  const { data, error } = await supabase.from('medications').select('*').eq('farm_id', farmId).order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data || []).map(mapMedication);
 }
 
 export async function createMedication(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('medications')
-    .insert({ farm_id: farmId, flock_id: record.flockId, date: record.date, medication_name: record.medicationName, dosage: record.dosage || null, duration_days: Number(record.durationDays) || null, reason: record.reason || null, cost: Number(record.cost) || 0, notes: record.notes || null })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('medications', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    start_date: record.date || record.startDate || new Date().toISOString().split('T')[0],
+    medication_name: record.medicationName || '',
+    dosage: record.dosage || '',
+    reason: record.reason || '',
+    cost: Number(record.cost) || 0,
+    notes: record.notes || '',
+  });
   return mapMedication(data);
 }
 
 export async function updateMedication(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('medications')
-    .update({ date: record.date, medication_name: record.medicationName, dosage: record.dosage || null, duration_days: Number(record.durationDays) || null, reason: record.reason || null, cost: Number(record.cost) || 0, notes: record.notes || null })
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('medications', id, {
+    start_date: record.date || record.startDate,
+    medication_name: record.medicationName,
+    dosage: record.dosage,
+    reason: record.reason,
+    cost: Number(record.cost) || 0,
+    notes: record.notes,
+  });
   return mapMedication(data);
 }
 
@@ -330,7 +389,19 @@ export async function deleteMedication(id) {
 
 function mapMedication(row) {
   if (!row) return null;
-  return { id: row.id, farmId: row.farm_id, flockId: row.flock_id, date: row.date, medicationName: row.medication_name, dosage: row.dosage, durationDays: row.duration_days, reason: row.reason, cost: row.cost, notes: row.notes, createdAt: row.created_at };
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    flockId: row.flock_id,
+    date: row.date || row.start_date,
+    medicationName: row.medication_name || '',
+    dosage: row.dosage || '',
+    durationDays: row.duration_days,
+    reason: row.reason || '',
+    cost: row.cost || 0,
+    notes: row.notes || '',
+    createdAt: row.created_at,
+  };
 }
 
 // ─── Customers ─────────────────────────────────────────────────────────────
@@ -423,24 +494,20 @@ export async function createSale(farmId, record) {
   const unitPrice = Number(record.unitPrice) || 0;
   const totalAmount = Number(record.totalAmount) || (qty * unitPrice);
 
-  const { data, error } = await supabase
-    .from('sales')
-    .insert({
-      farm_id: farmId,
-      flock_id: record.flockId || null,
-      customer_id: record.customerId || null,
-      customer_name: record.customerName || record.customer || null,
-      product: record.product || record.productType || 'Sale',
-      date: record.date || new Date().toISOString().split('T')[0],
-      quantity: qty,
-      unit_price: unitPrice,
-      total_amount: totalAmount,
-      payment_status: record.paymentStatus || 'Paid',
-      payment_method: record.paymentMethod || 'Cash',
-      notes: record.notes || null,
-    })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('sales', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    customer_id: record.customerId || null,
+    customer_name: record.customerName || record.customer || null,
+    product: record.product || record.productType || 'Sale',
+    date: record.date || new Date().toISOString().split('T')[0],
+    quantity: qty,
+    unit_price: unitPrice,
+    total_amount: totalAmount,
+    payment_status: record.paymentStatus || 'Paid',
+    payment_method: record.paymentMethod || 'Cash',
+    notes: record.notes || null,
+  });
   return mapSale(data);
 }
 
@@ -459,11 +526,7 @@ export async function updateSale(id, record) {
   if (record.paymentMethod !== undefined) patch.payment_method = record.paymentMethod;
   if (record.notes !== undefined) patch.notes = record.notes || null;
 
-  const { data, error } = await supabase
-    .from('sales')
-    .update(patch)
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('sales', id, patch);
   return mapSale(data);
 }
 
@@ -506,20 +569,16 @@ export async function getExpenses(farmId) {
 
 export async function createExpense(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('expenses')
-    .insert({
-      farm_id: farmId,
-      flock_id: record.flockId || null,
-      date: record.date || new Date().toISOString().split('T')[0],
-      category: record.category || 'General',
-      description: record.description || record.category || 'Expense',
-      amount: Number(record.amount) || 0,
-      payment_method: record.paymentMethod || 'Cash',
-      notes: record.notes || null,
-    })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('expenses', {
+    farm_id: farmId,
+    flock_id: record.flockId || null,
+    date: record.date || new Date().toISOString().split('T')[0],
+    category: record.category || 'General',
+    description: record.description || record.category || 'Expense',
+    amount: Number(record.amount) || 0,
+    payment_method: record.paymentMethod || 'Cash',
+    notes: record.notes || null,
+  });
   return mapExpense(data);
 }
 
@@ -534,11 +593,7 @@ export async function updateExpense(id, record) {
   if (record.paymentMethod !== undefined) patch.payment_method = record.paymentMethod;
   if (record.notes !== undefined) patch.notes = record.notes || null;
 
-  const { data, error } = await supabase
-    .from('expenses')
-    .update(patch)
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('expenses', id, patch);
   return mapExpense(data);
 }
 
@@ -575,21 +630,28 @@ export async function getWorkers(farmId) {
 
 export async function createWorker(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('workers')
-    .insert({ farm_id: farmId, name: record.name, role: record.role || null, phone: record.phone || null, email: record.email || null, salary: Number(record.salary) || 0, hire_date: record.hireDate || null, status: record.status || 'Active', notes: record.notes || null })
-    .select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeInsert('workers', {
+    farm_id: farmId,
+    name: record.name,
+    role: record.role || 'Farm Worker',
+    phone: record.phone || '',
+    email: record.email || '',
+    status: record.status || 'Active',
+    start_date: record.hireDate || record.startDate || new Date().toISOString().split('T')[0],
+  });
   return mapWorker(data);
 }
 
 export async function updateWorker(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const { data, error } = await supabase
-    .from('workers')
-    .update({ name: record.name, role: record.role || null, phone: record.phone || null, email: record.email || null, salary: Number(record.salary) || 0, hire_date: record.hireDate || null, status: record.status || 'Active', notes: record.notes || null })
-    .eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const data = await safeUpdate('workers', id, {
+    name: record.name,
+    role: record.role,
+    phone: record.phone,
+    email: record.email,
+    status: record.status,
+    start_date: record.hireDate || record.startDate,
+  });
   return mapWorker(data);
 }
 
@@ -601,7 +663,19 @@ export async function deleteWorker(id) {
 
 function mapWorker(row) {
   if (!row) return null;
-  return { id: row.id, farmId: row.farm_id, name: row.name, role: row.role, phone: row.phone, email: row.email, salary: row.salary, hireDate: row.hire_date, status: row.status, notes: row.notes, createdAt: row.created_at };
+  return {
+    id: row.id,
+    farmId: row.farm_id,
+    name: row.name,
+    role: row.role || 'Farm Worker',
+    phone: row.phone || '',
+    email: row.email || '',
+    salary: row.salary || 0,
+    hireDate: row.hire_date || row.start_date,
+    status: row.status || 'Active',
+    notes: row.notes || '',
+    createdAt: row.created_at,
+  };
 }
 
 // ─── Daily Records ─────────────────────────────────────────────────────────
@@ -676,13 +750,13 @@ export async function getFarmSubscription(farmId) {
   if (!supabase || !farmId) return null;
   const { data, error } = await supabase
     .from('farm_subscriptions')
-    .select('*, subscription_plans(*)')
+    .select('*')
     .eq('farm_id', farmId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
-  if (error) return null;
-  return mapSubscription(data);
+    .maybeSingle();
+  if (error) { console.warn('getFarmSubscription error:', error.message); return null; }
+  return data ? mapSubscription(data) : null;
 }
 
 function mapSubscription(row) {
@@ -693,7 +767,7 @@ function mapSubscription(row) {
     billingCycle: row.billing_cycle || 'monthly',
     startDate: row.created_at,
     trialEndsAt: row.trial_ends_at,
-    renewalDate: row.current_period_end,
+    renewalDate: row.renewal_date || row.current_period_end || row.trial_ends_at,
     autoRenew: row.auto_renew,
     trialUsed: Boolean(row.trial_ends_at),
     trialDaysTotal: 14,
@@ -709,22 +783,43 @@ export async function loadAllFarmData(farmId) {
   }
 
   const results = await Promise.allSettled([
-    getFarm(farmId),
-    getFlocks(farmId),
-    getFeeds(farmId),
-    getEggs(farmId),
-    getMortality(farmId),
-    getVaccinations(farmId),
-    getMedications(farmId),
-    getCustomers(farmId),
-    getSales(farmId),
-    getExpenses(farmId),
-    getWorkers(farmId),
-    getDailyRecords(farmId),
-    getFarmSubscription(farmId),
+    getFarm(farmId),           // 0 — null on failure
+    getFlocks(farmId),         // 1 — array
+    getFeeds(farmId),          // 2 — array
+    getEggs(farmId),           // 3 — array
+    getMortality(farmId),      // 4 — array
+    getVaccinations(farmId),   // 5 — array
+    getMedications(farmId),    // 6 — array
+    getCustomers(farmId),      // 7 — array
+    getSales(farmId),          // 8 — array
+    getExpenses(farmId),       // 9 — array
+    getWorkers(farmId),        // 10 — array
+    getDailyRecords(farmId),   // 11 — array
+    getFarmSubscription(farmId), // 12 — null on failure
   ]);
 
-  const [farm, flocks, feeds, eggs, mortality, vaccinations, medications, customers, sales, expenses, workers, dailyRecords, subscription] = results.map(r => r.status === 'fulfilled' ? r.value : (Array.isArray(r.value) ? [] : null));
+  // r.value is ONLY set on fulfilled promises; use r.reason for error logging
+  const getValue = (r, defaultValue) => {
+    if (r.status === 'fulfilled') return r.value;
+    console.warn('Farm data load partial failure:', r.reason?.message || r.reason);
+    return defaultValue;
+  };
+
+  const [farm, flocks, feeds, eggs, mortality, vaccinations, medications, customers, sales, expenses, workers, dailyRecords, subscription] = [
+    getValue(results[0],  null),
+    getValue(results[1],  []),
+    getValue(results[2],  []),
+    getValue(results[3],  []),
+    getValue(results[4],  []),
+    getValue(results[5],  []),
+    getValue(results[6],  []),
+    getValue(results[7],  []),
+    getValue(results[8],  []),
+    getValue(results[9],  []),
+    getValue(results[10], []),
+    getValue(results[11], []),
+    getValue(results[12], null),
+  ];
 
   return { farm, flocks: flocks || [], feeds: feeds || [], eggs: eggs || [], mortality: mortality || [], vaccinations: vaccinations || [], medications: medications || [], customers: customers || [], sales: sales || [], expenses: expenses || [], workers: workers || [], dailyRecords: dailyRecords || [], subscription };
 }

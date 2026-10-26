@@ -7,9 +7,11 @@ import { flockService } from '../../services/flockService';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import { POULTRY_TYPE_MAP, ALL_FLOCK_TYPE_OPTIONS } from '../../constants/poultryTypes';
 import { subscriptionService } from '../../services/subscriptionService';
+import { useToast } from '../../context/ToastContext';
 
 export default function Onboarding() {
   usePlanCatalog();
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
 
@@ -59,14 +61,20 @@ export default function Onboarding() {
   const handleNextStep1 = async (e) => {
     e.preventDefault();
     if (poultryTypes.length === 0) {
-      alert('Please select at least one poultry type you manage.');
+      toast.warning('Please select at least one poultry type you manage.', { title: 'Selection Required' });
       return;
     }
     if (currentPlan.limits.maxPoultryTypes !== Infinity && poultryTypes.length > currentPlan.limits.maxPoultryTypes) {
-      alert(`Your ${currentPlan.name} plan supports up to ${currentPlan.limits.maxPoultryTypes} poultry type(s). Please reduce selections or upgrade your plan.`);
+      toast.warning(`Your ${currentPlan.name} plan supports up to ${currentPlan.limits.maxPoultryTypes} poultry type(s). Please reduce selections or upgrade your plan.`, { title: 'Plan Limit' });
       return;
     }
-    try { await farmProfileService.updateFarm({ ...farmInfo, poultryTypes }); } catch(e) { alert(e.message); return; }
+    try { 
+      await farmProfileService.updateFarm({ ...farmInfo, poultryTypes }); 
+      toast.success('Farm configuration saved.', { title: 'Farm Updated' });
+    } catch(e) { 
+      toast.error(e.message, { title: 'Save Failed' }); 
+      return; 
+    }
     setStep(2);
   };
 
@@ -74,14 +82,21 @@ export default function Onboarding() {
     e.preventDefault();
     const birdCheck = subscriptionService.checkBirdCapacity(0, Number(firstFlock.initialBirds));
     if (!birdCheck.allowed) {
-      alert(birdCheck.message);
+      toast.warning(birdCheck.message, { title: 'Capacity Warning' });
       return;
     }
-    try { await flockService.create(firstFlock); } catch(e) { alert(e.message); return; }
+    try { 
+      await flockService.create(firstFlock); 
+      toast.success('First flock created successfully!', { title: 'Flock Saved' });
+    } catch(e) { 
+      toast.error(e.message, { title: 'Flock Error' }); 
+      return; 
+    }
     setStep(3);
   };
 
   const handleFinish = () => {
+    toast.success('Welcome to PoultryPro! Your farm dashboard is ready.', { title: 'Welcome to PoultryPro' });
     navigate('/dashboard');
   };
 

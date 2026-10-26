@@ -7,9 +7,11 @@ import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import { PLANS, PLAN_DETAILS } from '../../constants/plans';
 import { getPlanTheme } from '../../constants/planThemes';
 import { subscriptionService, createInitialSubscription } from '../../services/subscriptionService';
+import { useToast } from '../../context/ToastContext';
 
 export default function Register() {
   const [searchParams] = useSearchParams();
+  const toast = useToast();
   const { plans, loading: plansLoading, error: plansError } = usePlanCatalog();
   const planParam = searchParams.get('plan')?.toLowerCase();
   const initialPlan = (planParam === 'starter' || planParam === 'basic')
@@ -41,7 +43,10 @@ export default function Register() {
 
   const handlePoultryTypesChange = (newTypes) => {
     if (maxAllowedTypes !== Infinity && newTypes.length > maxAllowedTypes) {
-      alert(`The ${planInfo.name} plan supports up to ${maxAllowedTypes} poultry type${maxAllowedTypes > 1 ? 's' : ''}. Switch to ${selectedPlan === PLANS.STARTER ? 'Pro' : 'Enterprise'} to add more.`);
+      toast.warning(
+        `The ${planInfo.name} plan supports up to ${maxAllowedTypes} poultry type${maxAllowedTypes > 1 ? 's' : ''}. Switch to ${selectedPlan === PLANS.STARTER ? 'Pro' : 'Enterprise'} to add more.`,
+        { title: 'Plan Limit' }
+      );
       return;
     }
     setPoultryTypes(newTypes);
@@ -52,27 +57,28 @@ export default function Register() {
     if (submitting) return;
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match. Please re-enter your password.", { title: 'Password Mismatch' });
       return;
     }
     if (poultryTypes.length === 0) {
-      alert("Please select at least one poultry type.");
+      toast.warning("Please select at least one poultry type to configure your farm.", { title: 'Poultry Type Required' });
       return;
     }
     if (maxAllowedTypes !== Infinity && poultryTypes.length > maxAllowedTypes) {
-      alert(`Your selected ${planInfo.name} plan allows up to ${maxAllowedTypes} poultry type(s).`);
+      toast.warning(`Your selected ${planInfo.name} plan allows up to ${maxAllowedTypes} poultry type(s).`, { title: 'Limit Exceeded' });
       return;
     }
 
     setSubmitting(true);
     try {
       await register({ ...formData, poultryTypes, planId: selectedPlan, billingCycle });
+      toast.success('Welcome to PoultryPro! Your account and 14-day trial are ready.', { title: 'Account Created Successfully!' });
       navigate('/onboarding');
     } catch(e) { 
       if (e.message?.toLowerCase().includes('rate limit') || e.message?.includes('429')) {
-        alert("Registration rate limit reached. Please wait a minute or disable email confirmation in Supabase settings.");
+        toast.error("Registration rate limit reached. Please wait a minute or disable email confirmation in Supabase settings.", { title: 'Rate Limit Reached' });
       } else {
-        alert(e.message);
+        toast.error(e.message || "Registration failed. Please check your details and try again.", { title: 'Registration Failed' });
       }
     } finally {
       setSubmitting(false);

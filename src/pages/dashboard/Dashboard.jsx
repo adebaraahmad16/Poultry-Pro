@@ -17,10 +17,40 @@ export default function Dashboard() {
   const { selectedTypeIds } = usePoultryData();
   const { activeTypeId, activeType, showSelector } = usePoultry();
   const [activeModal, setActiveModal] = useState(null);
-  const navigate = useNavigate();
-  const openAction = action => {
-    if (action === 'flock') return setActiveModal(action);
-    navigate(`/daily-records?category=${({egg:'eggs',expense:'expenses',sale:'sales'})[action] || action}`);
+  const openAction = (action, flockId = null) => {
+    const flockQuery = flockId ? `&flockId=${flockId}` : '';
+    switch (action) {
+      case 'egg':
+      case 'eggs':
+        navigate(`/production/eggs?action=record${flockQuery}`);
+        break;
+      case 'feed':
+        navigate(`/production/feed?action=feed${flockQuery}`);
+        break;
+      case 'mortality':
+        navigate(`/health/mortality?action=record${flockQuery}`);
+        break;
+      case 'vaccination':
+      case 'vaccine':
+        navigate(`/health/vaccinations?action=record${flockQuery}`);
+        break;
+      case 'medication':
+        navigate(`/health/medication?action=record${flockQuery}`);
+        break;
+      case 'expense':
+      case 'expenses':
+        navigate(`/business/expenses?action=record${flockQuery}`);
+        break;
+      case 'sale':
+      case 'sales':
+        navigate(`/business/sales?action=record${flockQuery}`);
+        break;
+      case 'flock':
+        navigate(`/farm/flocks?action=record`);
+        break;
+      default:
+        navigate(`/farm/flocks`);
+    }
   };
 
   // No poultry types yet (fresh account that skipped onboarding) → fallback

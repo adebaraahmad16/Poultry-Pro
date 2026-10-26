@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Menu, ChevronDown, Building2 } from '../common/Icons';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -11,8 +11,22 @@ export default function Navbar({ onOpenMobileMenu }) {
   const { farm, notifications } = useFarm();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const notifRef = useRef(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = (notifications || []).filter((n) => !n.isRead && !n.read).length;
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
+    };
+    if (isNotifOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isNotifOpen]);
 
   return (
     <header className="min-w-0 shrink-0 gap-2 bg-white border-b border-slate-200 sticky top-0 z-30 px-3 sm:px-6 py-3 flex items-center justify-between">
@@ -68,16 +82,16 @@ export default function Navbar({ onOpenMobileMenu }) {
         </button>
 
         {/* Notification Bell */}
-        <div className="relative">
+        <div className="relative" ref={notifRef}>
           <button
             aria-label="Notifications"
             onClick={() => setIsNotifOpen(!isNotifOpen)}
-            className="p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 relative transition-colors"
+            className="p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 relative transition-all active:scale-95"
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-5 h-5 stroke-[1.9]" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-emerald-600 text-white font-bold text-[9px] rounded-full flex items-center justify-center border-2 border-white">
-                {unreadCount}
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-emerald-600 text-white font-black text-[9px] rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>

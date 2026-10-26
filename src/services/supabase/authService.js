@@ -32,7 +32,7 @@ export async function signUp({ fullName, email, password, phone, farmName, poult
 
   const userId = authData.user.id;
 
-  // 2. Create the farmer profile row (the DB trigger may also do this, upsert is safe)
+  // 2. Create the farmer profile row (trigger may also do this; upsert is safe)
   const { error: profileError } = await supabase.from('profiles').upsert({
     id: userId,
     full_name: fullName,
@@ -43,38 +43,44 @@ export async function signUp({ fullName, email, password, phone, farmName, poult
 
   if (profileError) console.warn('Profile upsert warning:', profileError.message);
 
-  // 3. Create the farm record
+  // 3. Create the farm record — provide an explicit UUID to avoid null-ID constraint
+  const farmId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
   const { data: farmData, error: farmError } = await supabase.from('farms').insert({
+    id: farmId,
     owner_id: userId,
     name: farmName || 'My Farm',
     poultry_types: Array.isArray(poultryTypes) ? poultryTypes : [],
   }).select().single();
 
-  if (farmError) console.warn('Farm creation warning:', farmError.message);
+  const resolvedFarmId = farmData?.id || farmId;
 
-  const farmId = farmData?.id || null;
+  if (farmError) {
+    console.warn('Farm creation warning:', farmError.message);
+  }
 
-  // 4. Update profile with farmId
-  if (farmId) {
-    await supabase.from('profiles').update({ farm_id: farmId }).eq('id', userId);
+  // 4. Update profile with farm_id
+  if (resolvedFarmId) {
+    await supabase.from('profiles').update({ farm_id: resolvedFarmId }).eq('id', userId);
   }
 
   // 5. Create the initial subscription (trial)
   const initialSub = createInitialSubscription(planId || PLANS.BASIC, billingCycle || 'monthly');
   const trialEndsAt = new Date(initialSub.trialEndsAt).toISOString();
 
-  const { error: subError } = await supabase.from('farm_subscriptions').insert({
-    farm_id: farmId,
-    user_id: userId,
-    plan_id: (planId || PLANS.BASIC).toLowerCase(),
-    status: 'trial',
-    billing_cycle: billingCycle || 'monthly',
-    trial_ends_at: trialEndsAt,
-    current_period_end: trialEndsAt,
-    auto_renew: true,
-  });
-
-  if (subError) console.warn('Subscription creation warning:', subError.message);
+  if (resolvedFarmId) {
+    const { error: subError } = await supabase.from('farm_subscriptions').insert({
+      farm_id: resolvedFarmId,
+      user_id: userId,
+      plan_id: (planId || PLANS.BASIC).toLowerCase(),
+      status: 'trial',
+      billing_cycle: billingCycle || 'monthly',
+      trial_ends_at: trialEndsAt,
+      renewal_date: trialEndsAt,
+      auto_renew: true,
+    });
+    if (subError) console.warn('Subscription creation warning:', subError.message);
+  }
 
   return {
     user: {
@@ -82,7 +88,7 @@ export async function signUp({ fullName, email, password, phone, farmName, poult
       email,
       fullName,
       phone,
-      farmId,
+      farmId: resolvedFarmId,
       farmName: farmName || 'My Farm',
       poultryTypes: Array.isArray(poultryTypes) ? poultryTypes : [],
       role: 'farmer',
@@ -133,35 +139,32 @@ export async function getSession() {
 
 /**
  * Fetch the farmer profile including farm data.
+ * Self-healing: backfills profile.farm_id if missing but farm exists via owner_id.
  */
 export async function getProfile(userId) {
   if (!supabase || !userId) return null;
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select(`
-      id,
-      full_name,
-      email,
-      phone,
-      role,
-      farm_id,
-      farms (
-        id,
-        name,
-        location,
-        poultry_types,
-        size,
-        currency,
-        weight_unit
-      )
-    `)
+    .select('id, full_name, email, phone, role, farm_id')
     .eq('id', userId)
     .single();
 
   if (error || !profile) return { id: userId, role: 'farmer' };
 
-  const farm = Array.isArray(profile.farms) ? profile.farms[0] : profile.farms;
+  let farm = null;
+  if (profile.farm_id) {
+    const { data: f } = await supabase.from('farms').select('*').eq('id', profile.farm_id).maybeSingle();
+    farm = f;
+  }
+  if (!farm) {
+    const { data: f } = await supabase.from('farms').select('*').eq('owner_id', userId).maybeSingle();
+    farm = f;
+    // Silently backfill profile.farm_id for existing accounts — self-healing fix
+    if (farm?.id && !profile.farm_id) {
+      supabase.from('profiles').update({ farm_id: farm.id }).eq('id', userId).then(() => {});
+    }
+  }
 
   return {
     id: profile.id,

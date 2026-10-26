@@ -1,100 +1,761 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { useRawFarm } from '../../context/FarmContext';
+import React, { useState, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  NotebookPen, Egg, Wheat, AlertTriangle, Syringe, Pill,
+  Receipt, DollarSign, Activity, Filter, Eye, ArrowUpRight,
+  Calendar, Layers, Building2, CheckCircle2, Clock
+} from '../common/Icons';
+import { useFarm, usePoultryData } from '../../context/FarmContext';
 import { usePoultry } from '../../context/PoultryContext';
-import { poultryTypeId } from '../../../shared/poultryScope';
 import { useAuth } from '../../context/AuthContext';
-import { dailyRecordService } from '../../services/dailyRecordService';
-import { CATEGORIES, completion, localDate, recordSummary, totals } from '../../../shared/dailyRecords';
-import DailyRecordForm from './DailyRecordForm';
-import DailyPerformance from './DailyPerformance';
+import DataTable from '../common/DataTable';
+import Badge from '../common/Badge';
+import Modal from '../common/Modal';
 
-const control='mt-1 w-full min-w-0 rounded-lg border border-slate-300 bg-white p-2.5 text-sm focus:ring-2 focus:ring-green-700 focus:outline-none';
-const button='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50 focus:ring-2 focus:ring-green-700';
-const colors={'Recorded':'bg-green-100 text-green-800','Pending':'bg-amber-100 text-amber-800','No Activity':'bg-blue-100 text-blue-800','Not Applicable':'bg-slate-100 text-slate-600'};
-function Dialog({title,children,onClose}) {
-  const ref=useRef(null);
-  useEffect(()=>{const node=ref.current;node.showModal();const close=e=>{e.preventDefault();onClose();};node.addEventListener('cancel',close);return()=>{node.removeEventListener('cancel',close);node.close();};},[]);
-  return <dialog ref={ref} aria-label={title} className="max-h-[90dvh] w-[min(94vw,48rem)] overflow-y-auto rounded-2xl border p-0 text-[#1F2937] backdrop:bg-slate-900/60"><div className="flex items-center justify-between gap-4 border-b p-5"><h2 className="text-lg font-bold">{title}</h2><button className={button} onClick={onClose} aria-label="Close dialog">Close</button></div><div className="p-5">{children}</div></dialog>;
-}
-function categorySummary(item) {
-  if(item.status!=='Recorded') return item.status==='Pending'?'Awaiting record':item.entries[0]?.values.reason || 'Does not apply';
-  const t=totals(item.entries);
-  return ({feed:`${t.feed.toLocaleString()} kg consumed`,mortality:`${t.mortality} birds`,eggs:`${t.eggs} eggs collected`,water:`${t.water.toLocaleString()} litres`,expenses:t.expenses.toLocaleString(),sales:`${t.revenue.toLocaleString()} revenue`})[item.id] || `${item.entries.filter(r=>r.status==='Recorded').length} entries recorded`;
-}
-export default function DailyRecords({compact=false,poultryType=null}) {
-  const {farm,refreshAllData,accessibleFarms,selectedFarmId,selectFarm}=useRawFarm();
-  const {activeTypeId,activeType,selectPoultryType,selectedTypes}=usePoultry();
-  const {user}=useAuth();
-  const [params]=useSearchParams();
-  const farms=accessibleFarms,farmId=selectedFarmId;
-  const [data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState('');
-  const type=activeTypeId==='all'?'':activeTypeId;
-  const [flockId,setFlockId]=useState(params.get('flockId')||'');
-  const [today,setToday]=useState(localDate()),[date,setDate]=useState(params.get('date')||localDate());
-  const [category,setCategory]=useState(params.get('category')||'feed'),[editing,setEditing]=useState(null),[entryOpen,setEntryOpen]=useState(false);
-  const [details,setDetails]=useState(null),[audit,setAudit]=useState([]),[deleting,setDeleting]=useState(null),[busy,setBusy]=useState(false);
-  const [search,setSearch]=useState(''),[historyCategory,setHistoryCategory]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[page,setPage]=useState(1);
-  const generation=useRef(0),entryRef=useRef(null),historyRef=useRef(null),selectionInitialized=useRef(false);
-  useEffect(()=>{const id=setInterval(()=>{const now=localDate();setToday(old=>{if(old!==now)setDate(d=>d===old?now:d);return now;});},30000);return()=>clearInterval(id);},[]);
-  const load=useCallback(async()=>{
-    if(!farmId)return;
-    const id=++generation.current;setLoading(true);setError('');
-    try{const result=await dailyRecordService.load(farmId);if(generation.current===id){setData(result);if(!selectionInitialized.current){setFlockId(current=>params.has('flockId')&&params.get('flockId')===''?'':result.flocks.some(f=>f.id===current)?current:result.flocks[0]?.id||'');selectionInitialized.current=true;}}}
-    catch(e){if(generation.current===id){setError(e.message);setData(null);}}
-    finally{if(generation.current===id)setLoading(false);}
-  },[farmId,activeTypeId]);
-  useEffect(()=>{setData(null);load();return()=>{generation.current++;};},[load]);
-  useEffect(()=>{const refresh=()=>load();window.addEventListener('daily-records-updated',refresh);window.addEventListener('focus',refresh);return()=>{window.removeEventListener('daily-records-updated',refresh);window.removeEventListener('focus',refresh);};},[load]);
-  const flocks=data?.flocks||[],feeds=data?.feeds||[],records=data?.records||[];
-  const types=[...new Set(flocks.map(f=>f.type))];
-  const choices=flocks.filter(f=>!type||poultryTypeId(f.type)===type);
-  const flock=flocks.find(f=>f.id===flockId);
-  const effectiveDate=compact?today:date;
-  const scoped=records.filter(r=>(flockId?r.flockId===flockId:!r.flockId)&&(!type||poultryTypeId(r.poultryType)===type));
-  const tracker=completion(scoped,effectiveDate,flock);
-  const currency=farms.find(f=>f.id===farmId)?.currency||farm.currency||'NGN';
-  const title=compact?"Today's Farm Records":'Daily Records Overview';
-  const goEntry=(id=category)=>{setCategory(id);setEditing(null);if(compact)setEntryOpen(true);else entryRef.current?.scrollIntoView({behavior:'smooth',block:'start'});};
-  const saved=async()=>{setNotice(editing?'Record corrected. Balances and summaries updated.':'Daily record saved.');setEditing(null);setEntryOpen(false);await load();refreshAllData().catch(()=>{});window.dispatchEvent(new Event('daily-records-updated'));};
-  const edit=r=>{setCategory(r.category);setEditing(r);setDate(r.date);setFlockId(r.flockId||'');if(compact)setEntryOpen(true);else entryRef.current?.scrollIntoView({behavior:'smooth'});};
-  const form=<DailyRecordForm key={`${category}|${farmId}|${flockId}|${effectiveDate}|${editing?.id||'new'}`} category={category} farmId={farmId} flock={flock} poultryType={type} date={effectiveDate} feeds={feeds} flocks={flocks} record={editing} initialValues={category==='health'&&params.get('healthType')==='Vaccination'?{recordType:'Vaccination'}:{}} onSaved={saved} onCancel={editing?()=>setEditing(null):compact?()=>setEntryOpen(false):undefined}/>;
-  const filtered=records.filter(r=>(!flockId||r.flockId===flockId)&&(!type||poultryTypeId(r.poultryType)===type)&&(!historyCategory||r.category===historyCategory)&&(!from||r.date>=from)&&(!to||r.date<=to)&&(!search||`${recordSummary(r)} ${r.date} ${r.status} ${r.category} ${flocks.find(f=>f.id===r.flockId)?.name||''} ${JSON.stringify(r.values)}`.toLowerCase().includes(search.toLowerCase())));
-  useEffect(()=>setPage(1),[farmId,flockId,type,historyCategory,from,to,search]);
-  const shown=filtered.slice((page-1)*20,page*20);
-  const exportRecords=async()=>{setBusy(true);setError('');try{await dailyRecordService.export({farmId,...(flockId?{flockId}:{}),...(type?{poultryType:type}:{}),...(historyCategory?{category:historyCategory}:{}),from,to,search});}catch(e){setError(e.message);}finally{setBusy(false);}};
-  return <div className="space-y-6 text-[#1F2937]">
-    {!compact&&<header><h1 className="text-2xl font-bold">Daily Farm Records</h1><p className="mt-1 text-sm text-slate-500">Record and monitor your poultry farm's daily feeding, production, health, and financial activities.</p></header>}
-    {!compact&&<nav aria-label="Daily record quick actions" className="flex flex-wrap gap-2">{[['feed','Record Feed'],['mortality','Record Mortality'],['eggs','Record Egg Production'],['expenses','Record Expenses']].map(([id,label])=><button key={id} className={button} disabled={loading} onClick={()=>goEntry(id)}>{label}</button>)}</nav>}
-    {notice&&<div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss notification">Dismiss</button></div>}
-    {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error} <button className="underline" onClick={load}>Retry</button></div>}
-    <section className="rounded-2xl border border-green-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby={compact?'today-records-title':'daily-records-title'}>
-      <div className="mb-5 flex flex-wrap justify-between gap-3"><div><h2 id={compact?'today-records-title':'daily-records-title'} className="text-xl font-bold">{title}</h2><p className="mt-1 text-sm text-slate-500">Keep your poultry farm records up to date by recording your daily farm activities.</p></div><time className="text-sm font-semibold text-green-800" dateTime={effectiveDate}>{new Date(effectiveDate+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</time></div>
-      <fieldset disabled={loading} className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="text-sm font-medium">Farm<select disabled={!!editing} value={farmId} className={control} onChange={e=>{selectionInitialized.current=false;selectFarm(e.target.value);}}>{farms.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
-        <label className="text-sm font-medium">Poultry type<select disabled={!!editing} value={type} className={control} onChange={e=>{selectPoultryType(e.target.value||'all');}}><option value="">All poultry types</option>{selectedTypes.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
-        <label className="text-sm font-medium">Flock<select disabled={!!editing} value={flockId} className={control} onChange={e=>setFlockId(e.target.value)}><option value="">Farm-wide activities</option>{choices.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
-        {!compact&&<label className="text-sm font-medium">Recording date<input type="date" required max={today} value={date} className={control} onChange={e=>{if(e.target.value)setDate(e.target.value);}}/></label>}
-      </fieldset>
-      {loading?<p role="status" className="py-8 text-sm text-slate-500">Loading saved farm records…</p>:data&&<>
-        {!flock&&<p className="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Select a flock to see its essential daily records. Farm-wide expenses, sales and activities can be recorded without a flock.</p>}
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(240px,1fr)]">
-          <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-slate-500"><th className="p-2">Activity</th><th className="p-2">{compact?"Today's record":'Daily record'}</th><th className="p-2">Status</th><th className="p-2"><span className="sr-only">Action</span></th></tr></thead><tbody>{tracker.items.map(item=><tr className="border-b border-slate-100" key={item.id}><th className="p-2 font-medium">{item.label}{!item.essential&&<span className="block text-xs font-normal text-slate-400">Optional</span>}</th><td className="p-2 text-slate-600">{categorySummary(item)}</td><td className="p-2"><span className={`inline-block whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${colors[item.status]}`}>{item.status}</span></td><td className="p-2">{(!item.flock||flock)&&<button className="text-sm font-semibold text-[#2563EB] underline" onClick={()=>goEntry(item.id)}>Record<span className="sr-only"> {item.label}</span></button>}</td></tr>)}</tbody></table></div>
-          <aside className="self-start rounded-xl bg-[#F8FAF9] p-5"><h3 className="font-bold">Daily Records Completion</h3><p className="mt-2 text-sm">{tracker.completed} of {tracker.total} applicable essential records completed</p><div className="mt-3 flex items-center gap-3"><progress value={tracker.completed} max={tracker.total||1} className="h-3 w-full accent-[#15803D]" aria-label="Daily records completion"/><strong>{tracker.percentage}%</strong></div><p className="mt-2 text-xs text-slate-500">{tracker.completed} completed · {tracker.pending.length} pending</p>{tracker.pending.length>0?<div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><p className="font-semibold">Remaining today</p><ul className="mt-1 space-y-1">{tracker.pending.map(c=><li key={c.id}><button className="underline" onClick={()=>goEntry(c.id)}>{c.label}</button></li>)}</ul></div>:<p className="mt-4 text-sm text-green-800">{flock?'All essential records are complete.':'Choose a flock to check completion.'}</p>}<button className="mt-4 w-full rounded-lg bg-[#15803D] px-4 py-2.5 text-sm font-semibold text-white" onClick={()=>goEntry(tracker.pending[0]?.id||'expenses')}>Complete Daily Records</button><p className="mt-3 text-xs text-slate-500">Optional activities do not trigger reminders. Confirm no activity explicitly; a missing record is never treated as zero.</p></aside>
+export default function DailyRecords({ compact = false }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const {
+    farm,
+    flocks,
+    feeds,
+    eggs,
+    mortality,
+    vaccinations,
+    medications,
+    expenses,
+    sales,
+    dailyRecords,
+    accessibleFarms,
+    selectedFarmId,
+    selectFarm
+  } = useFarm();
+
+  const { selectedTypes } = usePoultryData();
+  const { activeTypeId, selectPoultryType } = usePoultry();
+
+  // Filters State
+  const [datePreset, setDatePreset] = useState('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [poultryTypeFilter, setPoultryTypeFilter] = useState(activeTypeId || 'all');
+  const [flockFilter, setFlockFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // Details Modal State
+  const [selectedActivity, setSelectedActivity] = useState(null);
+
+  const farms = accessibleFarms || [farm].filter(Boolean);
+
+  // Helper date strings
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const yesterday = new Date(now.getTime() - 86400000);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  // 1. Build Unified Chronological Activity History from actual records
+  const allActivities = useMemo(() => {
+    const list = [];
+    const farmName = farm?.name || 'My Farm';
+
+    // Helper to find flock name & poultry type
+    const getFlockInfo = (fId) => {
+      const fl = flocks.find(f => f.id === fId);
+      return {
+        flockName: fl ? fl.name : 'Farm-wide',
+        poultryType: fl?.type || 'All Poultry'
+      };
+    };
+
+    // A. Egg Production records
+    (eggs || []).forEach(e => {
+      const { flockName, poultryType } = getFlockInfo(e.flockId);
+      const total = Number(e.totalCollected) || Number(e.goodEggs) || 0;
+      const good = Number(e.goodEggs) || total;
+      const cracked = Number(e.crackedEggs) || 0;
+      const damaged = Number(e.damagedEggs) || 0;
+      list.push({
+        id: `egg-${e.id}`,
+        rawId: e.id,
+        date: e.date || todayStr,
+        activityType: 'Egg Production',
+        category: 'eggs',
+        farmName,
+        farmId: e.farmId || farm?.id,
+        flockId: e.flockId,
+        flockName,
+        poultryType: e.poultryType || poultryType,
+        summary: `${total.toLocaleString()} eggs collected (${good} good, ${cracked} cracked, ${damaged} damaged)`,
+        recordedBy: e.recordedBy || user?.name || user?.email || 'Farmer',
+        status: 'Recorded',
+        dashboardPath: '/production/eggs',
+        dashboardName: 'Egg Production',
+        originalRecord: e
+      });
+    });
+
+    // B. Feeding records (from dailyRecords where category === 'feed')
+    (dailyRecords || [])
+      .filter(r => r.category === 'feed')
+      .forEach(f => {
+        const { flockName, poultryType } = getFlockInfo(f.flockId);
+        const qty = f.values?.quantity || f.quantity || 0;
+        const feedType = f.values?.feedType || f.feedType || 'Layer Mash';
+        list.push({
+          id: `feed-${f.id}`,
+          rawId: f.id,
+          date: f.date || todayStr,
+          activityType: 'Feeding',
+          category: 'feed',
+          farmName,
+          farmId: f.farmId || farm?.id,
+          flockId: f.flockId,
+          flockName,
+          poultryType: f.poultryType || poultryType,
+          summary: `${Number(qty).toLocaleString()} kg of ${feedType} consumed`,
+          recordedBy: f.farmerId || user?.name || user?.email || 'Farmer',
+          status: f.status || 'Recorded',
+          dashboardPath: '/production/feed',
+          dashboardName: 'Feed Management',
+          originalRecord: f
+        });
+      });
+
+    // C. Mortality records
+    (mortality || []).forEach(m => {
+      const { flockName, poultryType } = getFlockInfo(m.flockId);
+      const dead = Number(m.birdsDead) || Number(m.count) || 0;
+      const cause = m.cause || m.suspectedCause || 'Unspecified';
+      list.push({
+        id: `mortality-${m.id}`,
+        rawId: m.id,
+        date: m.date || todayStr,
+        activityType: 'Mortality',
+        category: 'mortality',
+        farmName,
+        farmId: m.farmId || farm?.id,
+        flockId: m.flockId,
+        flockName,
+        poultryType: m.poultryType || poultryType,
+        summary: `${dead} bird${dead === 1 ? '' : 's'} lost (Cause: ${cause})`,
+        recordedBy: m.recordedBy || user?.name || user?.email || 'Farmer',
+        status: 'Recorded',
+        dashboardPath: '/health/mortality',
+        dashboardName: 'Mortality Tracking',
+        originalRecord: m
+      });
+    });
+
+    // D. Vaccination records
+    (vaccinations || []).forEach(v => {
+      const { flockName, poultryType } = getFlockInfo(v.flockId);
+      const count = Number(v.birdsVaccinated) || 0;
+      const vaccine = v.vaccine || v.name || 'Vaccine';
+      list.push({
+        id: `vac-${v.id}`,
+        rawId: v.id,
+        date: v.scheduledDate || v.date || todayStr,
+        activityType: 'Vaccination',
+        category: 'vaccination',
+        farmName,
+        farmId: v.farmId || farm?.id,
+        flockId: v.flockId,
+        flockName,
+        poultryType,
+        summary: `${vaccine} administered to ${count.toLocaleString()} birds (${v.method || 'Drinking Water'})`,
+        recordedBy: v.administeredBy || user?.name || user?.email || 'Farmer',
+        status: v.status || 'Completed',
+        dashboardPath: '/health/vaccinations',
+        dashboardName: 'Vaccinations',
+        originalRecord: v
+      });
+    });
+
+    // E. Medication records
+    (medications || []).forEach(med => {
+      const { flockName, poultryType } = getFlockInfo(med.flockId);
+      list.push({
+        id: `med-${med.id}`,
+        rawId: med.id,
+        date: med.startDate || med.date || todayStr,
+        activityType: 'Medication',
+        category: 'medication',
+        farmName,
+        farmId: med.farmId || farm?.id,
+        flockId: med.flockId,
+        flockName,
+        poultryType,
+        summary: `${med.medicationName || med.name} (${med.dosage || 'Standard'} dose, ${med.durationDays || med.duration || 3} days)`,
+        recordedBy: med.administeredBy || user?.name || user?.email || 'Farmer',
+        status: med.status || 'Completed',
+        dashboardPath: '/health/medication',
+        dashboardName: 'Medications',
+        originalRecord: med
+      });
+    });
+
+    // F. Expenses records
+    (expenses || []).forEach(exp => {
+      const { flockName, poultryType } = getFlockInfo(exp.flockId);
+      list.push({
+        id: `exp-${exp.id}`,
+        rawId: exp.id,
+        date: exp.date || todayStr,
+        activityType: 'Expense',
+        category: 'expenses',
+        farmName,
+        farmId: exp.farmId || farm?.id,
+        flockId: exp.flockId,
+        flockName: exp.flockId ? flockName : 'General Farm',
+        poultryType: exp.flockId ? poultryType : 'Farm-wide',
+        summary: `₦${(Number(exp.amount) || 0).toLocaleString()} — ${exp.description || exp.category}`,
+        recordedBy: user?.name || user?.email || 'Farmer',
+        status: 'Paid',
+        dashboardPath: '/business/expenses',
+        dashboardName: 'Expenses',
+        originalRecord: exp
+      });
+    });
+
+    // G. Sales records
+    (sales || []).forEach(s => {
+      const { flockName, poultryType } = getFlockInfo(s.flockId);
+      const qty = s.quantity || 0;
+      const prod = s.product || s.productType || 'Product';
+      const cust = s.customerName || s.customer || 'Direct Customer';
+      list.push({
+        id: `sale-${s.id}`,
+        rawId: s.id,
+        date: s.date || todayStr,
+        activityType: 'Sale',
+        category: 'sales',
+        farmName,
+        farmId: s.farmId || farm?.id,
+        flockId: s.flockId,
+        flockName: s.flockId ? flockName : 'General Farm',
+        poultryType: s.flockId ? poultryType : 'Farm-wide',
+        summary: `₦${(Number(s.totalAmount) || 0).toLocaleString()} — ${qty} ${prod} to ${cust}`,
+        recordedBy: user?.name || user?.email || 'Farmer',
+        status: s.paymentStatus || 'Paid',
+        dashboardPath: '/business/sales',
+        dashboardName: 'Sales & Revenue',
+        originalRecord: s
+      });
+    });
+
+    // Sort descending by date
+    list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return list;
+  }, [farm, flocks, eggs, dailyRecords, mortality, vaccinations, medications, expenses, sales, user]);
+
+  // 2. Filtered Activities
+  const filteredActivities = useMemo(() => {
+    return allActivities.filter(act => {
+      // Category filter
+      if (categoryFilter !== 'all' && act.category !== categoryFilter) return false;
+
+      // Flock filter
+      if (flockFilter !== 'all' && act.flockId !== flockFilter) return false;
+
+      // Poultry Type filter
+      if (poultryTypeFilter !== 'all') {
+        const matchesType = act.poultryType.toLowerCase().includes(poultryTypeFilter.toLowerCase());
+        if (!matchesType && act.poultryType !== 'Farm-wide' && act.poultryType !== 'All Poultry') {
+          return false;
+        }
+      }
+
+      // Date Preset Filter
+      if (datePreset === 'today') {
+        if (act.date !== todayStr) return false;
+      } else if (datePreset === 'yesterday') {
+        if (act.date !== yesterdayStr) return false;
+      } else if (datePreset === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 86400000);
+        if (new Date(act.date) < weekAgo) return false;
+      } else if (datePreset === 'month') {
+        const monthAgo = new Date(now.getTime() - 30 * 86400000);
+        if (new Date(act.date) < monthAgo) return false;
+      } else if (datePreset === 'custom') {
+        if (customFrom && act.date < customFrom) return false;
+        if (customTo && act.date > customTo) return false;
+      }
+
+      return true;
+    });
+  }, [allActivities, categoryFilter, flockFilter, poultryTypeFilter, datePreset, customFrom, customTo, todayStr, yesterdayStr]);
+
+  // 3. Compute 8 Mandatory Overview Cards from actual Supabase records
+  const totalFeedKg = useMemo(() => {
+    return (dailyRecords || [])
+      .filter(r => r.category === 'feed')
+      .reduce((sum, r) => sum + (Number(r.values?.quantity || r.quantity || 0)), 0);
+  }, [dailyRecords]);
+
+  const totalEggsCollected = useMemo(() => {
+    return (eggs || []).reduce((sum, e) => sum + (Number(e.totalCollected) || Number(e.goodEggs) || 0), 0);
+  }, [eggs]);
+
+  const totalMortality = useMemo(() => {
+    return (mortality || []).reduce((sum, m) => sum + (Number(m.birdsDead) || Number(m.count) || 0), 0);
+  }, [mortality]);
+
+  const totalVaccinations = useMemo(() => {
+    return (vaccinations || []).length;
+  }, [vaccinations]);
+
+  const totalMedications = useMemo(() => {
+    return (medications || []).length;
+  }, [medications]);
+
+  const totalExpensesAmount = useMemo(() => {
+    return (expenses || []).reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  }, [expenses]);
+
+  const totalSalesAmount = useMemo(() => {
+    return (sales || []).reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+  }, [sales]);
+
+  const totalRecordedActivities = allActivities.length;
+
+  // Table columns definition
+  const columns = [
+    {
+      header: 'Date',
+      accessor: 'date',
+      render: (r) => <span className="font-semibold text-slate-800 whitespace-nowrap">{r.date}</span>
+    },
+    {
+      header: 'Activity Type',
+      render: (r) => {
+        let variant = 'slate';
+        if (r.category === 'eggs') variant = 'amber';
+        else if (r.category === 'feed') variant = 'blue';
+        else if (r.category === 'mortality') variant = 'rose';
+        else if (r.category === 'vaccination') variant = 'purple';
+        else if (r.category === 'medication') variant = 'cyan';
+        else if (r.category === 'sales') variant = 'green';
+        else if (r.category === 'expenses') variant = 'slate';
+        return <Badge variant={variant}>{r.activityType}</Badge>;
+      }
+    },
+    {
+      header: 'Farm / Flock',
+      render: (r) => (
+        <div>
+          <span className="font-semibold text-slate-900 block text-xs">{r.flockName}</span>
+          <span className="text-[10px] text-slate-400">{r.farmName}</span>
         </div>
-        <div className="mt-5 flex flex-wrap gap-3"><button onClick={()=>goEntry(flock?'feed':'expenses')} className="rounded-lg bg-[#15803D] px-4 py-2.5 text-sm font-semibold text-white">+ {compact?"Record Today's Activities":'Add Daily Record'}</button>{compact?<Link className={button} to={`/daily-records?${new URLSearchParams({farmId,flockId,poultryType:type,date:effectiveDate})}`}>View All Records</Link>:<button className={button} onClick={()=>historyRef.current?.scrollIntoView({behavior:'smooth'})}>View Records History</button>}</div>
-      </>}
-    </section>
-    {!compact&&data&&!loading&&<>
-      <section ref={entryRef} className="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"><h2 className="text-lg font-bold">{editing?'Correct Daily Activity':'Record Daily Activity'}</h2><div className="my-4 flex flex-wrap gap-2" role="group" aria-label="Record categories">{CATEGORIES.map(c=><button key={c.id} disabled={!!editing} type="button" aria-pressed={category===c.id} onClick={()=>{setCategory(c.id);setEditing(null);}} className={`${button} ${category===c.id?'!border-green-700 !bg-green-50 text-green-800':''}`}>{c.label}</button>)}</div>{CATEGORIES.find(c=>c.id===category)?.flock&&!flock?<p className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">Select a flock above to record this activity.</p>:form}</section>
-      <section ref={historyRef} className="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">Daily Records History</h2>{data.capabilities.dataExport&&<button disabled={busy} className={button} onClick={exportRecords}>{busy?'Exporting…':'Export CSV'}</button>}</div><div className="my-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm">Search records<input type="search" className={control} value={search} placeholder="Search activities and notes" onChange={e=>setSearch(e.target.value)}/></label><label className="text-sm">Category<select className={control} value={historyCategory} onChange={e=>setHistoryCategory(e.target.value)}><option value="">All categories</option>{CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label><label className="text-sm">From date<input type="date" className={control} value={from} max={to||today} onChange={e=>setFrom(e.target.value)}/></label><label className="text-sm">To date<input type="date" className={control} value={to} min={from} max={today} onChange={e=>setTo(e.target.value)}/></label></div><p className="mb-3 text-xs text-slate-500">Farm, poultry type and flock filters above also apply to history. Farm-wide selection shows all flocks in history.</p>
-        <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="border-b text-slate-500"><tr>{['Date','Farm','Flock','Record Type','Summary','Actions'].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{shown.map(r=><tr className="border-b border-slate-100" key={r.id}><td className="p-2">{r.date}</td><td className="p-2">{farms.find(f=>f.id===r.farmId)?.name}</td><td className="p-2">{flocks.find(f=>f.id===r.flockId)?.name||'Farm-wide'}</td><td className="p-2">{CATEGORIES.find(c=>c.id===r.category)?.label}<span className={`mt-1 block w-fit rounded px-2 py-0.5 text-xs ${colors[r.status]}`}>{r.status}</span></td><td className="p-2">{recordSummary(r)}</td><td className="p-2"><div className="flex flex-wrap gap-2"><button className="text-blue-700 underline" onClick={async()=>{setDetails(r);setAudit([]);try{setAudit(await dailyRecordService.audit(r));}catch(e){setError(e.message);}}}>View</button>{r.editable&&<><button className="text-green-800 underline" onClick={()=>edit(r)}>Edit</button><button className="text-red-700 underline" onClick={()=>setDeleting(r)}>Delete</button></>}</div></td></tr>)}</tbody></table></div>{!filtered.length&&<p className="py-8 text-center text-sm text-slate-500">No records match your filters.</p>}<div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm"><span>{filtered.length} saved records · Page {page} of {Math.max(1,Math.ceil(filtered.length/20))}</span><div className="flex gap-2"><button className={button} disabled={page<=1} onClick={()=>setPage(p=>p-1)}>Previous</button><button className={button} disabled={page*20>=filtered.length} onClick={()=>setPage(p=>p+1)}>Next</button></div></div>
-      </section>
-      <DailyPerformance records={records.filter(r=>(!flockId||r.flockId===flockId)&&(!type||poultryTypeId(r.poultryType)===type))} allRecords={records} flocks={choices} flock={flock} date={effectiveDate} currency={currency} capabilities={data.capabilities}/>
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"><h2 className="text-lg font-bold">Upcoming Vaccinations and Health Follow-ups</h2><ul className="mt-3 space-y-2 text-sm">{(data.upcomingHealth||[]).filter(h=>!flockId||h.flockId===flockId).map(h=><li key={h.id} className="rounded-lg bg-blue-50 p-3 text-blue-900">{h.date} · {h.vaccine} · {flocks.find(f=>f.id===h.flockId)?.name}</li>)}</ul>{!(data.upcomingHealth||[]).some(h=>!flockId||h.flockId===flockId)&&<p className="mt-2 text-sm text-slate-500">No upcoming health activities recorded for this selection.</p>}</section>
-    </>}
-    {entryOpen&&<Dialog title={CATEGORIES.find(c=>c.id===category)?.label||'Record Activity'} onClose={()=>setEntryOpen(false)}>{CATEGORIES.find(c=>c.id===category)?.flock&&!flock?<p>Select a flock before recording this activity.</p>:form}</Dialog>}
-    {details&&<Dialog title="Record Details" onClose={()=>setDetails(null)}><p className="mb-4 text-sm">{details.date} · {recordSummary(details)}</p><dl className="grid gap-3 text-sm sm:grid-cols-2">{Object.entries({...details.values,farmerId:details.farmerId||'Legacy record',farmId:details.farmId,flockId:details.flockId||'Farm-wide',poultryType:details.poultryType||'All poultry',createdAt:details.createdAt,updatedAt:details.updatedAt}).map(([key,value])=><div key={key}><dt className="break-words text-slate-500">{key.replace(/([A-Z])/g,' $1')}</dt><dd className="break-words font-medium">{String(value??'—')}</dd></div>)}</dl>{details.legacy&&<p className="mt-4 text-sm text-slate-500">This record was entered in an existing farm module. Corrections preserve its original ID and add an audit trail.</p>}<h3 className="mt-5 font-bold">Audit History</h3>{audit.length?<ul className="mt-2 space-y-3 text-sm">{audit.map((a,i)=><li key={i} className="rounded-lg bg-slate-50 p-3">{a.action} · {new Date(a.createdAt).toLocaleString()} · {a.actorId}<details className="mt-2"><summary className="cursor-pointer text-blue-700">View change details</summary><pre className="mt-2 overflow-x-auto text-xs">{JSON.stringify({before:a.beforeValues,after:a.afterValues},null,2)}</pre></details></li>)}</ul>:<p className="mt-2 text-sm text-slate-500">No daily record changes found.</p>}</Dialog>}
-    {deleting&&<Dialog title="Delete Daily Record?" onClose={()=>!busy&&setDeleting(null)}><p className="text-sm">Delete {recordSummary(deleting)} on {deleting.date}? Linked bird, feed and egg balances will be recalculated. This change will be kept in the audit history.</p><div className="mt-5 flex gap-3"><button disabled={busy} className="rounded-lg bg-red-700 px-4 py-2 text-white" onClick={async()=>{setBusy(true);try{await dailyRecordService.remove(deleting);setDeleting(null);await saved();setNotice('Record deleted. Linked balances updated.');}catch(e){setError(e.message);setDeleting(null);}finally{setBusy(false);}}}>{busy?'Deleting…':'Delete Record'}</button><button disabled={busy} className={button} onClick={()=>setDeleting(null)}>Cancel</button></div></Dialog>}
-  </div>;
+      )
+    },
+    {
+      header: 'Poultry Type',
+      render: (r) => <span className="text-xs font-medium text-slate-600">{r.poultryType}</span>
+    },
+    {
+      header: 'Record Summary',
+      render: (r) => (
+        <span className="font-medium text-slate-800 text-xs sm:text-sm line-clamp-2">
+          {r.summary}
+        </span>
+      )
+    },
+    {
+      header: 'Status',
+      render: (r) => {
+        const isCompleted = r.status === 'Completed' || r.status === 'Recorded' || r.status === 'Paid';
+        return (
+          <Badge variant={isCompleted ? 'green' : 'amber'}>
+            {r.status}
+          </Badge>
+        );
+      }
+    },
+    {
+      header: 'Actions',
+      render: (r) => (
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <button
+            onClick={() => setSelectedActivity(r)}
+            className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1"
+            title="View Details"
+          >
+            <Eye className="w-3.5 h-3.5 text-slate-500" />
+            Details
+          </button>
+          <Link
+            to={r.dashboardPath}
+            className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1"
+            title={`Open in ${r.dashboardName}`}
+          >
+            Dashboard
+            <ArrowUpRight className="w-3 h-3 text-emerald-600" />
+          </Link>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+              <NotebookPen className="w-6 h-6 text-emerald-600" />
+              Daily Farm Records — Centralized Monitoring
+            </h1>
+            <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-full">
+              Read-Only Overview
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500">
+            Centralized monitoring hub showing all recorded farm activities across production, feeding, health, expenses, and sales.
+          </p>
+        </div>
+
+        {/* Informational Guidance */}
+        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 self-start sm:self-auto">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>Each dashboard manages its own records directly</span>
+        </div>
+      </div>
+
+      {/* 8 Mandatory Overview Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* 1. Total Feed Consumed */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Feed Consumed</span>
+            <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
+              <Wheat className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-slate-900">{totalFeedKg.toLocaleString()} <span className="text-sm font-semibold text-slate-500">kg</span></p>
+            <Link to="/production/feed" className="text-2xs font-semibold text-teal-700 hover:underline flex items-center gap-0.5 mt-1.5">
+              Feed Dashboard <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 2. Total Eggs Collected */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Eggs Collected</span>
+            <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl">
+              <Egg className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-slate-900">{totalEggsCollected.toLocaleString()} <span className="text-sm font-semibold text-slate-500">eggs</span></p>
+            <Link to="/production/eggs" className="text-2xs font-semibold text-emerald-700 hover:underline flex items-center gap-0.5 mt-1.5">
+              Egg Production <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 3. Total Mortality */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Mortality</span>
+            <div className="p-2 bg-rose-50 text-rose-700 rounded-xl">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-rose-600">{totalMortality.toLocaleString()} <span className="text-sm font-semibold text-slate-500">birds</span></p>
+            <Link to="/health/mortality" className="text-2xs font-semibold text-rose-700 hover:underline flex items-center gap-0.5 mt-1.5">
+              Mortality Dashboard <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 4. Total Vaccinations */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Vaccinations</span>
+            <div className="p-2 bg-purple-50 text-purple-700 rounded-xl">
+              <Syringe className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-slate-900">{totalVaccinations} <span className="text-sm font-semibold text-slate-500">events</span></p>
+            <Link to="/health/vaccinations" className="text-2xs font-semibold text-purple-700 hover:underline flex items-center gap-0.5 mt-1.5">
+              Vaccination Records <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 5. Total Medication Activities */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Medication Activities</span>
+            <div className="p-2 bg-amber-50 text-amber-700 rounded-xl">
+              <Pill className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-slate-900">{totalMedications} <span className="text-sm font-semibold text-slate-500">treatments</span></p>
+            <Link to="/health/medication" className="text-2xs font-semibold text-amber-700 hover:underline flex items-center gap-0.5 mt-1.5">
+              Medication Dashboard <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 6. Total Expenses */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Expenses</span>
+            <div className="p-2 bg-slate-100 text-slate-800 rounded-xl">
+              <Receipt className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-slate-900">₦{totalExpensesAmount.toLocaleString()}</p>
+            <Link to="/business/expenses" className="text-2xs font-semibold text-slate-700 hover:underline flex items-center gap-0.5 mt-1.5">
+              Expenses Dashboard <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 7. Total Sales */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Sales</span>
+            <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl">
+              <DollarSign className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-emerald-700">₦{totalSalesAmount.toLocaleString()}</p>
+            <Link to="/business/sales" className="text-2xs font-semibold text-emerald-700 hover:underline flex items-center gap-0.5 mt-1.5">
+              Sales Dashboard <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 8. Total Recorded Activities */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recorded Activities</span>
+            <div className="p-2 bg-blue-50 text-blue-700 rounded-xl">
+              <Activity className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-blue-700">{totalRecordedActivities.toLocaleString()}</p>
+            <span className="text-2xs font-medium text-slate-400 block mt-1.5">Across all farm tables</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <span>Unified Monitoring Filters:</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* Farm selector */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Farm</label>
+            <select
+              value={selectedFarmId || farm?.id || ''}
+              onChange={(e) => selectFarm(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-500"
+            >
+              {farms.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Poultry Type selector */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Poultry Type</label>
+            <select
+              value={poultryTypeFilter}
+              onChange={(e) => setPoultryTypeFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="all">All Poultry Types</option>
+              {selectedTypes.map(t => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Flock selector */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Flock</label>
+            <select
+              value={flockFilter}
+              onChange={(e) => setFlockFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="all">All Flocks & Farm-wide</option>
+              {flocks.map(f => (
+                <option key={f.id} value={f.id}>{f.name} ({f.type})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Activity Category selector */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Activity Category</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="all">All Farm Activities</option>
+              <option value="eggs">Egg Production</option>
+              <option value="feed">Feeding</option>
+              <option value="mortality">Mortality</option>
+              <option value="vaccination">Vaccinations</option>
+              <option value="medication">Medication</option>
+              <option value="expenses">Expenses</option>
+              <option value="sales">Sales & Revenue</option>
+            </select>
+          </div>
+
+          {/* Date Presets selector */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Date Period</label>
+            <select
+              value={datePreset}
+              onChange={(e) => setDatePreset(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">This Month</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Custom Date Range Inputs */}
+        {datePreset === 'custom' && (
+          <div className="flex items-center gap-3 pt-2 border-t border-slate-100 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-600">From:</span>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-600">To:</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            {(customFrom || customTo) && (
+              <button
+                onClick={() => { setCustomFrom(''); setCustomTo(''); }}
+                className="text-xs text-rose-600 font-semibold hover:underline"
+              >
+                Clear Range
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Unified Activity History Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900">Unified Farm Activity History</h2>
+            <p className="text-xs text-slate-500">
+              Aggregated chronological log of all farm activities ({filteredActivities.length} total records shown)
+            </p>
+          </div>
+        </div>
+
+        <DataTable
+          columns={columns}
+          data={filteredActivities}
+          searchPlaceholder="Search unified activities by flock, poultry type, summary..."
+          emptyTitle="No farm activities recorded"
+        />
+      </div>
+
+      {/* View Details Read-Only Modal */}
+      {selectedActivity && (
+        <Modal
+          isOpen={!!selectedActivity}
+          onClose={() => setSelectedActivity(null)}
+          title={`Activity Details: ${selectedActivity.activityType}`}
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+              <p className="font-extrabold text-slate-900 text-sm">{selectedActivity.summary}</p>
+              <p className="text-slate-500">Date: <span className="font-semibold text-slate-700">{selectedActivity.date}</span></p>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-2.5 bg-white border border-slate-100 rounded-lg">
+                <dt className="text-slate-400 font-semibold uppercase text-[10px]">Farm</dt>
+                <dd className="font-bold text-slate-800 mt-0.5">{selectedActivity.farmName}</dd>
+              </div>
+              <div className="p-2.5 bg-white border border-slate-100 rounded-lg">
+                <dt className="text-slate-400 font-semibold uppercase text-[10px]">Flock</dt>
+                <dd className="font-bold text-slate-800 mt-0.5">{selectedActivity.flockName}</dd>
+              </div>
+              <div className="p-2.5 bg-white border border-slate-100 rounded-lg">
+                <dt className="text-slate-400 font-semibold uppercase text-[10px]">Poultry Type</dt>
+                <dd className="font-bold text-slate-800 mt-0.5">{selectedActivity.poultryType}</dd>
+              </div>
+              <div className="p-2.5 bg-white border border-slate-100 rounded-lg">
+                <dt className="text-slate-400 font-semibold uppercase text-[10px]">Status</dt>
+                <dd className="font-bold text-emerald-700 mt-0.5">{selectedActivity.status}</dd>
+              </div>
+            </dl>
+
+            <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-900 text-xs">
+              <p className="font-bold mb-0.5">ℹ️ Centralized Monitoring Mode</p>
+              <p className="text-blue-800 leading-relaxed">
+                Daily Records is strictly a monitoring page. To edit, update, or remove this record, open the original{' '}
+                <strong>{selectedActivity.dashboardName}</strong> dashboard.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedActivity(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const path = selectedActivity.dashboardPath;
+                  setSelectedActivity(null);
+                  navigate(path);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                Go to {selectedActivity.dashboardName}
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
 }

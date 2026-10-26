@@ -14,17 +14,29 @@ export const flockService = {
   },
 
   create: async (flockData) => {
-    const farmId = getSelectedFarmId();
+    let farmId = flockData?.farmId || getSelectedFarmId();
+    if (!farmId) {
+      const user = getItem(KEYS.USER, {});
+      farmId = user?.farmId;
+    }
     return flockMutations.create(farmId, flockData);
   },
 
   update: async (flockId, updates) => {
-    const farmId = getSelectedFarmId();
+    let farmId = updates?.farmId || getSelectedFarmId();
+    if (!farmId) {
+      const user = getItem(KEYS.USER, {});
+      farmId = user?.farmId;
+    }
     return flockMutations.update(farmId, flockId, updates);
   },
 
   delete: async (id) => {
-    const farmId = getSelectedFarmId();
+    let farmId = getSelectedFarmId();
+    if (!farmId) {
+      const user = getItem(KEYS.USER, {});
+      farmId = user?.farmId;
+    }
     return flockMutations.delete(farmId, id);
   },
 

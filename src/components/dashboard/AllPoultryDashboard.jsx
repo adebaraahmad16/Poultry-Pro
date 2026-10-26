@@ -1,5 +1,6 @@
 import React from 'react';
 import DailyRecordsSummary from '../daily/DailyRecordsSummary';
+import QuickActionsSection from './QuickActionsSection';
 import { Link } from 'react-router-dom';
 import { Bird, DollarSign, Egg, Wheat, LayoutGrid, PlusCircle, Sparkles } from '../common/Icons';
 import { usePoultryData } from '../../context/FarmContext';
@@ -34,6 +35,8 @@ export default function AllPoultryDashboard() {
           Managing {breakdownIds.length} poultry type{breakdownIds.length !== 1 ? 's' : ''} across {flocks.length} active flock{flocks.length !== 1 ? 's' : ''}
         </p>
       </div>
+
+      <QuickActionsSection />
 
       <DailyRecordsSummary />
 

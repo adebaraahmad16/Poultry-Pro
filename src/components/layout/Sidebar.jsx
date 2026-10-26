@@ -20,7 +20,8 @@ import {
   PieChart,
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Bell
 } from '../common/Icons';
 import { useAuth } from '../../context/AuthContext';
 import { NotebookPen as DailyRecordsIcon } from '../common/Icons';
@@ -91,6 +92,7 @@ export default function Sidebar({ className = "" }) {
     {
       title: "Account",
       items: [
+        { name: "Notifications", path: "/notifications", icon: Bell },
         { name: "Settings", path: "/settings", icon: Settings }
       ]
     }

@@ -1,41 +1,61 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Layers, Plus, Trash2, Eye, Filter } from '../../components/common/Icons';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Layers, Plus, Trash2, Eye, Edit2, Filter, AlertTriangle, CheckCircle2 } from '../../components/common/Icons';
 import { useFarm, usePoultryData } from '../../context/FarmContext';
 import { flockService } from '../../services/flockService';
-import { POULTRY_TYPE_MAP, ALL_FLOCK_TYPE_OPTIONS } from '../../constants/poultryTypes';
+import { ALL_FLOCK_TYPE_OPTIONS } from '../../constants/poultryTypes';
 import { usePoultry } from '../../context/PoultryContext';
+import { useToast } from '../../context/ToastContext';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
 
 export default function Flocks() {
+  const [params, setParams] = useSearchParams();
+  const toast = useToast();
   const { flocks, currentPlan, canAddFlock, canAddBirds, metrics, refreshAllData, isSubscriptionExpired, activeFlocksCount } = useFarm();
   const { selectedTypes } = usePoultryData();
-  const {activeType}=usePoultry();
+  const { activeType } = usePoultry();
   const navigate = useNavigate();
+
   const [filterType, setFilterType] = useState('All');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingFlock, setEditingFlock] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [limitError, setLimitError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Bird type options limited to the farmer's selected poultry types
   const flockTypeOptions = activeType ? activeType.flockTypes : selectedTypes.length > 0
     ? selectedTypes.flatMap((t) => t.flockTypes)
     : ALL_FLOCK_TYPE_OPTIONS;
 
-  const [form, setForm] = useState({
+  const defaultForm = {
     name: '',
-    type: flockTypeOptions[0] || '',
+    type: flockTypeOptions[0] || 'Broiler',
     breed: 'Isa Brown',
     initialBirds: 250,
+    currentBirds: 250,
+    ageWeeks: 1,
     costPerBird: 1000,
     pen: 'House 1',
+    status: 'Active',
+    acquisitionDate: new Date().toISOString().split('T')[0],
     source: 'Local Hatchery',
     notes: ''
-  });
+  };
 
-  const filteredFlocks = flocks.filter((f) => filterType === 'All' || f.type === filterType);
+  const [form, setForm] = useState(defaultForm);
+
+  // Auto-open via quick action (?action=record or ?action=flock)
+  useEffect(() => {
+    const action = params.get('action');
+    if (action === 'record' || action === 'flock') {
+      handleOpenAdd();
+      params.delete('action');
+      setParams(params, { replace: true });
+    }
+  }, [params]);
 
   const handleOpenAdd = () => {
     if (isSubscriptionExpired) {
@@ -45,39 +65,92 @@ export default function Flocks() {
     } else {
       setLimitError('');
     }
+    setEditingFlock(null);
+    setForm(defaultForm);
     setIsAddOpen(true);
   };
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    if (isSubscriptionExpired) {
-      setLimitError(`Subscription or trial expired. Please activate your subscription to add new flocks.`);
-      return;
-    }
-    if (!canAddFlock()) {
-      setLimitError(`Flock creation limit reached for your ${currentPlan.name} plan (${currentPlan.limits.maxFlocks} active flocks max). Please upgrade to Pro or Enterprise to add more flocks.`);
-      return;
-    }
-
-    if (!canAddBirds(form.initialBirds)) {
-      setLimitError(`Adding ${form.initialBirds} birds would exceed your ${currentPlan.name} plan capacity of ${currentPlan.limits.maxBirds?.toLocaleString()} birds (current: ${metrics.totalBirds.toLocaleString()}, would become: ${(metrics.totalBirds + Number(form.initialBirds)).toLocaleString()}). Upgrade your plan to expand bird capacity.`);
-      return;
-    }
-
-    try { await flockService.create(form); } catch(e) { setLimitError(e.message); return; }
-    refreshAllData();
-    setIsAddOpen(false);
+  const handleOpenEdit = (flock) => {
     setLimitError('');
-    setForm({ name: '', type: 'Layer', breed: 'Isa Brown', initialBirds: 250, costPerBird: 1000, pen: 'House 1', source: 'Local Hatchery', notes: '' });
+    setEditingFlock(flock);
+    setForm({
+      name: flock.name || '',
+      type: flock.type || flockTypeOptions[0] || 'Broiler',
+      breed: flock.breed || '',
+      initialBirds: flock.initialBirds || 0,
+      currentBirds: flock.currentBirds !== undefined ? flock.currentBirds : flock.initialBirds,
+      ageWeeks: flock.ageWeeks || 1,
+      costPerBird: flock.costPerBird || 0,
+      pen: flock.pen || flock.housingType || 'House 1',
+      status: flock.status || 'Active',
+      acquisitionDate: flock.acquisitionDate || flock.dateAcquired || new Date().toISOString().split('T')[0],
+      source: flock.source || 'Local Hatchery',
+      notes: flock.notes || ''
+    });
+    setIsAddOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!form.name.trim()) {
+      toast.error('Validation Error', 'Flock name is required.');
+      return;
+    }
+
+    if (!editingFlock) {
+      // Adding new flock validation
+      if (isSubscriptionExpired) {
+        setLimitError(`Subscription or trial expired. Please activate your subscription to add new flocks.`);
+        return;
+      }
+      if (!canAddFlock()) {
+        setLimitError(`Flock creation limit reached for your ${currentPlan.name} plan (${currentPlan.limits.maxFlocks} active flocks max).`);
+        return;
+      }
+      if (!canAddBirds(Number(form.initialBirds))) {
+        setLimitError(`Adding ${form.initialBirds} birds would exceed your ${currentPlan.name} plan capacity.`);
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    try {
+      if (editingFlock) {
+        await flockService.update(editingFlock.id, form);
+        toast.success('Flock Updated!', `${form.name} details have been updated successfully.`);
+      } else {
+        await flockService.create({
+          ...form,
+          currentBirds: Number(form.initialBirds)
+        });
+        toast.success('Flock Created!', `${form.name} has been added to your farm flocks.`);
+      }
+      await refreshAllData();
+      setIsAddOpen(false);
+      setEditingFlock(null);
+      setLimitError('');
+    } catch (err) {
+      toast.error('Unable to Save Flock', err.message || 'Please check your information and try again.');
+      setLimitError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
-    if (deletingId) {
+    if (!deletingId) return;
+    try {
       await flockService.delete(deletingId);
-      refreshAllData();
+      toast.success('Flock Deleted!', 'The flock and its records have been removed.');
+      await refreshAllData();
       setDeletingId(null);
+    } catch (err) {
+      toast.error('Delete Failed', err.message);
     }
   };
+
+  const filteredFlocks = flocks.filter((f) => filterType === 'All' || f.type === filterType);
 
   return (
     <div className="space-y-6 pb-12">
@@ -127,7 +200,9 @@ export default function Flocks() {
       {/* Flock Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredFlocks.map((flock) => {
-          const mortalityRate = (((flock.initialBirds - flock.currentBirds) / flock.initialBirds) * 100).toFixed(1);
+          const init = Number(flock.initialBirds) || 1;
+          const curr = Number(flock.currentBirds) !== undefined ? Number(flock.currentBirds) : init;
+          const mortalityRate = (((init - curr) / init) * 100).toFixed(1);
           return (
             <div
               key={flock.id}
@@ -137,7 +212,7 @@ export default function Flocks() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-extrabold text-slate-900 text-lg">{flock.name}</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">{flock.breed} • {flock.pen}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{flock.breed} • {flock.pen || flock.housingType || 'Pen 1'}</p>
                   </div>
                   <Badge variant={flock.type === 'Layer' ? 'green' : flock.type === 'Broiler' ? 'blue' : 'amber'}>
                     {flock.type}
@@ -147,19 +222,20 @@ export default function Flocks() {
                 <div className="mt-6 grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Live Birds</span>
-                    <p className="text-xl font-extrabold text-slate-900 mt-0.5">{flock.currentBirds.toLocaleString()}</p>
-                    <span className="text-[10px] text-slate-400">Initial: {flock.initialBirds.toLocaleString()}</span>
+                    <p className="text-xl font-extrabold text-slate-900 mt-0.5">{curr.toLocaleString()}</p>
+                    <span className="text-[10px] text-slate-400">Initial: {init.toLocaleString()}</span>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Flock Age</span>
-                    <p className="text-xl font-extrabold text-slate-900 mt-0.5">{flock.ageWeeks || 12} wks</p>
+                    <p className="text-xl font-extrabold text-slate-900 mt-0.5">{flock.ageWeeks || 1} wks</p>
                     <span className="text-[10px] text-rose-500 font-semibold">Mortality: {mortalityRate}%</span>
                   </div>
                 </div>
 
                 <div className="mt-4 text-xs text-slate-600 space-y-1">
+                  <p><strong>Status:</strong> <span className={`font-semibold ${flock.status === 'Active' ? 'text-emerald-600' : 'text-slate-500'}`}>{flock.status || 'Active'}</span></p>
                   <p><strong>Source:</strong> {flock.source || 'Local Hatchery'}</p>
-                  <p><strong>Acquired:</strong> {flock.dateAcquired}</p>
+                  <p><strong>Acquired:</strong> {flock.dateAcquired || flock.acquisitionDate || '—'}</p>
                 </div>
               </div>
 
@@ -171,12 +247,22 @@ export default function Flocks() {
                   <Eye className="w-3.5 h-3.5" />
                   View Details
                 </button>
-                <button
-                  onClick={() => setDeletingId(flock.id)}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleOpenEdit(flock)}
+                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                    title="Edit Flock"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeletingId(flock.id)}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="Delete Flock"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -202,8 +288,12 @@ export default function Flocks() {
         </div>
       )}
 
-      {/* Add Flock Modal */}
-      <Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title="Create New Flock">
+      {/* Add / Edit Flock Modal */}
+      <Modal
+        isOpen={isAddOpen}
+        onClose={() => { setIsAddOpen(false); setLimitError(''); }}
+        title={editingFlock ? 'Update Flock Details' : 'Create New Flock'}
+      >
         {limitError && (
           <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
             <p className="font-extrabold text-amber-950 mb-1">⚠️ Plan Tier Limit Reached</p>
@@ -220,25 +310,25 @@ export default function Flocks() {
             </button>
           </div>
         )}
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Flock Name</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Flock Name *</label>
             <input
               type="text"
               required
-              placeholder="e.g. Layer Batch C"
+              placeholder="e.g. Layer Batch C, Broiler Pen 2"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Bird Type</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Bird Type *</label>
               <select
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
               >
                 {flockTypeOptions.map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -246,43 +336,128 @@ export default function Flocks() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Breed</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Breed *</label>
               <input
                 type="text"
                 required
+                placeholder="e.g. Isa Brown, Cobb 500, Marshall"
                 value={form.breed}
                 onChange={(e) => setForm({ ...form, breed: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Initial Birds</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                {editingFlock ? 'Live Birds Population *' : 'Initial Birds Count *'}
+              </label>
               <input
                 type="number"
                 required
                 min="1"
-                value={form.initialBirds}
-                onChange={(e) => setForm({ ...form, initialBirds: Number(e.target.value) })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                value={editingFlock ? form.currentBirds : form.initialBirds}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (editingFlock) {
+                    setForm({ ...form, currentBirds: val });
+                  } else {
+                    setForm({ ...form, initialBirds: val, currentBirds: val });
+                  }
+                }}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Age (Weeks)</label>
+              <input
+                type="number"
+                min="0"
+                value={form.ageWeeks}
+                onChange={(e) => setForm({ ...form, ageWeeks: Number(e.target.value) })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Pen / House / Cage</label>
+              <input
+                type="text"
+                placeholder="e.g. Pen 1, House A"
+                value={form.pen}
+                onChange={(e) => setForm({ ...form, pen: e.target.value })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Cost Per Bird (₦)</label>
               <input
                 type="number"
-                required
                 min="0"
                 value={form.costPerBird}
                 onChange={(e) => setForm({ ...form, costPerBird: Number(e.target.value) })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
-          <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
-            Save Flock
-          </button>
+
+          {editingFlock && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Flock Status</label>
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+              >
+                <option value="Active">Active</option>
+                <option value="Culled">Culled</option>
+                <option value="Sold">Sold</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Hatchery / Source</label>
+            <input
+              type="text"
+              placeholder="e.g. CHI Farms, Zartech, Amo Hatchery"
+              value={form.source}
+              onChange={(e) => setForm({ ...form, source: e.target.value })}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Notes / Remarks</label>
+            <textarea
+              rows={2}
+              placeholder="Flock vaccination history, batch notes..."
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => { setIsAddOpen(false); setLimitError(''); }}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+            >
+              {isSaving ? 'Saving...' : editingFlock ? 'Save Flock Changes' : 'Create Flock'}
+            </button>
+          </div>
         </form>
       </Modal>
 

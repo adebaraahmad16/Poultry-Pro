@@ -38,6 +38,8 @@ export const dailyRecordService = {
           flocks,
           feeds,
           records,
+          capabilities: { dataExport: true, reportsAnalytics: true },
+          upcomingHealth: [],
         };
       } catch (e) {
         console.warn('Error loading daily records from Supabase:', e);
@@ -50,6 +52,8 @@ export const dailyRecordService = {
       flocks: getItem(KEYS.FLOCKS, []),
       feeds: getItem(KEYS.FEED, []),
       records: getItem(KEYS.DAILY_RECORDS || 'poultrypro_daily_records', []),
+      capabilities: { dataExport: true, reportsAnalytics: true },
+      upcomingHealth: [],
     };
   },
 

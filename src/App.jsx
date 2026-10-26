@@ -5,6 +5,9 @@ import { FarmProvider } from './context/FarmContext';
 import { PoultryProvider } from './context/PoultryContext';
 import { AdminProvider } from './admin/context/AdminContext';
 
+import { ToastProvider } from './context/ToastContext';
+import { ConfirmProvider } from './context/ConfirmContext';
+
 // Layout
 import MainLayout from './components/layout/MainLayout';
 
@@ -14,6 +17,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import Onboarding from './pages/onboarding/Onboarding';
+import NotificationsPage from './pages/notifications/NotificationsPage';
 
 // Farm OS App Pages
 import Dashboard from './pages/dashboard/Dashboard';
@@ -69,87 +73,92 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <FarmProvider>
-        <PoultryProvider>
-          <AdminProvider>
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <Routes>
-                {/* Public Landing & Farmer Auth */}
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/onboarding" element={<Onboarding />} />
+    <ToastProvider>
+      <ConfirmProvider>
+        <AuthProvider>
+          <FarmProvider>
+            <PoultryProvider>
+              <AdminProvider>
+                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                  <Routes>
+                    {/* Public Landing & Farmer Auth */}
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
 
-                {/* Farmer Dashboard Application Shell */}
-                <Route
-                  element={
-                    <ProtectedRoute>
-                      <MainLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/daily-records" element={<DailyRecords />} />
-                  <Route path="/farm" element={<FarmOverview />} />
-                  <Route path="/farm/flocks" element={<Flocks />} />
-                  <Route path="/farm/flocks/:id" element={<FlockDetails />} />
-                  <Route path="/production/eggs" element={<EggProduction />} />
-                  <Route path="/production/feed" element={<FeedManagement />} />
-                  <Route path="/health" element={<HealthOverview />} />
-                  <Route path="/health/vaccinations" element={<Vaccinations />} />
-                  <Route path="/health/medication" element={<Medication />} />
-                  <Route path="/health/mortality" element={<Mortality />} />
-                  <Route path="/business/sales" element={<Sales />} />
-                  <Route path="/business/customers" element={<Customers />} />
-                  <Route path="/business/expenses" element={<Expenses />} />
-                  <Route path="/business/inventory" element={<Inventory />} />
-                  <Route path="/management/workers" element={<Workers />} />
-                  <Route path="/management/tasks" element={<Tasks />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/reports/profit-loss" element={<ProfitLoss />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/settings/*" element={<Settings />} />
-                </Route>
+                    {/* Farmer Dashboard Application Shell */}
+                    <Route
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout />
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/daily-records" element={<DailyRecords />} />
+                      <Route path="/farm" element={<FarmOverview />} />
+                      <Route path="/farm/flocks" element={<Flocks />} />
+                      <Route path="/farm/flocks/:id" element={<FlockDetails />} />
+                      <Route path="/production/eggs" element={<EggProduction />} />
+                      <Route path="/production/feed" element={<FeedManagement />} />
+                      <Route path="/health" element={<HealthOverview />} />
+                      <Route path="/health/vaccinations" element={<Vaccinations />} />
+                      <Route path="/health/medication" element={<Medication />} />
+                      <Route path="/health/mortality" element={<Mortality />} />
+                      <Route path="/business/sales" element={<Sales />} />
+                      <Route path="/business/customers" element={<Customers />} />
+                      <Route path="/business/expenses" element={<Expenses />} />
+                      <Route path="/business/inventory" element={<Inventory />} />
+                      <Route path="/management/workers" element={<Workers />} />
+                      <Route path="/management/tasks" element={<Tasks />} />
+                      <Route path="/reports" element={<Reports />} />
+                      <Route path="/reports/profit-loss" element={<ProfitLoss />} />
+                      <Route path="/notifications" element={<NotificationsPage />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/settings/*" element={<Settings />} />
+                    </Route>
 
-                {/* Super Admin Unauthenticated Route */}
-                <Route path="/admin/login" element={<AdminLogin />} />
+                    {/* Super Admin Unauthenticated Route */}
+                    <Route path="/admin/login" element={<AdminLogin />} />
 
-                {/* Super Admin Protected Application Shell */}
-                <Route
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminLayout />
-                    </ProtectedAdminRoute>
-                  }
-                >
-                  <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  <Route path="/admin/farmers" element={<AdminFarmers />} />
-                  <Route path="/admin/farms" element={<AdminFarms />} />
-                  <Route path="/admin/poultry-types" element={<AdminPoultryTypes />} />
-                  <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
-                  <Route path="/admin/payments" element={<AdminPayments />} />
-                  <Route path="/admin/notifications" element={<AdminNotifications />} />
-                  <Route path="/admin/support" element={<AdminSupport />} />
-                  <Route path="/admin/reports" element={<AdminReports />} />
-                  <Route path="/admin/website-content" element={<AdminWebsiteContent />} />
-                  <Route path="/admin/administrators" element={<AdminManagement />} />
-                  <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
-                  <Route path="/admin/settings" element={<AdminSettings />} />
-                  <Route path="/admin/profile" element={<AdminProfile />} />
-                  <Route path="/admin/health" element={<PlatformHealth />} />
-                  <Route path="/admin/revenue" element={<RevenueAnalytics />} />
-                </Route>
+                    {/* Super Admin Protected Application Shell */}
+                    <Route
+                      element={
+                        <ProtectedAdminRoute>
+                          <AdminLayout />
+                        </ProtectedAdminRoute>
+                      }
+                    >
+                      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                      <Route path="/admin/farmers" element={<AdminFarmers />} />
+                      <Route path="/admin/farms" element={<AdminFarms />} />
+                      <Route path="/admin/poultry-types" element={<AdminPoultryTypes />} />
+                      <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+                      <Route path="/admin/payments" element={<AdminPayments />} />
+                      <Route path="/admin/notifications" element={<AdminNotifications />} />
+                      <Route path="/admin/support" element={<AdminSupport />} />
+                      <Route path="/admin/reports" element={<AdminReports />} />
+                      <Route path="/admin/website-content" element={<AdminWebsiteContent />} />
+                      <Route path="/admin/administrators" element={<AdminManagement />} />
+                      <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+                      <Route path="/admin/settings" element={<AdminSettings />} />
+                      <Route path="/admin/profile" element={<AdminProfile />} />
+                      <Route path="/admin/health" element={<PlatformHealth />} />
+                      <Route path="/admin/revenue" element={<RevenueAnalytics />} />
+                    </Route>
 
-                {/* Global Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </BrowserRouter>
-          </AdminProvider>
-        </PoultryProvider>
-      </FarmProvider>
-    </AuthProvider>
+                    {/* Global Fallback */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </BrowserRouter>
+              </AdminProvider>
+            </PoultryProvider>
+          </FarmProvider>
+        </AuthProvider>
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }

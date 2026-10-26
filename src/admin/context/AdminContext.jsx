@@ -121,21 +121,29 @@ export const AdminProvider = ({ children }) => {
               setCurrentAdmin(adminObj);
               setIsAdminLoggedIn(true);
 
-              // Load farmers from profiles table
-              const { data: farmersData, error: farmersError } = await supabase
-                .from('profiles')
-                .select(`
-                  id, full_name, email, phone, role, created_at, farm_id,
-                  farms (id, name, location, poultry_types),
-                  farm_subscriptions (plan_id, status, billing_cycle, trial_ends_at, current_period_end, auto_renew)
-                `)
-                .eq('role', 'farmer')
-                .order('created_at', { ascending: false });
+              // Load farmers, farms, and subscriptions reliably without foreign key joins
+              const [
+                { data: farmersProfiles, error: farmersError },
+                { data: allFarms },
+                { data: allSubs }
+              ] = await Promise.all([
+                supabase
+                  .from('profiles')
+                  .select('id, full_name, email, phone, role, created_at, farm_id')
+                  .eq('role', 'farmer')
+                  .order('created_at', { ascending: false }),
+                supabase
+                  .from('farms')
+                  .select('id, owner_id, name, location, poultry_types'),
+                supabase
+                  .from('farm_subscriptions')
+                  .select('*')
+              ]);
 
-              if (!farmersError && Array.isArray(farmersData)) {
-                const mapped = farmersData.map(f => {
-                  const farm = Array.isArray(f.farms) ? f.farms[0] : f.farms;
-                  const sub = Array.isArray(f.farm_subscriptions) ? f.farm_subscriptions[0] : f.farm_subscriptions;
+              if (!farmersError && Array.isArray(farmersProfiles)) {
+                const mapped = farmersProfiles.map(f => {
+                  const farm = (allFarms || []).find(farmItem => farmItem.id === f.farm_id || farmItem.owner_id === f.id);
+                  const sub = (allSubs || []).find(subItem => subItem.user_id === f.id || (farm && subItem.farm_id === farm.id));
                   const planId = (sub?.plan_id || 'basic').toUpperCase();
                   const subStatus = sub?.status || 'trial';
                   return {
@@ -157,7 +165,7 @@ export const AdminProvider = ({ children }) => {
                       planId,
                       status: subStatus,
                       trialEndsAt: sub.trial_ends_at,
-                      renewalDate: sub.current_period_end,
+                      renewalDate: sub.renewal_date || sub.current_period_end || sub.trial_ends_at,
                       autoRenew: sub.auto_renew,
                     } : null,
                   };
@@ -357,10 +365,57 @@ export const AdminProvider = ({ children }) => {
     setAuditLogs(adminService.getAuditLogs());
   };
 
-  const sendNotification = (notifData) => {
+  const sendNotification = async (notifData) => {
     const newNotif = adminService.sendNotification(notifData);
     setNotifications(adminService.getNotifications());
     setAuditLogs(adminService.getAuditLogs());
+
+    // Also persist broadcast announcement into Supabase notifications for target farmers
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        let targets = farmers || [];
+        if (notifData.targetAudience === 'Basic Plan Users') {
+          targets = targets.filter(f => f.planId === 'basic' || (!f.planId && ['Basic','Starter','Free'].includes(f.subscription)));
+        } else if (notifData.targetAudience === 'Pro Users') {
+          targets = targets.filter(f => f.planId === 'professional' || (!f.planId && ['Pro','Professional'].includes(f.subscription)));
+        } else if (notifData.targetAudience === 'Enterprise Users') {
+          targets = targets.filter(f => f.planId === 'enterprise' || (!f.planId && ['Enterprise'].includes(f.subscription)));
+        } else if (notifData.targetFarmerId) {
+          targets = targets.filter(f => f.id === notifData.targetFarmerId);
+        }
+
+        const priorityType = notifData.priority === 'Urgent Announcement' || notifData.priority === 'urgent'
+          ? 'error'
+          : notifData.priority === 'Important Notice' || notifData.priority === 'high'
+          ? 'warning'
+          : 'info';
+
+        const priorityLevel = notifData.priority === 'Urgent Announcement' || notifData.priority === 'urgent'
+          ? 'urgent'
+          : notifData.priority === 'Important Notice' || notifData.priority === 'high'
+          ? 'high'
+          : 'normal';
+
+        const rows = targets.map(f => ({
+          user_id: f.id,
+          farm_id: f.farmId || null,
+          title: notifData.title,
+          message: notifData.message,
+          type: priorityType,
+          category: 'announcement',
+          priority: priorityLevel,
+          action_url: '/notifications',
+          is_read: false
+        }));
+
+        if (rows.length > 0) {
+          await supabase.from('notifications').insert(rows);
+        }
+      } catch (err) {
+        console.warn('Supabase admin dispatch broadcast warning:', err.message);
+      }
+    }
+
     return newNotif;
   };
 

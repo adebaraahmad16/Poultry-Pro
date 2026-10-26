@@ -11,6 +11,11 @@ import { availableTypeIds, poultryTypeId, scopeFarmData, selectionKey, restoreSe
 import { setSelectedFarmId, setSelectedPoultryType } from '../services/farmScope';
 import { isSupabaseConfigured } from '../lib/supabaseClient.js';
 import { loadAllFarmData } from '../services/supabase/farmDataService.js';
+import { 
+  fetchNotifications, 
+  evaluateFarmSmartAlerts, 
+  subscribeToNotificationChanges 
+} from '../services/notificationStore.js';
 
 const FarmContext = createContext();
 
@@ -42,11 +47,13 @@ export const FarmProvider = ({ children }) => {
   const loadedScopeRef = useRef(''); loadedScopeRef.current = loadedScope;
   const refreshScope = useRef('');
   const [selection, setSelection] = useState({ key: '', id: 'all' });
-  const scopeId = `${user?.id || ''}:${selectedFarmId || user?.farmId || ''}`;
+  const effectiveFarmId = selectedFarmId || user?.farmId || farm?.id || '';
+  const scopeId = `${user?.id || ''}:${effectiveFarmId}`;
   const scopeRef = useRef(scopeId); scopeRef.current = scopeId;
   const types = availableTypeIds(farm, flocks);
-  const preferenceKey = selectionKey(user?.id, selectedFarmId || user?.farmId);
-  const activeTypeId = loadedScope === scopeId ? restoreSelection(selection.key === preferenceKey ? selection.id : localStorage.getItem(preferenceKey), types) : 'all';
+  const preferenceKey = selectionKey(user?.id, effectiveFarmId);
+  const isScopeMatch = Boolean(loadedScope && (loadedScope === scopeId || (loadedScope.startsWith(`${user?.id}:`) && (loadedScope.split(':')[1] === effectiveFarmId || !effectiveFarmId))));
+  const activeTypeId = isScopeMatch ? restoreSelection(selection.key === preferenceKey ? selection.id : localStorage.getItem(preferenceKey), types) : 'all';
   setSelectedPoultryType(activeTypeId);
 
   const selectPoultryType = id => {
@@ -91,15 +98,33 @@ export const FarmProvider = ({ children }) => {
   }, [isLoggedIn, authLoading, user?.id]);
 
   const refreshAllData = useCallback(async () => {
-    if (authLoading || !isLoggedIn) return;
+    if (authLoading || !isLoggedIn || !user?.id) return;
 
-    const farmId = selectedFarmId || user?.farmId;
+    let farmId = selectedFarmId || user?.farmId || farm?.id;
+
+    // Fallback: profile has no farm_id — look up farm by owner_id from Supabase
+    if (!farmId && user?.id && isSupabaseConfigured()) {
+      try {
+        const { supabase: sb } = await import('../lib/supabaseClient.js');
+        if (sb) {
+          const { data: ownedFarm } = await sb.from('farms').select('id').eq('owner_id', user.id).maybeSingle();
+          if (ownedFarm?.id) {
+            farmId = ownedFarm.id;
+            updateSelectedFarmId(ownedFarm.id);
+          }
+        }
+      } catch (e) { console.warn('Farm owner lookup failed:', e.message); }
+    }
+
+    const identity = `${user.id}:${farmId || ''}`;
+
     if (!farmId) {
+      // No farm found — resolve loading so the UI shows empty state instead of spinning forever
       setDataLoading(false);
+      setLoadedScope(identity);
       return;
     }
 
-    const identity = `${user.id}:${farmId}`;
     if (refreshScope.current === identity) return;
     refreshScope.current = identity;
     refreshing.current = true;
@@ -107,7 +132,10 @@ export const FarmProvider = ({ children }) => {
     if (loadedScopeRef.current !== identity) setDataLoading(true);
     setDataError('');
 
-    const valid = () => scopeRef.current === identity;
+    const valid = () => {
+      const [curUserId, curFarmId] = (scopeRef.current || '').split(':');
+      return curUserId === user?.id && (!curFarmId || curFarmId === farmId);
+    };
 
     try {
       // Use Supabase if configured, otherwise fall back gracefully
@@ -129,7 +157,24 @@ export const FarmProvider = ({ children }) => {
         setWorkers(data.workers || []);
         setInventory(inventoryService.getInventory());
         setTasks(taskService.getTasks());
-        setNotifications(notificationService.getNotifications());
+        
+        // Load notifications from persistent notificationStore
+        const initialNotifs = await fetchNotifications(user.id, farmId);
+        setNotifications(initialNotifs);
+
+        // Run smart automated farm alerts evaluation asynchronously
+        evaluateFarmSmartAlerts({
+          feeds: data.feeds || [],
+          mortality: data.mortality || [],
+          flocks: data.flocks || [],
+          subscription: data.subscription || subscriptionService.getSubscription(),
+          farmId,
+          userId: user.id,
+        }).then((newAlerts) => {
+          if (newAlerts && newAlerts.length > 0) {
+            fetchNotifications(user.id, farmId).then(setNotifications);
+          }
+        }).catch(err => console.warn('Smart alert evaluation error:', err));
 
         // Build accessible farms list (user can only access their own farm for now)
         setAccessibleFarms([data.farm].filter(Boolean));
@@ -144,6 +189,13 @@ export const FarmProvider = ({ children }) => {
           .filter(r => r.category === 'weight' && r.status === 'Recorded')
           .map(r => ({ ...r.values, id: r.id, flockId: r.flockId, date: r.date }))
         );
+
+        const key = selectionKey(user.id, farmId);
+        const available = availableTypeIds(data.farm || {}, data.flocks || []);
+        setSelection(current => {
+          const id = restoreSelection(current.key === key ? current.id : localStorage.getItem(key), available);
+          localStorage.setItem(key, id); return { key, id };
+        });
       } else {
         // Supabase not configured — no data to load
         if (!valid()) return;
@@ -154,21 +206,16 @@ export const FarmProvider = ({ children }) => {
         setInventory([]); setTasks([]); setNotifications([]);
       }
 
-      const key = selectionKey(user.id, farmId);
-      const available = availableTypeIds(farm, flocks);
-      setSelection(current => {
-        const id = restoreSelection(current.key === key ? current.id : localStorage.getItem(key), available);
-        localStorage.setItem(key, id); return { key, id };
-      });
-
       if (valid()) setLoadedScope(identity);
     } catch (error) {
-      if (valid()) { setLoadedScope(''); setDataError(error.message || 'Failed to load farm data.'); }
+      console.error('Farm data load error:', error.message);
+      // Always resolve loading — show error instead of infinite spinner
+      if (valid()) { setLoadedScope(identity); setDataError(error.message || 'Failed to load farm data.'); }
     } finally {
       if (valid()) setDataLoading(false);
       if (refreshScope.current === identity) { refreshScope.current = ''; refreshing.current = false; }
     }
-  }, [isLoggedIn, authLoading, user?.id, selectedFarmId]);
+  }, [isLoggedIn, authLoading, user?.id, user?.farmId, selectedFarmId, farm?.id]);
 
   useEffect(() => {
     refreshAllData().catch(err => console.error('Farm data load error:', err));
@@ -178,13 +225,26 @@ export const FarmProvider = ({ children }) => {
       refreshAllData().catch(err => console.error('Farm data refresh error:', err));
     };
 
+    const handleNotificationsUpdate = (e) => {
+      if (e.detail) setNotifications(e.detail);
+    };
+
     window.addEventListener('storage-update', handleStorageUpdate);
     window.addEventListener('daily-records-updated', handleStorageUpdate);
+    window.addEventListener('notifications-updated', handleNotificationsUpdate);
+
+    // Setup Supabase Realtime for notifications
+    const unsubscribeRealtime = subscribeToNotificationChanges(user?.id, () => {
+      fetchNotifications(user?.id, selectedFarmId || user?.farmId).then(setNotifications);
+    });
+
     return () => {
       window.removeEventListener('storage-update', handleStorageUpdate);
       window.removeEventListener('daily-records-updated', handleStorageUpdate);
+      window.removeEventListener('notifications-updated', handleNotificationsUpdate);
+      unsubscribeRealtime();
     };
-  }, [refreshAllData]);
+  }, [refreshAllData, user?.id, selectedFarmId]);
 
   // Metrics
   const totalBirds = flocks.reduce((sum, f) => sum + (Number(f.currentBirds) || 0), 0);
@@ -288,9 +348,9 @@ export const FarmProvider = ({ children }) => {
   return (
     <FarmContext.Provider
       value={{
-        accessibleFarms, selectedFarmId: selectedFarmId || user?.farmId, selectFarm,
+        accessibleFarms, selectedFarmId: effectiveFarmId, selectFarm,
         activeTypeId, selectPoultryType, availableTypeIds: types,
-        dataLoading: dataLoading || loadedScope !== scopeId, dataError, dataReady: loadedScope === scopeId,
+        dataLoading: dataLoading || !isScopeMatch, dataError, dataReady: Boolean(isScopeMatch),
         farm, flocks, feeds, eggs, mortality, vaccinations, medications,
         sales, customers, expenses, inventory, workers, tasks,
         weightRecords, dailyRecords, notifications,

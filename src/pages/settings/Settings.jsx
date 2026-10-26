@@ -8,12 +8,18 @@ import { resetAllData } from '../../services/storageService';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import SubscriptionManagement from './components/SubscriptionManagement';
 
+import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../context/ConfirmContext';
+import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
+
 export default function Settings() {
   const { user } = useAuth();
   const { farm, refreshAllData, flocks, metrics, workers, currentPlan, currentPlanId, updatePlan } = useFarm();
   const { selectedTypeIds } = usePoultryData();
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const getTabFromPath = (path) => {
     if (path.includes('/settings/farm')) return 'Farm Settings';
@@ -46,11 +52,21 @@ export default function Settings() {
     weightUnit: farm?.weightUnit || 'kg'
   });
 
-  const [notifSettings, setNotifSettings] = useState({
-    vaccinations: true,
-    lowFeed: true,
-    payments: true,
-    mortality: true
+  const [notifSettings, setNotifSettings] = useState(() => {
+    const saved = localStorage.getItem('poultrypro_notif_preferences');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      farmActivity: true,
+      feedInventory: true,
+      mortalityAlerts: true,
+      productionReminders: true,
+      subscriptionAlerts: true,
+      systemAnnouncements: true,
+      emailNotifications: true,
+      securityAlerts: true
+    };
   });
 
   const handleSaveUser = (e) => {
@@ -229,27 +245,96 @@ export default function Settings() {
         )}
 
         {activeTab === 'Notifications' && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Notification & Warning Alerts</h3>
-            {[
-              { label: 'Vaccination Schedule Reminders', desc: 'Get alerted 24 hours before a scheduled vaccine dose.', key: 'vaccinations' },
-              { label: 'Low Feed Inventory Warnings', desc: 'Alert when feed stock drops below minimum threshold bags.', key: 'lowFeed' },
-              { label: 'Pending Customer Payment Reminders', desc: 'Notify on open unpaid customer invoices.', key: 'payments' },
-              { label: 'Mortality Rate Spike Alerts', desc: 'Alert if daily mortality exceeds 1% of flock size.', key: 'mortality' }
-            ].map((n) => (
-              <div key={n.key} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                  <p className="text-sm font-bold text-slate-800">{n.label}</p>
-                  <p className="text-xs text-slate-500">{n.desc}</p>
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">Notification & Alert Preferences</h3>
+              <p className="text-xs text-slate-500">
+                Choose which farm alerts, warnings, and announcements you wish to receive in your dashboard.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { 
+                  key: 'farmActivity', 
+                  label: 'Farm Activity Notifications', 
+                  desc: 'Get alerted when new flocks, tasks, or farm milestones are recorded.' 
+                },
+                { 
+                  key: 'feedInventory', 
+                  label: 'Feed Inventory & Stock Warnings', 
+                  desc: 'Receive immediate warnings when feed stock approaches minimum thresholds or runs out.' 
+                },
+                { 
+                  key: 'mortalityAlerts', 
+                  label: 'Mortality & Disease Spike Alerts', 
+                  desc: 'Instant high-priority warning if daily mortality exceeds configured safety thresholds.' 
+                },
+                { 
+                  key: 'productionReminders', 
+                  label: 'Production & Task Reminders', 
+                  desc: 'Reminders for daily egg collection, vaccination schedules, and medication courses.' 
+                },
+                { 
+                  key: 'subscriptionAlerts', 
+                  label: 'Subscription & Billing Reminders', 
+                  desc: 'Advance notice when trial or subscription renewals are due.' 
+                },
+                { 
+                  key: 'systemAnnouncements', 
+                  label: 'PoultryPro System Announcements', 
+                  desc: 'Platform updates, agricultural advisories, and administrative notices.' 
+                },
+                { 
+                  key: 'emailNotifications', 
+                  label: 'Email Summaries & Urgent Alerts', 
+                  desc: 'Send urgent security and critical farm alerts to your registered email address.' 
+                },
+                { 
+                  key: 'securityAlerts', 
+                  label: 'Account Security Notifications', 
+                  desc: 'Critical security alerts (password changes, logins). Required for account protection.',
+                  required: true
+                }
+              ].map((n) => (
+                <div key={n.key} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:bg-slate-100/60">
+                  <div className="pr-4">
+                    <p className="text-sm font-bold text-slate-800">{n.label}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{n.desc}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={n.required ? true : Boolean(notifSettings[n.key])}
+                    disabled={n.required}
+                    onChange={(e) => {
+                      if (n.required) return;
+                      setNotifSettings({ ...notifSettings, [n.key]: e.target.checked });
+                    }}
+                    className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500 disabled:opacity-50"
+                  />
                 </div>
-                <input
-                  type="checkbox"
-                  checked={notifSettings[n.key]}
-                  onChange={(e) => setNotifSettings({ ...notifSettings, [n.key]: e.target.checked })}
-                  className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
-                />
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                localStorage.setItem('poultrypro_notif_preferences', JSON.stringify(notifSettings));
+                if (isSupabaseConfigured() && supabase && user?.id) {
+                  try {
+                    await supabase.from('profiles').update({
+                      raw_user_meta_data: { notif_preferences: notifSettings }
+                    }).eq('id', user.id);
+                  } catch (e) {
+                    console.warn('Preferences sync to Supabase:', e.message);
+                  }
+                }
+                toast.success('Notification preferences saved successfully.', { title: 'Preferences Updated' });
+              }}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"
+            >
+              Save Notification Preferences
+            </button>
           </div>
         )}
 
@@ -272,8 +357,7 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => {
-                  setSuccessMsg('Security password updated successfully.');
-                  setTimeout(() => setSuccessMsg(''), 3000);
+                  toast.success('Security password updated successfully.', { title: 'Security Updated' });
                 }}
                 className="px-6 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-sm"
               >
@@ -291,13 +375,19 @@ export default function Settings() {
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to reset all data? This will wipe all records and give you a fresh, clean dashboard.')) {
-                    resetAllData();
-                    refreshAllData();
-                    setSuccessMsg('All farm records wiped. You now have a fresh, clean farm.');
-                    setTimeout(() => setSuccessMsg(''), 4000);
-                  }
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Reset All Farm Data?',
+                    message: 'Are you sure you want to reset all data? This will wipe all records and give you a fresh, clean dashboard. This action cannot be undone.',
+                    confirmText: 'Wipe All Data & Start Fresh',
+                    cancelText: 'Keep Farm Data',
+                    isDanger: true,
+                  });
+                  if (!ok) return;
+
+                  resetAllData();
+                  refreshAllData();
+                  toast.warning('All farm records have been reset.', { title: 'Farm Wiped' });
                 }}
                 className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs border border-rose-200 flex items-center gap-2 transition-all"
               >
