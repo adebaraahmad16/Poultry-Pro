@@ -19,6 +19,18 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import Onboarding from './pages/onboarding/Onboarding';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 
+// Legal Pages
+import TermsOfService from './pages/legal/TermsOfService';
+import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import CookiePolicy from './pages/legal/CookiePolicy';
+
+// Scroll Restoration
+import ScrollToTop from './components/common/ScrollToTop';
+
+// Cookie Consent
+import CookieConsentBanner from './components/legal/CookieConsentBanner';
+import CookiePreferencesModal from './components/legal/CookiePreferencesModal';
+
 // Farm OS App Pages
 import Dashboard from './pages/dashboard/Dashboard';
 import DailyRecords from './components/daily/DailyRecords';
@@ -80,6 +92,7 @@ export default function App() {
             <PoultryProvider>
               <AdminProvider>
                 <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                  <ScrollToTop />
                   <Routes>
                     {/* Public Landing & Farmer Auth */}
                     <Route path="/" element={<LandingPage />} />
@@ -87,6 +100,11 @@ export default function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/onboarding" element={<Onboarding />} />
+
+                    {/* Legal Pages */}
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/cookie-policy" element={<CookiePolicy />} />
 
                     {/* Farmer Dashboard Application Shell */}
                     <Route
@@ -153,6 +171,9 @@ export default function App() {
                     {/* Global Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
+                  {/* Global Cookie Consent UI — rendered outside Routes so it persists across navigations */}
+                  <CookieConsentBanner />
+                  <CookiePreferencesModal />
                 </BrowserRouter>
               </AdminProvider>
             </PoultryProvider>

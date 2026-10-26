@@ -41,7 +41,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Broiler'],
     traits: { eggs: false, weight: true, feed: true },
     salesProduct: 'Live Birds',
-    description: 'Meat birds — focus on weight gain, growth performance and feed conversion.'
+    description: 'Meat birds,  focus on weight gain, growth performance and feed conversion.'
   },
   {
     id: 'layers',
@@ -51,7 +51,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Layer'],
     traits: { eggs: true, weight: false, feed: true },
     salesProduct: 'Eggs',
-    description: 'Egg production — focus on lay rate, egg quality and feed efficiency.'
+    description: 'Egg production,  focus on lay rate, egg quality and feed efficiency.'
   },
   {
     id: 'chicks',
@@ -61,7 +61,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Chick', 'Chicken', 'Pullet'],
     traits: { eggs: false, weight: true, feed: true },
     salesProduct: 'Live Birds',
-    description: 'Young birds — focus on brooding, early growth and survival rate.'
+    description: 'Young birds,  focus on brooding, early growth and survival rate.'
   },
   {
     id: 'ducks',
@@ -71,7 +71,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Duck'],
     traits: { eggs: true, weight: true, feed: true },
     salesProduct: 'Live Birds',
-    description: 'Dual-purpose waterfowl — population, eggs where applicable, weight and health.'
+    description: 'Dual-purpose waterfowl, eggs where applicable, weight and health.'
   },
   {
     id: 'turkeys',
@@ -81,7 +81,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Turkey'],
     traits: { eggs: false, weight: true, feed: true },
     salesProduct: 'Live Birds',
-    description: 'Large meat birds — weight, growth, feed and health monitoring.'
+    description: 'Large meat birds,  weight, growth, feed and health monitoring.'
   },
   {
     id: 'geese',
@@ -91,7 +91,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Goose'],
     traits: { eggs: true, weight: true, feed: true },
     salesProduct: 'Live Birds',
-    description: 'Hardy waterfowl — population, eggs, weight and grazing-based feeding.'
+    description: 'Hardy waterfowl, eggs, weight and grazing-based feeding.'
   },
   {
     id: 'guinea-fowl',
@@ -101,7 +101,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Guinea Fowl'],
     traits: { eggs: true, weight: true, feed: true },
     salesProduct: 'Live Birds',
-    description: 'Free-range favourites — population, eggs, weight and hardiness.'
+    description: 'Free-range favourites, eggs, weight and hardiness.'
   },
   {
     id: 'quails',
@@ -111,7 +111,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Quail'],
     traits: { eggs: true, weight: false, feed: true },
     salesProduct: 'Quail Eggs',
-    description: 'Small, fast-laying birds — population, egg production rate and feed.'
+    description: 'Small, fast-laying birds, egg production rate and feed.'
   },
   {
     id: 'other',
@@ -121,7 +121,7 @@ export const POULTRY_TYPES = [
     flockTypes: ['Other'],
     traits: { eggs: false, weight: true, feed: true },
     salesProduct: 'Live Birds',
-    description: 'Any other poultry — general records with weight, feed and health tracking.'
+    description: 'Any other poultry, general records with weight, feed and health tracking.'
   }
 ];
 

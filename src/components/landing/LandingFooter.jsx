@@ -1,38 +1,33 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Bird, Facebook, Twitter, Instagram, Linkedin, Youtube } from '../common/Icons';
+import { openCookiePreferencesModal } from '../../services/cookieConsentService';
 
 const COLUMNS = [
   {
     title: 'Product',
     links: [
-      { label: 'Features', href: '#features' },
-      { label: 'Pricing', href: '#pricing' },
-      { label: 'Dashboard', href: '#dashboard-preview' },
-      { label: 'Poultry Types', href: '#poultry-types' },
-      { label: 'Reports', href: '#dashboard-preview' },
+      { label: 'Features', href: '#features', type: 'hash' },
+      { label: 'Pricing', href: '#pricing', type: 'hash' },
+      { label: 'Dashboard', href: '#dashboard-preview', type: 'hash' },
+      { label: 'Poultry Types', href: '#poultry-types', type: 'hash' },
     ],
   },
   {
     title: 'Resources',
     links: [
-      { label: 'Poultry Farming Guide', href: '#how-it-works' },
-      { label: 'Help Center', href: '#faq' },
-      { label: 'FAQs', href: '#faq' },
-      { label: 'Blog', href: '#' },
-    ],
-  },
-  {
-    title: 'Business',
-    links: [
-      { label: 'Contact Us', href: '#' },
+      { label: 'How It Works', href: '#how-it-works', type: 'hash' },
+      { label: 'FAQs', href: '#faq', type: 'hash' },
+      { label: 'Create Account', to: '/register', type: 'route' },
+      { label: 'Contact Us', href: '#', type: 'hash' },
     ],
   },
   {
     title: 'Legal',
     links: [
-      { label: 'Privacy Policy', href: '#' },
-      { label: 'Terms of Service', href: '#' },
-      { label: 'Cookie Policy', href: '#' },
+      { label: 'Terms of Service', to: '/terms-of-service', type: 'route' },
+      { label: 'Privacy Policy', to: '/privacy-policy', type: 'route' },
+      { label: 'Cookie Policy', to: '/cookie-policy', type: 'route' },
     ],
   },
 ];
@@ -51,14 +46,14 @@ export default function LandingFooter() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           {/* Brand column */}
-          <div className="col-span-2 md:col-span-1">
+          <div className="col-span-2 md:col-span-2">
             <div className="flex items-center gap-2.5">
               <span className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
                 <Bird className="w-5 h-5" />
               </span>
               <span className="text-lg font-extrabold text-white">PoultryPro</span>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+            <p className="mt-3 text-sm leading-relaxed text-slate-400 max-w-xs">
               Smart Management. Healthier Flocks. Better Profits.
             </p>
             <div className="mt-5 flex items-center gap-2">
@@ -82,9 +77,21 @@ export default function LandingFooter() {
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <a href={link.href} className="text-sm hover:text-emerald-400 transition-colors">
-                      {link.label}
-                    </a>
+                    {link.type === 'route' ? (
+                      <Link
+                        to={link.to}
+                        className="text-sm hover:text-emerald-400 transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-sm hover:text-emerald-400 transition-colors"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -92,11 +99,24 @@ export default function LandingFooter() {
           ))}
         </div>
 
+        {/* Bottom bar */}
         <div className="mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-500">
             © {new Date().getFullYear()} PoultryPro. All rights reserved.
           </p>
-          <div className="text-xs text-slate-400 text-center sm:text-right"><p>Smart Management. Healthier Flocks. Better Profits.</p><a href="/images/poultry/credits.html" className="mt-1 inline-block underline hover:text-white">Photo credits</a></div>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 text-xs text-slate-500">
+            <Link to="/terms-of-service" className="hover:text-emerald-400 transition-colors">Terms</Link>
+            <Link to="/privacy-policy" className="hover:text-emerald-400 transition-colors">Privacy</Link>
+            <Link to="/cookie-policy" className="hover:text-emerald-400 transition-colors">Cookies</Link>
+            <button
+              type="button"
+              onClick={openCookiePreferencesModal}
+              className="hover:text-emerald-400 transition-colors underline underline-offset-2 bg-transparent border-0 p-0 cursor-pointer text-xs text-slate-500"
+            >
+              Manage Cookie Preferences
+            </button>
+            <a href="/images/poultry/credits.html" className="hover:text-white transition-colors underline">Photo credits</a>
+          </div>
         </div>
       </div>
     </footer>

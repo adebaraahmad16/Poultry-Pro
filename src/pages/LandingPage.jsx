@@ -4,7 +4,7 @@ import PlanCards from '../components/subscriptions/PlanCards';
 import { usePlanCatalog } from '../components/subscriptions/usePlanCatalog';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Wheat, Egg, ShieldCheck, BarChart3, Package, Users, NotebookPen, PiggyBank, Clock, Bird, ArrowRight, ChevronDown, Star, Info } from '../components/common/Icons';
+import { ShieldCheck, BarChart3, Package, NotebookPen, PiggyBank, Clock, Bird, ArrowRight, ChevronDown, Star, Info } from '../components/common/Icons';
 import { useAuth } from '../context/AuthContext';
 import { POULTRY_TYPES } from '../constants/poultryTypes';
 import LandingNavbar from '../components/landing/LandingNavbar';
@@ -90,58 +90,47 @@ export default function LandingPage() {
         <section id="hero" aria-labelledby="hero-title" className="relative isolate overflow-hidden bg-[#123524]">
           <SectionPhoto name="hero" eager />
           <div className="absolute inset-0 bg-slate-950/75" aria-hidden="true" />
-          <div data-hero-layout className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:gap-12 lg:px-8">
+          <div data-hero-layout className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-14 lg:px-8">
             <div data-hero-content className="min-w-0">
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">Smart management. Healthier flocks.</p>
               <h1 id="hero-title" className="max-w-xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl xl:text-[3.25rem]">
                 Manage Your Poultry Farm <span className="text-emerald-300">Smarter,</span> Grow Your Business Faster.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-100 sm:text-lg">
-                PoultryPro helps poultry farmers manage their flocks, monitor bird health, track feeding,
-                record expenses, and analyse farm performance, all from one powerful platform.
+                Manage your flocks, track farm records, monitor expenses, and grow your poultry business all in one place.
               </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 {startCta}
-                <a href="#features" className="flex w-full items-center justify-center rounded-2xl border border-white/50 bg-white px-7 py-4 text-base font-bold text-[#1F2937] transition-colors hover:bg-slate-100 sm:w-auto">Explore Features</a>
-              </div>
-              <div className="mt-7 border-t border-white/20 pt-5">
-                <h2 className="text-sm font-bold text-white">Everything You Need to Manage Your Poultry Farm</h2>
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">{[
-                  {icon:Package,title:'All-in-One Management',text:'Manage important farm operations from one dashboard.'},
-                  {icon:NotebookPen,title:'Easy Record Keeping',text:'Organise flock, feeding, health and financial records.'},
-                  {icon:BarChart3,title:'Better Farm Decisions',text:'Understand performance through reports and analytics.'},
-                ].map(({icon:Icon,title,text}) => <div key={title} className="flex gap-2 sm:block">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300"/><div><h3 className="text-xs font-bold text-white sm:mt-2">{title}</h3><p className="mt-1 text-xs leading-relaxed text-slate-200">{text}</p></div>
-                </div>)}</div>
+                <a href="#features" className="flex w-full items-center justify-center rounded-2xl border border-white/50 bg-white px-7 py-4 text-base font-bold text-[#1F2937] transition-colors hover:bg-slate-100 sm:w-auto">
+                  Explore Features
+                </a>
               </div>
             </div>
             <HeroDashboardPreview />
           </div>
         </section>
 
-        {/* 5. Features — "Everything Your Farm Needs" */}
+        {/* Features — Exactly 6 core features */}
         <section id="features" className="py-20 bg-white border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               eyebrow="Features"
               title="Everything You Need to Run Your Farm"
-              subtitle="Purpose-built tools for flocks, feed, production, health, money and people — all in one place."
+              subtitle="Essential tools to track, monitor, and optimize your poultry operations."
             />
 
-            <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {[
-                { icon: Bird, title: 'Flock Management', desc: 'Track your birds, breeds, ages, flock sizes and mortality.' },
-                { icon: Wheat, title: 'Feed Management', desc: 'Monitor feed purchases, consumption and remaining stock.' },
-                { icon: Egg, title: 'Production Tracking', desc: 'Track egg production and other poultry-specific production metrics.' },
-                { icon: ShieldCheck, title: 'Health Management', desc: 'Manage vaccinations, medication and health records.' },
-                { icon: PiggyBank, title: 'Sales & Expenses', desc: 'Track your income, expenses and farm profitability.' },
-                { icon: BarChart3, title: 'Farm Analytics', desc: 'Turn your farm records into useful insights.' },
-                { icon: Package, title: 'Inventory', desc: 'Know what farm supplies you have and when you need to restock.' },
-                { icon: Users, title: 'Worker Management', desc: 'Manage farm workers and assign daily tasks.' },
+                { icon: Bird, title: 'Flock Management', desc: 'Track flock batches, bird counts, breeds, ages, and mortality across your houses.' },
+                { icon: NotebookPen, title: 'Daily Farm Records', desc: 'Log daily feed consumption, egg collections, and routine activities in one place.' },
+                { icon: Package, title: 'Feed and Inventory Tracking', desc: 'Monitor feed purchases, current stock levels, and equipment to prevent supply shortages.' },
+                { icon: ShieldCheck, title: 'Poultry Health Monitoring', desc: 'Schedule vaccinations, track medication courses, and record flock health history accurately.' },
+                { icon: PiggyBank, title: 'Expenses and Sales', desc: 'Track bird sales, egg revenue, operating expenses, and cash flow in real time.' },
+                { icon: BarChart3, title: 'Farm Analytics', desc: 'Understand farm performance, mortality rates, production trends, and overall profitability.' },
               ].map((f) => {
                 const Icon = f.icon;
                 return (
-                  <div key={f.title} className="p-6 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all">
+                  <div key={f.title} className="p-6 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-emerald-200 hover:shadow-md transition-all flex flex-col">
                     <div className="mb-4">
                       <div className="p-3 w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
                         <Icon className="w-6 h-6" />
@@ -156,7 +145,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 6. Poultry-type personalization */}
+        {/* Poultry-type personalization */}
         <section id="poultry-types" className="relative isolate overflow-hidden border-t border-slate-200/60 bg-[#123524] py-16 sm:py-20">
           <SectionPhoto name="poultry-types" />
           <div className="absolute inset-0 bg-[#F8FAF9]/80" aria-hidden="true" />
@@ -164,7 +153,7 @@ export default function LandingPage() {
             <SectionHeading
               eyebrow="Personalized for you"
               title="Built Around the Poultry You Raise"
-              subtitle="Whether you raise broilers, layers, turkeys or ducks, PoultryPro adapts your farm dashboard to match your operation."
+              subtitle="Whether you raise broilers, layers, turkeys or ducks, PoultryPro adapts to your operation."
             />
 
             <div className="mt-10 grid grid-cols-1 auto-rows-fr md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -194,13 +183,13 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 7. Dashboard preview */}
+        {/* Dashboard preview */}
         <section id="dashboard-preview" className="py-20 bg-white border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               eyebrow="Dashboard"
               title="See Your Farm at a Glance"
-              subtitle="Monitor your flock, production, feed, expenses and revenue without going through piles of notebooks or spreadsheets."
+              subtitle="Monitor flock health, feed inventory, expenses, and production from one live dashboard."
             />
 
             {/* Browser-frame dashboard mockup */}
@@ -264,29 +253,26 @@ export default function LandingPage() {
           </div>
         </section>
 
-
-        {/* 9. How PoultryPro Works */}
+        {/* How It Works — 3 simple steps */}
         <section id="how-it-works" className="py-20 bg-white border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               eyebrow="How it works"
-              title="How PoultryPro Works"
-              subtitle="Five simple steps from notebooks to a data-driven farm."
+              title="How It Works"
+              subtitle="Three simple steps to smarter poultry farm management."
             />
 
-            <div className="mt-14 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { step: '1', title: 'Create Your Account', desc: 'Register and tell us what type of poultry you manage.' },
-                { step: '2', title: 'Set Up Your Farm', desc: 'Add your farm information and create your flocks.' },
-                { step: '3', title: 'Record Your Activities', desc: 'Record feed, production, health, sales, expenses and other activities.' },
-                { step: '4', title: 'Monitor Your Farm', desc: "View your farm's performance through your personalized dashboard." },
-                { step: '5', title: 'Make Better Decisions', desc: "Use your farm data to understand what's working and where improvements are needed." },
+                { step: '1', title: 'Step 1 — Create Your Account', desc: 'Sign up and set up your poultry farm.' },
+                { step: '2', title: 'Step 2 — Manage Your Farm', desc: 'Record activities and monitor your poultry operations.' },
+                { step: '3', title: 'Step 3 — Track Your Progress', desc: 'Review farm performance and make informed decisions.' },
               ].map((s) => (
-                <div key={s.step} className="relative p-6 rounded-2xl bg-slate-50 border border-slate-200/80">
-                  <span className="absolute -top-4 left-6 w-9 h-9 rounded-xl bg-emerald-600 text-white font-extrabold flex items-center justify-center shadow-md">
+                <div key={s.step} className="relative p-7 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-emerald-200 hover:shadow-md transition-all">
+                  <span className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-extrabold flex items-center justify-center shadow-md mb-4">
                     {s.step}
                   </span>
-                  <h3 className="mt-4 text-base font-extrabold text-slate-900">{s.title}</h3>
+                  <h3 className="text-lg font-extrabold text-slate-900">{s.title}</h3>
                   <p className="mt-2 text-sm text-slate-600 leading-relaxed">{s.desc}</p>
                 </div>
               ))}
@@ -294,36 +280,31 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 10. Benefits */}
+        {/* Why Choose PoultryPro? — 4 benefits */}
         <section id="benefits" className="relative isolate py-20 bg-slate-50 border-t border-slate-200/60">
           <SectionPhoto name="farmer" />
           <div className="absolute inset-0 bg-slate-50/90" aria-hidden="true" />
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
-              eyebrow="Benefits"
-              title="Why Farmers Choose PoultryPro"
+              eyebrow="Why PoultryPro"
+              title="Why Choose PoultryPro?"
+              subtitle="Built specifically for poultry farmers who want clarity, efficiency, and growth."
             />
-            <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { icon: NotebookPen, title: 'Less Paperwork', desc: 'Keep your farm records digitally.' },
-                { icon: BarChart3, title: 'Better Decisions', desc: 'Understand your farm using real data.' },
-                { icon: PiggyBank, title: 'Know Your Profit', desc: 'Track revenue and expenses.' },
-                { icon: Wheat, title: 'Control Feed Costs', desc: 'Monitor your feed consumption and stock.' },
-                { icon: Bird, title: 'Monitor Your Flocks', desc: 'Know exactly what is happening with your birds.' },
-                { icon: Clock, title: 'Save Time', desc: 'Manage your farm from your phone or computer.' },
+                { icon: Clock, title: 'Simple Farm Management', desc: 'Intuitive tools designed specifically for poultry farmers to streamline daily operations.' },
+                { icon: NotebookPen, title: 'Better Record Keeping', desc: 'Replace scattered paper notebooks with organized, secure digital records you can trust.' },
+                { icon: ShieldCheck, title: 'Improved Farm Monitoring', desc: 'Spot health issues early, monitor daily feed intake, and reduce bird mortality.' },
+                { icon: BarChart3, title: 'Data-Driven Decisions', desc: 'Use accurate production and financial reports to grow profitability sustainably.' },
               ].map((b) => {
                 const Icon = b.icon;
                 return (
-                  <div key={b.title} className="flex gap-4 p-6 rounded-2xl bg-white border border-slate-200/80 hover:shadow-md transition-all">
-                    <div className="p-3 w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <div key={b.title} className="p-6 rounded-2xl bg-white border border-slate-200/80 hover:border-emerald-200 hover:shadow-md transition-all flex flex-col">
+                    <div className="p-3 w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
                       <Icon className="w-6 h-6" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-extrabold text-slate-900">
-                        {b.title}
-                      </h3>
-                      <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">{b.desc}</p>
-                    </div>
+                    <h3 className="text-base font-extrabold text-slate-900">{b.title}</h3>
+                    <p className="mt-2 text-sm text-slate-600 leading-relaxed">{b.desc}</p>
                   </div>
                 );
               })}
@@ -331,7 +312,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 11. Farmer statistics */}
+        {/* Farmer statistics */}
         <section className="py-20 bg-[#15803D] border-t border-emerald-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
@@ -359,7 +340,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 12. Pricing */}
+        {/* Pricing */}
         <section id="pricing" className="py-20 bg-white border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
@@ -409,8 +390,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-
-        {/* 14. Testimonials (placeholder content) */}
+        {/* Testimonials */}
         <section id="testimonials" className="py-20 bg-white border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
@@ -444,23 +424,36 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 15. FAQ */}
+        {/* FAQ — 5 concise questions */}
         <section id="faq" className="py-20 bg-slate-50 border-t border-slate-200/60">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               eyebrow="FAQ"
               title="Frequently Asked Questions"
+              subtitle="Quick answers to common questions about PoultryPro."
             />
             <div className="mt-12 space-y-3">
               {[
-                { q: 'Is there a free trial for PoultryPro?', a: 'Yes! Every newly registered farm gets an unconditional 14-day free trial on any subscription plan (Basic, Pro, or Enterprise). No credit card or upfront payment is required to start your trial.' },
-                { q: 'What subscription plans are available?', a: 'PoultryPro offers Basic, Pro, and Enterprise. See the pricing cards above for current prices and limits.' },
-                { q: 'Can I manage different types of poultry?', a: 'Available capacity depends on your plan. The pricing cards above show the current limits.' },
-                { q: 'Can I manage multiple flocks?', a: 'Available capacity depends on your plan. The pricing cards above show the current limits.' },
-                { q: 'What happens when my 14-day free trial ends?', a: 'When your trial expires, all your existing farm data, flock history, and production records remain safe and viewable. To add new flocks or records, you can activate your subscription via Paystack.' },
-                { q: 'Can I use PoultryPro on my phone?', a: 'Yes. The platform is fully responsive and optimized for smartphones, tablets, and desktop computers.' },
-                { q: 'Can I track farm expenses and profit?', a: 'Yes. You can record daily expenses, track feed costs, and monitor gross and net margins with automatic profitability calculations.' },
-                { q: 'Can I add farm workers and staff accounts?', a: 'Available capacity depends on your plan. The pricing cards above show the current limits.' },
+                {
+                  q: 'What is PoultryPro and what does it do?',
+                  a: 'PoultryPro is a complete farm management platform that helps poultry farmers track flocks, daily records, feed, health, and finances in one easy-to-use system.',
+                },
+                {
+                  q: 'What poultry types are supported?',
+                  a: 'PoultryPro supports broilers, layers, cockerels, turkeys, ducks, and mixed poultry operations, adapting dashboards to your specific bird types.',
+                },
+                {
+                  q: 'How do farmers manage their daily records?',
+                  a: 'Farmers log feeding, egg collection, mortality, vaccinations, sales, and expenses directly into dedicated dashboards on any mobile or desktop device.',
+                },
+                {
+                  q: 'What subscription plans are available?',
+                  a: 'We offer Basic, Pro, and Enterprise plans with flexible monthly or annual billing. All plans include a 14-day free trial with no credit card required.',
+                },
+                {
+                  q: 'How secure is my account and farm data?',
+                  a: 'Your account is protected with encrypted authentication and dedicated data isolation, ensuring only authorized farm members can access your farm records.',
+                },
               ].map((f) => (
                 <FaqItem key={f.q} q={f.q} a={f.a} />
               ))}
@@ -468,30 +461,25 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 16. Final CTA */}
+        {/* Final CTA */}
         <section className="relative isolate overflow-hidden py-20 bg-[#123524] border-t border-emerald-700/30">
           <SectionPhoto name="cta" />
           <div className="absolute inset-0 bg-slate-950/75" aria-hidden="true" />
           <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-              Your Farm. Your Data. Your Growth.
+              Ready to Manage Your Farm Smarter?
             </h2>
-            <p className="mt-4 text-lg text-emerald-50">
-              Start managing your poultry operation with PoultryPro today.
+            <p className="mt-4 text-base sm:text-lg text-emerald-100 max-w-xl mx-auto leading-relaxed">
+              Join PoultryPro and simplify your daily poultry farm operations.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 to={isLoggedIn ? '/dashboard' : '/register'}
-                className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-emerald-50 text-emerald-800 font-extrabold text-base rounded-2xl shadow-lg transition-all"
+                className="w-full sm:w-auto px-8 py-4 bg-[#15803D] hover:bg-green-800 text-white font-bold text-base rounded-2xl transition-all shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2"
               >
-                {isLoggedIn ? 'Open Your Dashboard' : 'Start 14-Day Free Trial'}
+                {isLoggedIn ? 'Go to Your Dashboard' : 'Get Started'}
+                <ArrowRight className="w-5 h-5" />
               </Link>
-              <a
-                href="#pricing"
-                className="w-full sm:w-auto px-8 py-4 border-2 border-white/60 hover:bg-white/10 text-white font-extrabold text-base rounded-2xl transition-all"
-              >
-                View Pricing
-              </a>
             </div>
           </div>
         </section>

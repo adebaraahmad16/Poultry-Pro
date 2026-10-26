@@ -34,6 +34,7 @@ export default function Register() {
     confirmPassword: ''
   });
   const [poultryTypes, setPoultryTypes] = useState([]);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -55,6 +56,11 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
+
+    if (!agreedToTerms) {
+      toast.warning("Please read and accept the Terms of Service and Privacy Policy to proceed.", { title: 'Terms Agreement Required' });
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match. Please re-enter your password.", { title: 'Password Mismatch' });
@@ -297,11 +303,34 @@ export default function Register() {
             <PoultryTypeSelect selected={poultryTypes} onChange={handlePoultryTypesChange} columns="grid-cols-2 sm:grid-cols-3" />
           </div>
 
+          <div className="mt-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                id="agree-terms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+              />
+              <span className="text-xs text-slate-600 leading-relaxed">
+                I have read and agree to PoultryPro's{' '}
+                <Link to="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline font-semibold">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline font-semibold">
+                  Privacy Policy
+                </Link>
+                . I understand PoultryPro is intended for farm and flock management.
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit"
-            disabled={submitting}
-            className={`w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-6 ${
-              submitting ? 'opacity-70 cursor-not-allowed' : ''
+            disabled={submitting || !agreedToTerms}
+            className={`w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-5 ${
+              submitting || !agreedToTerms ? 'opacity-60 cursor-not-allowed' : ''
             }`}
           >
             {submitting ? 'Creating Account…' : 'Continue to Farm Setup'}
