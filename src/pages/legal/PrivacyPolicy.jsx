@@ -23,12 +23,12 @@ const SECTIONS = [
 
 function Section({ id, number, title, children }) {
   return (
-    <section id={id} className="mb-10 scroll-mt-24">
-      <h2 className="text-xl font-extrabold text-slate-900 mb-4 flex items-center gap-2">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-700 text-xs font-black shrink-0">{number}</span>
-        {title}
+    <section id={id} className="mb-8 sm:mb-10 scroll-mt-28 sm:scroll-mt-24">
+      <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 mb-3 sm:mb-4 flex items-start sm:items-center gap-2 sm:gap-2.5">
+        <span className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-blue-100 text-blue-700 text-xs font-black shrink-0 mt-0.5 sm:mt-0">{number}</span>
+        <span className="leading-tight">{title}</span>
       </h2>
-      <div className="space-y-3 text-sm text-slate-700 leading-relaxed">{children}</div>
+      <div className="space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed">{children}</div>
     </section>
   );
 }
@@ -178,8 +178,11 @@ export default function PrivacyPolicy() {
 
       <Section id="third-party-services" number="6" title="Third-Party Services">
         <p>PoultryPro currently integrates with the following third-party services:</p>
-        <div className="overflow-x-auto mt-3">
-          <table className="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto mt-3 mb-2">
+          <p className="text-[11px] text-slate-500 sm:hidden mb-1.5 flex items-center gap-1 font-medium">
+            <span>⇄ Swipe horizontally to view full table</span>
+          </p>
+          <table className="min-w-[500px] w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
             <thead className="bg-slate-50">
               <tr>
                 <th className="text-left px-4 py-3 font-bold text-slate-700">Service</th>
