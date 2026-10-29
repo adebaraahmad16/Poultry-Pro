@@ -1,3 +1,4 @@
+import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import { Eye, ShieldAlert, CheckCircle2, Send, Phone, Mail, MapPin } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
@@ -177,7 +178,7 @@ export default function Farmers() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Registered Farmers Management
@@ -194,7 +195,7 @@ export default function Farmers() {
       </div>
 
       {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
           <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Farmers</span>
           <p className="text-2xl font-black text-slate-900 mt-1">{farmers.length}</p>
@@ -235,9 +236,9 @@ export default function Farmers() {
 
       {/* Farmer Profile Modal (README Section 4B) */}
       {selectedFarmer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <AdminDialog onClose={()=>setSelectedFarmer(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 font-extrabold flex items-center justify-center text-lg">
                   {selectedFarmer.fullName?.[0] || '?'}
@@ -275,19 +276,19 @@ export default function Farmers() {
 
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Platform Status</span>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <span className="text-slate-500">Plan Tier:</span>
                   <StatusBadge variant={selectedFarmer.subscription}>{selectedFarmer.subscription} Plan</StatusBadge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <span className="text-slate-500">Account Status:</span>
                   <StatusBadge variant={selectedFarmer.status}>{selectedFarmer.status}</StatusBadge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <span className="text-slate-500">Joined Date:</span>
                   <span className="font-semibold text-slate-800">{selectedFarmer.dateJoined}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <span className="text-slate-500">Last Activity:</span>
                   <span className="font-semibold text-slate-800">{selectedFarmer.lastLogin}</span>
                 </div>
@@ -333,13 +334,13 @@ export default function Farmers() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminDialog>
       )}
 
       {/* Direct Notification Modal */}
       {notifyFarmer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
+        <AdminDialog onClose={()=>setNotifyFarmer(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-5">
             <h3 className="text-lg font-extrabold text-slate-900">
               Send Direct Notification to {notifyFarmer.fullName}
             </h3>
@@ -379,7 +380,7 @@ export default function Farmers() {
               </div>
             </form>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

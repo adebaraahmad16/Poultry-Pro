@@ -1,3 +1,4 @@
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import React, { useState } from 'react';
 import {
   Settings as SettingsIcon, Save, CheckCircle2, Shield, CreditCard,
@@ -42,7 +43,7 @@ export default function Settings() {
   return (
     <div className="space-y-6 pb-16">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
@@ -69,7 +70,7 @@ export default function Settings() {
 
       {/* Tabs Navigation */}
       <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
-        <div className="flex gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
+        <label className="block p-2 sm:hidden text-sm font-semibold">Settings section<select aria-label="Settings section" className="mt-2 w-full rounded-xl border p-3 bg-white" value={activeTab} onChange={e => setActiveTab(e.target.value)}>{tabs.map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}</select></label><div className="hidden sm:flex flex-wrap gap-1.5 pb-1 text-xs font-bold">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -266,8 +267,8 @@ export default function Settings() {
                   <ShieldCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="email"
-                    value={form.supportEscalationEmail || 'escalations@poultrypro.ng'}
-                    onChange={(e) => setForm({ ...form, supportEscalationEmail: e.target.value })}
+                    value={SUPPORT_CONTACT.email}
+                    readOnly
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-emerald-600"
                   />
                 </div>
@@ -286,7 +287,7 @@ export default function Settings() {
         {/* Tab 3: Security & Sessions */}
         {activeTab === 'security' && (
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs space-y-6">
-            <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+            <div className="border-b border-slate-100 pb-4 flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <Shield className="w-5 h-5 text-emerald-700" />
@@ -489,7 +490,7 @@ export default function Settings() {
 
             <div className="space-y-5 text-xs">
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                     <span className="font-extrabold text-slate-900 text-sm">Paystack Nigeria (Live Gateway)</span>
@@ -528,7 +529,7 @@ export default function Settings() {
               </div>
 
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                     <span className="font-extrabold text-slate-900 text-sm">Flutterwave Africa (Secondary Gateway)</span>
@@ -606,7 +607,7 @@ export default function Settings() {
                 { key: 'subscriptionExpiryReminderAlerts', label: 'Subscription Expiry Automated Reminders', desc: 'Trigger automated email and SMS prompts before farmer renewals' },
                 { key: 'systemAnnouncements', label: 'System Announcements Broadcast', desc: 'Allow super admins to broadcast banner announcements across farmer dashboards' }
               ].map(({ key, label, desc }) => (
-                <div key={key} className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                <div key={key} className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex-wrap gap-3">
                   <div>
                     <h4 className="font-bold text-slate-900 text-xs sm:text-sm">{label}</h4>
                     <p className="text-2xs sm:text-xs text-slate-500">{desc}</p>
@@ -793,7 +794,7 @@ export default function Settings() {
         )}
 
         {/* Global Save Button Footer */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
           <p className="text-2xs text-slate-400">
             Changes to platform parameters will take effect immediately across all active sessions.
           </p>

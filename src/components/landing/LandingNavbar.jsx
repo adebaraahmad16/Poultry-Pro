@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Bird, Menu, X, LayoutDashboard } from '../common/Icons';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,6 +15,7 @@ const NAV_LINKS = [
 export default function LandingNavbar() {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const goDashboard = () => navigate('/dashboard');
@@ -35,7 +36,7 @@ export default function LandingNavbar() {
         {/* Desktop nav */}
         <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-600" aria-label="Main navigation">
           {NAV_LINKS.map((link) => (
-            <a key={link.label} href={link.href} className="hover:text-emerald-600 transition-colors whitespace-nowrap">
+            <a key={link.label} href={pathname === '/' ? link.href : `/${link.href}`} className="hover:text-emerald-600 transition-colors whitespace-nowrap">
               {link.label}
             </a>
           ))}
@@ -84,7 +85,7 @@ export default function LandingNavbar() {
             {NAV_LINKS.map((link) => (
               <a
                 key={link.label}
-                href={link.href}
+                href={pathname === '/' ? link.href : `/${link.href}`}
                 onClick={() => setMobileOpen(false)}
                 className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
               >

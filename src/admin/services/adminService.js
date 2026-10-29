@@ -1,4 +1,5 @@
 import { getCatalog, savePlan } from '../../services/planCatalog';
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import {
   initialAdminUsers,
   initialFarmers,
@@ -238,7 +239,7 @@ export const adminService = {
   // Platform Settings & CMS
   getSettings: () => {
     const current = getLocal(KEYS.SETTINGS, initialPlatformSettings);
-    const merged = { ...initialPlatformSettings, ...current };
+    const merged = { ...initialPlatformSettings, ...current, supportEscalationEmail: SUPPORT_CONTACT.email };
     if (merged.defaultCurrency === 'N' || !merged.defaultCurrency) {
       merged.defaultCurrency = '₦';
     }
@@ -246,7 +247,7 @@ export const adminService = {
   },
   updateSettings: (newSettings) => {
     const current = getLocal(KEYS.SETTINGS, initialPlatformSettings);
-    const updated = { ...initialPlatformSettings, ...current, ...newSettings };
+    const updated = { ...initialPlatformSettings, ...current, ...newSettings, supportEscalationEmail: SUPPORT_CONTACT.email };
     if (updated.defaultCurrency === 'N' || !updated.defaultCurrency) {
       updated.defaultCurrency = '₦';
     }
@@ -255,10 +256,13 @@ export const adminService = {
     return updated;
   },
 
-  getCmsContent: () => getLocal(KEYS.CMS, initialWebsiteContent),
+  getCmsContent: () => {
+    const current = getLocal(KEYS.CMS, initialWebsiteContent);
+    return { ...current, contact: { ...current.contact, email: SUPPORT_CONTACT.email, phone: SUPPORT_CONTACT.phone, whatsapp: SUPPORT_CONTACT.internationalPhone } };
+  },
   updateCmsContent: (newCms) => {
     const current = getLocal(KEYS.CMS, initialWebsiteContent);
-    const updated = { ...current, ...newCms };
+    const updated = { ...current, ...newCms, contact: { ...current.contact, ...newCms.contact, email: SUPPORT_CONTACT.email, phone: SUPPORT_CONTACT.phone, whatsapp: SUPPORT_CONTACT.internationalPhone } };
     setLocal(KEYS.CMS, updated);
     adminService.logAction('Updated Website Content', 'Public landing page CMS updated');
     return updated;

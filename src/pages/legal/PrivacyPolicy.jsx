@@ -1,3 +1,4 @@
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import React from 'react';
 import LegalPageLayout from '../../components/legal/LegalPageLayout';
 import { Link } from 'react-router-dom';
@@ -319,19 +320,15 @@ export default function PrivacyPolicy() {
         </ul>
         <p>
           To exercise any of these rights, please contact us at{' '}
-          <a href="mailto:privacy@poultrypro.ng" className="text-emerald-600 hover:underline">privacy@poultrypro.ng</a>{' '}
-          or <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a>.
+          <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>.
           We will respond to verified requests within a reasonable timeframe.
-        </p>
-        <p className="text-amber-800 bg-amber-50 p-3 rounded-lg text-xs">
-          <strong>[To Be Confirmed]:</strong> The privacy email address requires confirmation from the business owner.
         </p>
       </Section>
 
       <Section id="account-deletion" number="11" title="Account Deletion and Data Removal">
         <p>
           You may request deletion of your PoultryPro account by contacting our support team at{' '}
-          <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a>.
+          <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>.
         </p>
         <p>Upon receiving a deletion request:</p>
         <ul className="list-disc list-inside space-y-1 pl-2">
@@ -373,7 +370,7 @@ export default function PrivacyPolicy() {
         <p>
           We do not knowingly collect personal information from children. If you believe that a child has registered an
           account without appropriate parental or guardian consent, please contact us at{' '}
-          <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a>{' '}
+          <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>{' '}
           and we will take appropriate action.
         </p>
         <p className="text-amber-800 bg-amber-50 p-3 rounded-lg text-xs">
@@ -418,20 +415,19 @@ export default function PrivacyPolicy() {
           <p><strong className="text-slate-900">Platform:</strong> PoultryPro</p>
           <p>
             <strong className="text-slate-900">Privacy Contact:</strong>{' '}
-            <a href="mailto:privacy@poultrypro.ng" className="text-emerald-600 hover:underline">privacy@poultrypro.ng</a>
+            <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>
           </p>
           <p>
             <strong className="text-slate-900">Support:</strong>{' '}
-            <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a>
+            <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>
           </p>
           <p>
             <strong className="text-slate-900">General Enquiries:</strong>{' '}
-            <a href="mailto:hello@poultrypro.ng" className="text-emerald-600 hover:underline">hello@poultrypro.ng</a>
+            <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>
           </p>
         </div>
         <p className="text-amber-800 bg-amber-50 p-3 rounded-lg text-xs mt-3">
-          <strong>[To Be Confirmed]:</strong> The business postal address, registered business name, and privacy contact
-          details require confirmation from the business owner before publication.
+          <strong>[To Be Confirmed]:</strong> The business postal address and registered business name require confirmation from the business owner before publication.
         </p>
       </Section>
     </LegalPageLayout>

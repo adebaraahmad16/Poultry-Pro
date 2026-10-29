@@ -1,3 +1,4 @@
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import React, { useState } from 'react';
 import { Globe, Save, CheckCircle2, Plus, Trash2, HelpCircle, Phone, Mail } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
@@ -36,13 +37,13 @@ export default function WebsiteContent() {
   return (
     <div className="space-y-8 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Website Content Management (CMS)
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Update PoultryPro's public landing page headlines, support contact numbers, and FAQs without modifying code.
+            Update PoultryPro's public landing page headlines and FAQs, and view official support contact details.
           </p>
         </div>
         {savedSuccess && (
@@ -155,13 +156,8 @@ export default function WebsiteContent() {
               <input
                 type="email"
                 required
-                value={form.contact?.email || ''}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    contact: { ...form.contact, email: e.target.value }
-                  })
-                }
+                value={SUPPORT_CONTACT.email}
+                readOnly
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
               />
             </div>
@@ -171,13 +167,8 @@ export default function WebsiteContent() {
               <input
                 type="text"
                 required
-                value={form.contact?.phone || ''}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    contact: { ...form.contact, phone: e.target.value }
-                  })
-                }
+                value={SUPPORT_CONTACT.phone}
+                readOnly
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
               />
             </div>
@@ -187,13 +178,8 @@ export default function WebsiteContent() {
               <input
                 type="text"
                 required
-                value={form.contact?.whatsapp || ''}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    contact: { ...form.contact, whatsapp: e.target.value }
-                  })
-                }
+                value={SUPPORT_CONTACT.internationalPhone}
+                readOnly
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
               />
             </div>
@@ -239,7 +225,7 @@ export default function WebsiteContent() {
         {/* Existing FAQs */}
         <div className="divide-y divide-slate-100">
           {(form.faqs || []).map((faq, index) => (
-            <div key={index} className="py-4 flex items-start justify-between gap-4">
+            <div key={index} className="py-4 flex items-start justify-between gap-4 flex-wrap">
               <div className="space-y-1">
                 <span className="font-extrabold text-sm text-slate-900 block">{faq.q}</span>
                 <p className="text-xs text-slate-500 leading-relaxed">{faq.a}</p>

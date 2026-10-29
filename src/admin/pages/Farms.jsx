@@ -1,3 +1,4 @@
+import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import { Building2, Eye, MapPin, Bird, Layers } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
@@ -96,7 +97,7 @@ export default function Farms() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Farms & Multi-Poultry Directory
@@ -127,9 +128,9 @@ export default function Farms() {
 
       {/* Farm Details & Multi-Poultry Breakdown Modal (README Section 5C) */}
       {selectedFarm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <AdminDialog onClose={()=>setSelectedFarm(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 font-extrabold flex items-center justify-center text-lg">
                   <Building2 className="w-6 h-6" />
@@ -176,7 +177,7 @@ export default function Farms() {
                 {(selectedFarm.breakdown || []).map((b, idx) => (
                   <div
                     key={idx}
-                    className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between"
+                    className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between flex-wrap gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-xs">
@@ -211,7 +212,7 @@ export default function Farms() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { taskService } from '../../services/managementService';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function Tasks() {
   const { tasks, workers, refreshAllData } = useFarm();
@@ -55,7 +56,7 @@ export default function Tasks() {
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          className="w-full sm:w-auto justify-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Create Task
@@ -166,6 +167,13 @@ export default function Tasks() {
       </Modal>
 
       <ConfirmModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} title="Delete Task" message="Are you sure?" />
+
+      {/* Mobile Sticky Action Button */}
+      <StickyRecordButton
+        label="Create Task"
+        onClick={() => setIsAddOpen(true)}
+        isModalOpen={isAddOpen || !!deletingId}
+      />
     </div>
   );
 }

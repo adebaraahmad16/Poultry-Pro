@@ -9,6 +9,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function FeedManagement() {
   const [params, setParams] = useSearchParams();
@@ -372,19 +373,19 @@ export default function FeedManagement() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <button
             onClick={handleOpenAddFeeding}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+            className="w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
             + Record Feeding
           </button>
           <button
             onClick={handleOpenAddStock}
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
             + Add Feed Stock
           </button>
         </div>
@@ -721,6 +722,14 @@ export default function FeedManagement() {
             ? "Are you sure you want to delete this feed inventory item from store records?"
             : "Are you sure you want to remove this flock feeding activity record?"
         }
+      />
+
+      {/* Sticky Mobile Record Button */}
+      <StickyRecordButton
+        onClick={handleOpenAddFeeding}
+        label="Record Feeding"
+        color="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/30"
+        isModalOpen={isFeedingModalOpen || isStockModalOpen || !!deletingId}
       />
     </div>
   );

@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function Flocks() {
   const [params, setParams] = useSearchParams();
@@ -173,7 +174,7 @@ export default function Flocks() {
 
         <button
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          className="w-full sm:w-auto justify-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Add New Flock
@@ -468,6 +469,13 @@ export default function Flocks() {
         onConfirm={handleDelete}
         title="Delete Flock Record"
         message="Are you sure you want to permanently delete this flock? This action will remove all historical production records associated with it."
+      />
+
+      {/* Mobile Sticky Action Button */}
+      <StickyRecordButton
+        label="Add Flock"
+        onClick={handleOpenAdd}
+        isModalOpen={isAddOpen || !!deletingId}
       />
     </div>
   );

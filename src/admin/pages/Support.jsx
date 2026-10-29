@@ -1,3 +1,4 @@
+import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import { Headphones, Send, CheckCircle2, AlertCircle, Clock, MessageSquare, User } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
@@ -102,7 +103,7 @@ export default function Support() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Farmer Support Center
@@ -119,7 +120,7 @@ export default function Support() {
       </div>
 
       {/* KPI Cards (README Section 11A) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-5 gap-3.5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
           <span className="text-[10px] font-bold text-slate-400 uppercase">Total Tickets</span>
           <p className="text-2xl font-black text-slate-900 mt-1">{totalTickets}</p>
@@ -155,10 +156,10 @@ export default function Support() {
 
       {/* Ticket Conversation Thread Modal (README Section 11C & 11D) */}
       {activeTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <AdminDialog onClose={()=>setActiveTicket(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-wrap gap-3">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-slate-500">{activeTicket.id}</span>
@@ -181,7 +182,7 @@ export default function Support() {
             </div>
 
             {/* Conversation Messages Thread */}
-            <div className="p-6 overflow-y-auto flex-1 space-y-4 bg-[#F8FAF9]">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 bg-[#F8FAF9]">
               {(activeTicket.messages || []).map((msg, idx) => {
                 const isAdmin = msg.role === 'Support Admin';
                 return (
@@ -228,7 +229,7 @@ export default function Support() {
                 </button>
               </form>
 
-              <div className="flex items-center justify-between text-xs pt-1">
+              <div className="flex items-center justify-between text-xs pt-1 flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-slate-500 font-semibold">Change Status:</span>
                   <button
@@ -256,7 +257,7 @@ export default function Support() {
               </div>
             </div>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

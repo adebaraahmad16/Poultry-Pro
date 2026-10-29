@@ -40,15 +40,29 @@ export const flockService = {
     return flockMutations.delete(farmId, id);
   },
 
-  recordMortality: (flockId, count) => {
+  recordMortality: async (flockId, count) => {
     const flocks = getItem(KEYS.FLOCKS, []);
+    let targetFlock = null;
     const updated = flocks.map(f => {
       if (f.id === flockId) {
         const current = Math.max(0, Number(f.currentBirds) - Number(count));
-        return { ...f, currentBirds: current };
+        targetFlock = { ...f, currentBirds: current };
+        return targetFlock;
       }
       return f;
     });
     setItem(KEYS.FLOCKS, updated);
+    if (targetFlock) {
+      let farmId = targetFlock.farmId || getSelectedFarmId();
+      if (!farmId) {
+        const user = getItem(KEYS.USER, {});
+        farmId = user?.farmId;
+      }
+      try {
+        await flockMutations.update(farmId, flockId, { currentBirds: targetFlock.currentBirds });
+      } catch (e) {
+        console.warn('Could not sync flock mortality deduction to remote:', e);
+      }
+    }
   }
 };

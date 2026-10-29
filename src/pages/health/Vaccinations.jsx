@@ -8,6 +8,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function Vaccinations() {
   const [params, setParams] = useSearchParams();
@@ -272,9 +273,9 @@ export default function Vaccinations() {
 
         <button
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          className="w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           + Record Vaccination
         </button>
       </div>
@@ -540,6 +541,14 @@ export default function Vaccinations() {
         onConfirm={handleDelete}
         title="Delete Vaccination Record"
         message="Are you sure you want to delete this vaccination record from your schedule history?"
+      />
+
+      {/* Sticky Mobile Record Button */}
+      <StickyRecordButton
+        onClick={handleOpenAdd}
+        label="Record Vaccine"
+        color="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/30"
+        isModalOpen={isAddOpen || !!deletingId}
       />
     </div>
   );

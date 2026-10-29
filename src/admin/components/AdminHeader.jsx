@@ -5,6 +5,7 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function AdminHeader({
   setMobileOpen,
+  mobileOpen,
   isCollapsed,
   setIsCollapsed
 }) {
@@ -18,6 +19,12 @@ export default function AdminHeader({
 
   const profileRef = useRef(null);
   const notifRef = useRef(null);
+  useEffect(() => { setProfileOpen(false); setNotifOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    const close = event => { if (event.key === 'Escape') { setProfileOpen(false); setNotifOpen(false); } };
+    document.addEventListener('keydown', close);
+    return () => document.removeEventListener('keydown', close);
+  }, []);
 
   // Close popovers on click outside
   useEffect(() => {
@@ -42,6 +49,7 @@ export default function AdminHeader({
     if (path.startsWith('/poultry-types')) return 'Poultry Types & Modules';
     if (path.startsWith('/subscriptions')) return 'Subscription Plans & Tiers';
     if (path.startsWith('/payments')) return 'Payments & Revenue Transactions';
+    if (path.startsWith('/contact-messages')) return 'Contact Messages';
     if (path.startsWith('/notifications')) return 'Broadcast Notifications & Alerts';
     if (path.startsWith('/support')) return 'Customer Support Center';
     if (path.startsWith('/reports')) return 'Reports, Analytics & Exports';
@@ -68,19 +76,22 @@ export default function AdminHeader({
   const pendingTicketsCount = tickets.filter((t) => t.status === 'Open').length;
 
   return (
-    <header className="min-w-0 h-16 gap-2 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 sm:px-6 flex items-center justify-between">
+    <header className="min-w-0 min-h-16 gap-2 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 sm:px-6 flex items-center justify-between pt-[env(safe-area-inset-top)]">
       {/* Left: Mobile Toggle, Landing Page Logo & Page Title */}
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3 py-2">
         <button
           onClick={() => setMobileOpen(true)}
-          className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+          aria-label="Open navigation"
+          aria-expanded={mobileOpen}
+          aria-controls="admin-mobile-navigation"
+          className="lg:hidden h-11 w-11 shrink-0 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
           title="Open Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         {/* Brand Logo in Title Bar (Same as Landing Page) */}
-        <Link to="/admin/dashboard" className="flex items-center gap-2.5 mr-1" aria-label="PoultryPro Admin">
+        <Link to="/admin/dashboard" className="hidden sm:flex shrink-0 items-center gap-2.5 mr-1" aria-label="PoultryPro Admin">
           <span className="w-9 h-9 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-sm shrink-0">
             <Bird className="w-5 h-5 stroke-[2.5]" />
           </span>
@@ -92,15 +103,16 @@ export default function AdminHeader({
         <div className="h-6 w-px bg-slate-200 hidden sm:block mx-1" />
 
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+          <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 font-semibold">
             <span>Admin</span>
             <span>/</span>
             <span className="text-emerald-700 capitalize">
               {location.pathname.split('/')[2] || 'Dashboard'}
             </span>
           </div>
-          <h1 className="text-base sm:text-lg font-extrabold text-slate-900 leading-none mt-0.5 truncate max-w-[200px] sm:max-w-xs md:max-w-md">
-            {getPageTitle()}
+          <h1 className="text-sm sm:text-base lg:text-lg font-extrabold text-slate-900 leading-snug truncate">
+            <span className="sm:hidden capitalize">{path.split('/')[1]?.replaceAll('-', ' ') || 'Dashboard'}</span>
+            <span className="hidden sm:inline">{getPageTitle()}</span>
           </h1>
         </div>
       </div>
@@ -133,7 +145,9 @@ export default function AdminHeader({
         <div className="relative" ref={notifRef}>
           <button
             onClick={() => setNotifOpen(!notifOpen)}
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition relative"
+            aria-label="Notifications and alerts"
+            aria-expanded={notifOpen}
+            className="h-11 w-11 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition relative"
             title="Notifications & Alerts"
           >
             <Bell className="w-5 h-5" />
@@ -143,7 +157,7 @@ export default function AdminHeader({
           </button>
 
           {notifOpen && (
-            <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto mt-2 sm:w-96 max-h-[75dvh] overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-xl p-4 z-50">
+            <div className="fixed left-3 right-3 top-[calc(4rem+env(safe-area-inset-top))] sm:absolute sm:left-auto sm:right-0 sm:top-auto mt-2 sm:w-96 max-h-[75dvh] overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-xl p-4 z-50">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
                   Platform Alerts & Tickets
@@ -188,7 +202,9 @@ export default function AdminHeader({
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-2 p-1 pl-2 hover:bg-slate-50 border border-slate-200 rounded-2xl transition"
+            aria-label="Administrator account menu"
+            aria-expanded={profileOpen}
+            className="min-h-11 min-w-11 flex items-center justify-center gap-2 p-1 lg:pl-2 hover:bg-slate-50 border border-slate-200 rounded-2xl transition"
           >
             {currentAdmin?.avatar ? (
               <img

@@ -1,3 +1,4 @@
+import ResponsiveRecords from '../components/ResponsiveRecords';
 import React, { useState } from 'react';
 import {
   BarChart3, Download, Printer, DollarSign, Users, Bird, CheckCircle2,
@@ -75,7 +76,7 @@ export default function Reports() {
   return (
     <div className="space-y-8 pb-12">
       {/* Header Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Reports & Platform Analytics</h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -111,7 +112,7 @@ export default function Reports() {
       </div>
 
       {/* KPI Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
           title="Conversion Rate"
           value={`${conversionRate}%`}
@@ -151,7 +152,7 @@ export default function Reports() {
       </div>
 
       {/* Revenue Trend Chart */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
           <div>
             <h3 className="font-extrabold text-base text-slate-900">
@@ -179,13 +180,7 @@ export default function Reports() {
         </div>
         <div className="h-72 mt-5">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={MONTHLY_REVENUE} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="repGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#15803D" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#15803D" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <AreaChart accessibilityLayer data={MONTHLY_REVENUE} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
               <XAxis dataKey="month" stroke="#94A3B8" fontSize={11} tickLine={false} />
               <YAxis
@@ -212,7 +207,7 @@ export default function Reports() {
                 stroke="#15803D"
                 strokeWidth={3}
                 fillOpacity={1}
-                fill="url(#repGrad)"
+                fill="#dcfce7"
                 dot={{ fill: '#15803D', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6 }}
               />
@@ -224,8 +219,8 @@ export default function Reports() {
       {/* Middle Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Poultry Breakdown Bar Chart */}
-        <div className="lg:col-span-8 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
             <div>
               <h3 className="font-extrabold text-base text-slate-900">Poultry Species Farm Adoption</h3>
               <p className="text-xs text-slate-400 mt-0.5">Registered farm count by poultry category</p>
@@ -233,7 +228,7 @@ export default function Reports() {
           </div>
           <div className="h-56 mt-5">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={POULTRY_BREAKDOWN} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <BarChart accessibilityLayer data={POULTRY_BREAKDOWN} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="category" stroke="#94A3B8" fontSize={11} tickLine={false} />
                 <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
@@ -242,22 +237,22 @@ export default function Reports() {
                   formatter={(val, name) => [val, name === 'farms' ? 'Farms' : name === 'flocks' ? 'Flocks' : 'Birds']}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                <Bar dataKey="farms" fill="#15803D" radius={[4, 4, 0, 0]} name="Farms" />
-                <Bar dataKey="flocks" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Flocks" />
+                <Bar isAnimationActive={false} dataKey="farms" fill="#15803D" radius={[4, 4, 0, 0]} name="Farms" />
+                <Bar isAnimationActive={false} dataKey="flocks" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Flocks" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Plan Distribution Pie */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
           <div className="pb-4 border-b border-slate-100">
             <h3 className="font-extrabold text-base text-slate-900">Plan Distribution</h3>
             <p className="text-xs text-slate-400 mt-0.5">Active farmers by subscription tier</p>
           </div>
           <div className="h-44 mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart accessibilityLayer>
                 <Pie
                   data={PLAN_DISTRIBUTION}
                   cx="50%"
@@ -280,7 +275,7 @@ export default function Reports() {
           </div>
           <div className="space-y-2 mt-2">
             {PLAN_DISTRIBUTION.map((p) => (
-              <div key={p.name} className="flex items-center justify-between text-xs">
+              <div key={p.name} className="flex items-center justify-between text-xs flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                   <span className="text-slate-700 font-medium">{p.name} Plan</span>
@@ -295,7 +290,7 @@ export default function Reports() {
       {/* Bottom Data Tables Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Species Distribution Table */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
           <h3 className="text-base font-extrabold text-slate-900 mb-1">
             Poultry Species & Flock Distribution
           </h3>
@@ -303,7 +298,7 @@ export default function Reports() {
             Total active farm adoption across registered categories
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <ResponsiveRecords><table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] border-b border-slate-100">
                 <tr>
                   <th className="py-2.5 px-3">Poultry Category</th>
@@ -336,12 +331,12 @@ export default function Reports() {
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></ResponsiveRecords>
           </div>
         </div>
 
         {/* Geographic Distribution */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
           <h3 className="text-base font-extrabold text-slate-900 mb-1">
             Geographic Poultry Farm Distribution
           </h3>
@@ -351,7 +346,7 @@ export default function Reports() {
           <div className="space-y-3">
             {GEO_DATA.map((loc) => (
               <div key={loc.state} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2 flex-wrap gap-3">
                   <span>{loc.state}</span>
                   <span className="text-emerald-800 font-extrabold">
                     {loc.birds.toLocaleString()} birds
@@ -364,7 +359,7 @@ export default function Reports() {
                     style={{ width: `${loc.share}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1 flex-wrap gap-3">
                   <span>{loc.share}% of platform farms</span>
                 </div>
               </div>
@@ -374,8 +369,8 @@ export default function Reports() {
       </div>
 
       {/* Monthly Revenue Table */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4 flex-wrap gap-3">
           <div>
             <h3 className="font-extrabold text-base text-slate-900">Monthly Revenue & Growth Log</h3>
             <p className="text-xs text-slate-400 mt-0.5">Detailed month-by-month platform financial record</p>
@@ -385,7 +380,7 @@ export default function Reports() {
           </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <ResponsiveRecords><table className="w-full text-xs">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="py-3 px-4 text-left font-bold text-slate-500 uppercase tracking-wider">Month</th>
@@ -428,7 +423,7 @@ export default function Reports() {
                 );
               })}
             </tbody>
-          </table>
+          </table></ResponsiveRecords>
         </div>
       </div>
     </div>

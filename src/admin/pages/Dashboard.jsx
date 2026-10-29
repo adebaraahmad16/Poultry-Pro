@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome & Platform Health Bar */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
@@ -71,14 +71,14 @@ export default function AdminDashboard() {
 
       {/* Platform KPIs — all from live data */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
             Platform Key Performance Indicators
           </h2>
           <span className="text-xs font-bold text-slate-400">Live Data</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
           <StatCard
             title="Total Farmers"
             value={metrics.totalFarmers.toLocaleString()}
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Subscription Tier Breakdown */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Trial / Free</span>
           <p className="text-3xl font-black text-slate-700 mt-1">{trialFarmers.length}</p>
@@ -172,11 +172,11 @@ export default function AdminDashboard() {
       </div>
 
       {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
         {/* Farmer Registration & Revenue Trend */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="xl:col-span-7 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">
                 Farmer Registrations & Subscription Revenue
@@ -193,13 +193,7 @@ export default function AdminDashboard() {
           <div className={`${hasChartData ? 'h-56 sm:h-64' : 'py-5'} mt-4`}>
             {hasChartData ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={registrationTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="adminColorGreen" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#15803D" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#15803D" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <AreaChart accessibilityLayer data={registrationTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                   <XAxis dataKey="month" stroke="#94A3B8" fontSize={11} tickLine={false} />
                   <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
@@ -210,7 +204,7 @@ export default function AdminDashboard() {
                     ]}
                     contentStyle={{ backgroundColor: '#1E293B', color: '#FFF', borderRadius: '12px', border: 'none', fontSize: '12px' }}
                   />
-                  <Area type="monotone" dataKey="revenue" stroke="#15803D" strokeWidth={3} fillOpacity={1} fill="url(#adminColorGreen)" />
+                  <Area isAnimationActive={false} type="monotone" dataKey="revenue" stroke="#15803D" strokeWidth={3} fillOpacity={1} fill="#dcfce7" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -224,8 +218,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Poultry Type Distribution — from real farm breakdown */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="xl:col-span-5 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">
                 Poultry Type Distribution
@@ -242,7 +236,7 @@ export default function AdminDashboard() {
           <div className={`${hasDistributionData ? 'h-56 sm:h-64' : 'py-5'} mt-4`}>
             {hasDistributionData ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={poultryDistribution} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                <BarChart accessibilityLayer data={poultryDistribution} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                   <XAxis type="number" stroke="#94A3B8" fontSize={11} tickLine={false} />
                   <YAxis dataKey="type" type="category" stroke="#94A3B8" fontSize={11} tickLine={false} width={70} />
@@ -250,7 +244,7 @@ export default function AdminDashboard() {
                     formatter={(val) => [`${val} Farms`, 'Adoption']}
                     contentStyle={{ backgroundColor: '#1E293B', color: '#FFF', borderRadius: '12px', border: 'none', fontSize: '12px' }}
                   />
-                  <Bar dataKey="farms" fill="#2563EB" radius={[0, 6, 6, 0]} />
+                  <Bar isAnimationActive={false} dataKey="farms" fill="#2563EB" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -266,11 +260,11 @@ export default function AdminDashboard() {
       </div>
 
       {/* Bottom Grids: Recent Registrations & Live Audit Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
         {/* Recent Farmer Registrations */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="xl:col-span-7 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">
                 Recent Farmer Registrations
@@ -291,7 +285,7 @@ export default function AdminDashboard() {
               farmers.slice(0, 5).map((f) => {
                 const expired = getFarmerSubscriptionStatus(f);
                 return (
-                  <div key={f.id} className="py-3.5 flex items-center justify-between gap-3">
+                  <div key={f.id} className="py-3.5 flex flex-wrap items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-xl bg-slate-100 font-bold text-slate-700 flex items-center justify-center text-xs shrink-0">
                         {f.fullName ? f.fullName[0] : '?'}
@@ -305,7 +299,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       {expired && (
                         <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
                           Expired
@@ -322,8 +316,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Live Audit Activity Stream */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="xl:col-span-5 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">
                 Admin Activity Stream

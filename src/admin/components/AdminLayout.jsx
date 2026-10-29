@@ -3,6 +3,9 @@ import { Outlet } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import { useAdmin } from '../context/AdminContext';
+import '../admin.css';
+import { ConfirmProvider } from '../../context/ConfirmContext';
+import AdminDialog from './AdminDialog';
 
 export default function AdminLayout() {
   const { dataError, refreshAllAdminData } = useAdmin();
@@ -27,6 +30,7 @@ export default function AdminLayout() {
       >
         <AdminHeader
           setMobileOpen={setMobileOpen}
+          mobileOpen={mobileOpen}
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
         />
@@ -36,7 +40,7 @@ export default function AdminLayout() {
             <p>{dataError}</p>
             <button onClick={refreshAllAdminData} className="mt-2 rounded-lg border border-amber-400 px-4 py-2 font-semibold">Retry loading data</button>
           </div>}
-          <Outlet />
+          <ConfirmProvider Dialog={AdminDialog}><Outlet /></ConfirmProvider>
         </main>
       </div>
     </div>

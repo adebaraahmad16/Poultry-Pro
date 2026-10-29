@@ -6,6 +6,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function Customers() {
   const { customers, refreshAllData } = useFarm();
@@ -77,7 +78,7 @@ export default function Customers() {
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          className="w-full sm:w-auto justify-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Add New Customer
@@ -141,6 +142,13 @@ export default function Customers() {
       </Modal>
 
       <ConfirmModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} title="Delete Customer" message="Are you sure?" />
+
+      {/* Mobile Sticky Action Button */}
+      <StickyRecordButton
+        label="Add Customer"
+        onClick={() => setIsAddOpen(true)}
+        isModalOpen={isAddOpen || !!deletingId}
+      />
     </div>
   );
 }

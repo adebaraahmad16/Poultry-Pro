@@ -1,3 +1,5 @@
+import AdminDialog from '../components/AdminDialog';
+import ContactAlerts from '../components/ContactAlerts';
 import React, { useState } from 'react';
 import { 
   Bell, 
@@ -152,6 +154,7 @@ export default function Notifications() {
 
   return (
     <div className="space-y-8 pb-12">
+      <ContactAlerts />
       {/* Top Banner */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs">
         <div className="flex items-center gap-3">
@@ -171,7 +174,7 @@ export default function Notifications() {
 
       {/* Broadcast Composer */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-emerald-700" />
             <h2 className="text-base font-extrabold text-slate-900">
@@ -324,7 +327,7 @@ export default function Notifications() {
 
       {/* Dispatched Broadcasts Table */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <h2 className="text-base font-extrabold text-slate-900">
               Dispatched Broadcast History
@@ -347,13 +350,13 @@ export default function Notifications() {
 
       {/* Live Preview Modal */}
       {isPreviewOpen && (
-        <div
+        <AdminDialog onClose={()=>setIsPreviewOpen(false)}
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Eye className="w-5 h-5 text-emerald-700" />
                 <h3 className="font-extrabold text-slate-900 text-sm">
@@ -378,7 +381,7 @@ export default function Notifications() {
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <h4 className="text-xs font-bold text-slate-900 truncate">
                       {form.title || 'Announcement Headline'}
                     </h4>
@@ -397,11 +400,11 @@ export default function Notifications() {
             </div>
 
             <div className="bg-slate-50 p-3.5 rounded-xl text-xs space-y-1">
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Recipients:</span>
                 <span className="font-bold text-slate-800">{form.targetAudience} ({calculateRecipientCount()} farmers)</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Category:</span>
                 <span className="font-bold text-slate-800">{form.category}</span>
               </div>
@@ -425,7 +428,7 @@ export default function Notifications() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

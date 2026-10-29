@@ -1,3 +1,5 @@
+import ResponsiveRecords from '../components/ResponsiveRecords';
+import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import { Plus, Phone } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
@@ -35,7 +37,7 @@ export default function AdminManagement() {
   return (
     <div className="space-y-8 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Administrative Team & Role RBAC
@@ -71,7 +73,7 @@ export default function AdminManagement() {
 
       {/* Admin Users Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-base font-extrabold text-slate-900">
             Platform Administrators ({adminStaff.length})
           </h2>
@@ -79,7 +81,7 @@ export default function AdminManagement() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs sm:text-sm">
+          <ResponsiveRecords><table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[11px] border-b border-slate-200">
               <tr>
                 <th className="px-6 py-3.5">Administrator</th>
@@ -142,15 +144,15 @@ export default function AdminManagement() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></ResponsiveRecords>
         </div>
       </div>
 
       {/* Invite Admin Modal (README Section 13B) */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <AdminDialog onClose={()=>setIsAddOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-3">
               <h3 className="text-lg font-extrabold text-slate-900">Invite Platform Administrator</h3>
               <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
             </div>
@@ -224,7 +226,7 @@ export default function AdminManagement() {
               </div>
             </form>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

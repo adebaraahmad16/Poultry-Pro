@@ -1,0 +1,52 @@
+.admin-workspace { width: 100%; }
+.admin-workspace main > *, .admin-workspace .flex > *, .admin-dialog-panel .flex > * { min-width: 0; }
+.admin-workspace :is(button, a, input, select, textarea):focus-visible,
+.admin-dialog :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #15803d; outline-offset: 3px; }
+.admin-workspace :is(input, select, textarea), .admin-dialog :is(input, select, textarea) { max-width: 100%; min-width: 0; }
+.admin-workspace :is(input[type='checkbox'], input[type='radio']), .admin-dialog :is(input[type='checkbox'], input[type='radio']) { flex-shrink: 0; }
+.admin-workspace .recharts-wrapper { touch-action: pan-y; }
+.admin-workspace .recharts-default-tooltip { max-width: min(280px, 75vw); white-space: normal; }
+.admin-workspace .recharts-legend-wrapper { max-width: 100%; }
+.admin-dialog { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.admin-dialog .admin-dialog-panel { min-width: 0; max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; outline: none; }
+.admin-dialog-panel .grid > * { min-width: 0; }
+.admin-dialog-header { position: sticky; top: -1rem; z-index: 5; background: white; min-height: 44px; flex-wrap: nowrap !important; }
+.admin-dialog-header > :not(button) { min-width: 0; flex: 1 1 auto; }
+.admin-dialog-header > button { min-height: 44px; min-width: 44px; flex-shrink: 0; }
+@media (max-width: 1279px) {
+  .admin-records table, .admin-records tbody { display: block; width: 100%; }
+  .admin-records thead { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+  .admin-records tbody { padding: 12px; display: grid; gap: 12px; }
+  .admin-records tbody tr { display: block; min-width: 0; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: white; }
+  .admin-records tbody td { display: block; padding: 8px 0; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  .admin-records tbody td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; font-size: 11px; font-weight: 700; color: #64748b; }
+  .admin-records tbody td:first-child { padding-top: 0; font-weight: 700; }
+  .admin-records tbody td:last-child { padding-bottom: 0; }
+  .admin-records td .whitespace-nowrap { white-space: normal; }
+  .admin-records td .flex { flex-wrap: wrap; }
+  .admin-records td .truncate { white-space: normal; overflow: visible; text-overflow: clip; max-width: 100%; }
+  .admin-workspace main .grid:has(> [data-plan]) { grid-template-columns: minmax(0,1fr); }
+  .admin-records tbody tr { display: flex; flex-direction: column; }
+  .admin-records td:is([data-label='Full Name'],[data-label='Farmer Name'],[data-label='Headline & Summary']) { order: -1; }
+}
+@media (max-width: 639px) {
+  .admin-workspace main { padding: 12px; font-size: 14px; }
+  .admin-workspace main :is(button, a[class], select), .admin-dialog :is(button, a[class], select) { min-height: 44px; }
+  .admin-workspace main button, .admin-dialog button { touch-action: manipulation; }
+  .admin-records tbody td { font-size: 14px; }
+  .admin-workspace main button:has(> svg:only-child), .admin-dialog button:has(> svg:only-child) { min-width: 44px; }
+  .admin-workspace main :is(input:not([type='checkbox']):not([type='radio']), select, textarea),
+  .admin-dialog :is(input:not([type='checkbox']):not([type='radio']), select, textarea) { font-size: 16px; min-height: 44px; }
+  .admin-workspace main .flex > .shrink-0 { max-width: 100%; }
+  .admin-workspace main [data-plan] { padding: 20px; }
+  .admin-workspace main [data-plan] button { width: 100%; }
+  .admin-workspace main [data-plan] .text-3xl { font-size: 1.5rem; }
+  .admin-dialog .admin-dialog-panel { padding: 16px; border-radius: 16px; }
+  .admin-dialog-panel :is(.grid-cols-2, .grid-cols-3) { grid-template-columns: minmax(0,1fr); }
+  .admin-dialog-panel .flex.justify-end { flex-wrap: wrap; }
+  .admin-dialog-panel .flex.justify-end > button { flex: 1 1 auto; }
+  .admin-workspace label:has(input[type='checkbox']), .admin-dialog label:has(input[type='checkbox']), .admin-workspace label[for] { min-height: 44px; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-workspace *, .admin-dialog * { animation: none !important; transition-duration: 0.01ms !important; }
+}

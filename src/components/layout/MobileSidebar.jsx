@@ -4,9 +4,29 @@ import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
 export default function MobileSidebar({ isOpen, onClose }) {
-  const location=useLocation();
-  useEffect(()=>{onClose();},[location.pathname]);
-  useEffect(()=>{if(!isOpen)return;const close=e=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[isOpen,onClose]);
+  const location = useLocation();
+
+  // Close on route change
+  useEffect(() => { onClose(); }, [location.pathname]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [isOpen, onClose]);
+
+  // Lock body scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (

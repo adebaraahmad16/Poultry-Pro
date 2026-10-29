@@ -105,6 +105,7 @@ Object.assign(paths, {
   HelpCircle:'M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0 M9 8c0-4 8-3 5 1l-2 2v3 M12 17h.01',
   CheckSquare:'M3 3h18v18H3z M6 12l4 4 8-9',
   CheckCheck:'M1 12l4 4 9-11 M10 15l3 3L23 6',
+  Inbox:'M2 14h8l2 4h4l2-4h4V5H2z M2 14V5h20v9',
 });
 paths.Building=paths.Building2;paths.FileText=paths.NotebookPen;paths.BarChart2=paths.BarChart3;
 paths.SlidersHorizontal=paths.Sliders;paths.Shield=paths.ShieldCheck;
@@ -217,3 +218,4 @@ export const Upload = icon('Upload');
 export const Wifi = icon('Wifi');
 export const XCircle = icon('XCircle');
 export const Zap = icon('Zap');
+export const Inbox = icon('Inbox');

@@ -3,9 +3,10 @@ import { AlertTriangle, AlertCircle, X } from '../components/common/Icons';
 
 const ConfirmContext = createContext(null);
 
-export function ConfirmProvider({ children }) {
+export function ConfirmProvider({ children, Dialog = null }) {
   const [dialogState, setDialogState] = useState(null);
   const resolveRef = useRef(null);
+  const DialogShell = Dialog || 'div';
 
   const confirm = useCallback((options) => {
     return new Promise((resolve) => {
@@ -47,7 +48,9 @@ export function ConfirmProvider({ children }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       {dialogState?.isOpen && (
-        <div
+        <DialogShell
+          onClose={Dialog ? handleCancel : undefined}
+          title={Dialog ? dialogState.title : undefined}
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-dialog-title"
@@ -113,7 +116,7 @@ export function ConfirmProvider({ children }) {
               </button>
             </div>
           </div>
-        </div>
+        </DialogShell>
       )}
     </ConfirmContext.Provider>
   );

@@ -1,3 +1,4 @@
+import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import { Bird, Plus, CheckCircle2, XCircle, Info, Sparkles } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
@@ -23,7 +24,7 @@ export default function PoultryTypes() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Poultry Types & Categories Management
@@ -46,10 +47,10 @@ export default function PoultryTypes() {
         {categories.map((cat) => (
           <div
             key={cat.id}
-            className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs hover:shadow-sm transition flex flex-col justify-between"
+            className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs hover:shadow-sm transition flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-base shrink-0">
                     <Bird className="w-5 h-5" />
@@ -89,7 +90,7 @@ export default function PoultryTypes() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => toggleCategoryStatus(cat.id)}
@@ -120,9 +121,9 @@ export default function PoultryTypes() {
 
       {/* Add Category Modal */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <AdminDialog onClose={()=>setIsAddOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-3">
               <h3 className="text-lg font-extrabold text-slate-900">Add Poultry Category</h3>
               <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
             </div>
@@ -181,7 +182,7 @@ export default function PoultryTypes() {
               </div>
             </form>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

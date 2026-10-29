@@ -1,3 +1,4 @@
+import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import {
   ShieldAlert, ShieldCheck, Download, Clock, Eye,
@@ -110,7 +111,7 @@ export default function AuditLogs() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="w-5 h-5 text-emerald-700" />
@@ -135,7 +136,7 @@ export default function AuditLogs() {
       </div>
 
       {/* KPI Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
           <span className="text-xs font-bold text-slate-400 uppercase">Total Log Entries</span>
           <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{auditLogs.length}</p>
@@ -182,9 +183,9 @@ export default function AuditLogs() {
 
       {/* Log Detail Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <AdminDialog onClose={()=>setSelectedLog(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-3">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-emerald-700" />
                 <h3 className="font-extrabold text-base text-slate-900">Audit Log Detail</h3>
@@ -208,7 +209,7 @@ export default function AuditLogs() {
                 { label: 'Timestamp (WAT)', value: selectedLog.timestamp, mono: true },
                 { label: 'Status', value: selectedLog.status },
               ].map((row, i) => (
-                <div key={i} className="flex items-start justify-between py-2 border-b border-slate-50 last:border-0 gap-4">
+                <div key={i} className="flex items-start justify-between py-2 border-b border-slate-50 last:border-0 gap-4 flex-wrap">
                   <span className="text-slate-400 font-semibold shrink-0">{row.label}:</span>
                   {row.label === 'Status' ? (
                     <StatusBadge variant={row.value}>{row.value}</StatusBadge>
@@ -230,7 +231,7 @@ export default function AuditLogs() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

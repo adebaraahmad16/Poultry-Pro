@@ -8,6 +8,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function Inventory() {
   const [params, setParams] = useSearchParams();
@@ -262,17 +263,17 @@ export default function Inventory() {
           <p className="text-xs sm:text-sm text-slate-500 mt-1">Track feeders, drinkers, egg trays, medications, packaging, and farm supplies.</p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => handleOpenMovement()}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5"
+            className="w-full sm:w-auto justify-center px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5"
           >
             <ArrowDownRight className="w-4 h-4 text-slate-600" />
             Record Movement
           </button>
           <button
             onClick={handleOpenAdd}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+            className="w-full sm:w-auto justify-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Add Inventory Item
@@ -598,6 +599,13 @@ export default function Inventory() {
         onConfirm={handleDelete}
         title="Delete Inventory Item"
         message="Are you sure you want to remove this item from your inventory? This action cannot be undone."
+      />
+
+      {/* Mobile Sticky Action Button */}
+      <StickyRecordButton
+        label="Add Item"
+        onClick={handleOpenAdd}
+        isModalOpen={isAddOpen || isMovementOpen || !!deletingId}
       />
     </div>
   );

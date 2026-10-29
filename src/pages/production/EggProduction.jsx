@@ -8,6 +8,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import EggProductionChart from '../../components/charts/EggProductionChart';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function EggProduction() {
   const [params, setParams] = useSearchParams();
@@ -260,9 +261,9 @@ export default function EggProduction() {
 
         <button
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          className="w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           + Record Egg Production
         </button>
       </div>
@@ -471,6 +472,14 @@ export default function EggProduction() {
         onConfirm={handleDelete}
         title="Delete Egg Record"
         message="Are you sure you want to delete this daily egg collection record? This will update your calculated egg inventory and yield statistics."
+      />
+
+      {/* Sticky Mobile Record Button */}
+      <StickyRecordButton
+        onClick={handleOpenAdd}
+        label="Record Eggs"
+        color="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/30"
+        isModalOpen={isAddOpen || !!deletingId}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import PlanCards from '../../components/subscriptions/PlanCards';
 import { usePlanCatalog } from '../../components/subscriptions/usePlanCatalog';
@@ -10,13 +11,9 @@ export default function SubscriptionPlansTab() {
  const [cycle, setCycle] = useState('monthly');
  const [editing, setEditing] = useState(null), [draft, setDraft] = useState(null);
  const [confirm, setConfirm] = useState(null), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
- const [subscribers, setSubscribers] = useState([]);
+ const subscribers = farmers || [];
  const [view, setView] = useState(null);
 
- React.useEffect(() => {
-   // Farmers are loaded from Supabase via AdminContext — no legacy backend call needed
-   setSubscribers(farmers && farmers.length ? farmers : []);
- }, [farmers]);
  const edit = p => { setEditing(p); setDraft(structuredClone(p)); setMessage(''); };
  const review = e => { e.preventDefault(); try { validatePlan(draft); setConfirm(draft); } catch(e) { setMessage(e.message); } };
  const save = async () => {
@@ -30,15 +27,26 @@ export default function SubscriptionPlansTab() {
   {error && <div role="alert" className="p-3 border border-red-200 rounded-lg text-red-700">{error} <button onClick={retry} className="underline">Retry</button></div>}
   {message && <p role="status" className="p-3 bg-blue-50 text-blue-900 rounded-lg">{message}</p>}
   <PlanCards plans={plans} cycle={cycle} admin onEdit={edit} onToggle={p => setConfirm({...p,status:p.status === 'Active' ? 'Disabled' : 'Active'})} onView={setView} subscriberCount={count}/>
-  {editing && <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-labelledby="edit-plan-title" className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-auto"><h3 id="edit-plan-title" className="text-xl font-bold">Edit {editing.name}</h3><form onSubmit={review} className="space-y-5 mt-4">
+  {editing && <AdminDialog onClose={()=>{if(!busy)setEditing(null)}} className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-labelledby="edit-plan-title" className="bg-white rounded-2xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-auto"><h3 id="edit-plan-title" className="text-xl font-bold">Edit {editing.name}</h3><form onSubmit={review} className="space-y-5 mt-4">
    <fieldset className="space-y-3"><legend className="font-bold">General Information</legend><label className="block text-sm">Plan name<input required maxLength={80} className={input} value={draft.name} onChange={e => setDraft({...draft,name:e.target.value})}/></label><label className="block text-sm">Description<textarea required maxLength={1000} className={input} value={draft.description} onChange={e => setDraft({...draft,description:e.target.value})}/></label><label className="block text-sm">Status<select className={input} value={draft.status} onChange={e => setDraft({...draft,status:e.target.value})}><option>Active</option><option>Disabled</option></select></label></fieldset>
-   <fieldset><legend className="font-bold mb-2">Pricing (NGN)</legend><div className="grid grid-cols-2 gap-3">{[['Monthly price','monthlyPrice'],['Annual price','annualPrice']].map(([label,key]) => <label key={key} className="text-sm">{label}<input required type="number" min="0.01" step="0.01" className={input} value={draft[key]} onChange={e => setDraft({...draft,[key]:Number(e.target.value)})}/></label>)}</div></fieldset>
-   <fieldset><legend className="font-bold">Usage Limits</legend><p className="text-xs text-slate-500 my-2">Select Unlimited for unrestricted capacity.</p><div className="grid sm:grid-cols-2 gap-3">{LIMIT_KEYS.map((key,i) => <label key={key} className="text-sm">{['Active flocks','Bird capacity','Poultry types','Staff accounts','Farm locations'][i]}<div className="flex items-center gap-2"><input aria-label={key} type="number" required={draft[key] !== null} disabled={draft[key] === null} min="1" step="1" className={input} value={draft[key] ?? ''} onChange={e => setDraft({...draft,[key]:Number(e.target.value)})}/><span className="whitespace-nowrap text-xs"><input type="checkbox" checked={draft[key] === null} onChange={e => setDraft({...draft,[key]:e.target.checked ? null : 1})}/> Unlimited</span></div></label>)}</div></fieldset>
+   <fieldset><legend className="font-bold mb-2">Pricing (NGN)</legend><div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">{[['Monthly price','monthlyPrice'],['Annual price','annualPrice']].map(([label,key]) => <label key={key} className="text-sm">{label}<input required type="number" min="0.01" step="0.01" className={input} value={draft[key]} onChange={e => setDraft({...draft,[key]:Number(e.target.value)})}/></label>)}</div></fieldset>
+   <fieldset><legend className="font-bold">Usage Limits</legend><p className="text-xs text-slate-500 my-2">Select Unlimited for unrestricted capacity.</p>
+    <div className="grid sm:grid-cols-2 gap-3">{LIMIT_KEYS.map((key,i) => {
+      const label = ['Active flocks','Bird capacity','Poultry types','Staff accounts','Farm locations'][i];
+      return <div key={key} className="text-sm min-w-0">
+        <label htmlFor={`plan-limit-${key}`}>{label}</label>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <input id={`plan-limit-${key}`} aria-label={label} type="number" required={draft[key] !== null} disabled={draft[key] === null} min="1" step="1" className={input} value={draft[key] ?? ''} onChange={e => setDraft({...draft,[key]:Number(e.target.value)})}/>
+          <label className="inline-flex items-center gap-1 whitespace-nowrap text-xs"><input type="checkbox" aria-label={`Unlimited ${label.toLowerCase()}`} checked={draft[key] === null} onChange={e => setDraft({...draft,[key]:e.target.checked ? null : 1})}/> Unlimited</label>
+        </div>
+      </div>;
+    })}</div>
+   </fieldset>
    <fieldset><legend className="font-bold mb-2">Available Features</legend><div className="grid sm:grid-cols-2 gap-3">{Object.entries(FEATURE_LABELS).map(([key,label]) => <label className="text-sm flex gap-2" key={key}><input type="checkbox" checked={Boolean(draft?.capabilities?.[key])} onChange={e => setDraft({...draft,capabilities:{...(draft?.capabilities || {}),[key]:e.target.checked}})}/>{label}</label>)}</div></fieldset>
    {message && <p role="alert" className="text-red-700 text-sm">{message}</p>}
    <div className="flex flex-wrap justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDraft(structuredClone(editing))} className="px-4 py-2 border rounded-lg">Reset Changes</button><button type="button" onClick={() => setEditing(null)} className="px-4 py-2 border rounded-lg">Cancel</button><button className="px-4 py-2 bg-[#15803D] text-white rounded-lg">Save Changes</button></div>
-  </form></section></div>}
-  {confirm && <div className="fixed inset-0 z-[60] bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-labelledby="confirm-plan-title" className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4"><h3 id="confirm-plan-title" className="font-bold">Confirm Plan Changes</h3><p className="text-sm">Publish changes to {confirm.name}? New selections will use this configuration. Existing subscriptions retain their agreed price. Usage limits apply immediately; disabling a plan preserves its subscribers.</p>{message && <p role="alert" className="text-sm text-red-700">{message}</p>}<div className="flex justify-end gap-2"><button disabled={busy} onClick={() => setConfirm(null)} className="px-4 py-2 border rounded-lg">Cancel</button><button disabled={busy} onClick={save} className="px-4 py-2 bg-[#15803D] text-white rounded-lg">{busy ? 'Saving…' : 'Confirm and Save'}</button></div></section></div>}
-  {view && <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-label="Plan subscribers" className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-auto"><h3 className="font-bold text-lg">{view.name} Subscribers ({count(view)})</h3><ul className="divide-y my-4">{subscribers.filter(s => s.planId === view.id).map(s => <li key={s.id} className="py-3 text-sm"><strong>{s.fullName}</strong><p>{s.email} · {s.subscriptionStatus}</p></li>)}</ul>{!count(view) && <p className="my-4 text-sm text-slate-500">No subscribed farmers.</p>}<button onClick={() => setView(null)} className="px-4 py-2 border rounded-lg">Close</button></section></div>}
+  </form></section></AdminDialog>}
+  {confirm && <AdminDialog onClose={()=>{if(!busy)setConfirm(null)}} className="fixed inset-0 z-[60] bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-labelledby="confirm-plan-title" className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full space-y-4"><h3 id="confirm-plan-title" className="font-bold">Confirm Plan Changes</h3><p className="text-sm">Publish changes to {confirm.name}? New selections will use this configuration. Existing subscriptions retain their agreed price. Usage limits apply immediately; disabling a plan preserves its subscribers.</p>{message && <p role="alert" className="text-sm text-red-700">{message}</p>}<div className="flex justify-end gap-2"><button disabled={busy} onClick={() => setConfirm(null)} className="px-4 py-2 border rounded-lg">Cancel</button><button disabled={busy} onClick={save} className="px-4 py-2 bg-[#15803D] text-white rounded-lg">{busy ? 'Saving…' : 'Confirm and Save'}</button></div></section></AdminDialog>}
+  {view && <AdminDialog onClose={()=>setView(null)} className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-label="Plan subscribers" className="bg-white rounded-2xl p-4 sm:p-6 max-w-lg w-full max-h-[80vh] overflow-auto"><h3 className="font-bold text-lg">{view.name} Subscribers ({count(view)})</h3><ul className="divide-y my-4">{subscribers.filter(s => s.planId === view.id).map(s => <li key={s.id} className="py-3 text-sm"><strong>{s.fullName}</strong><p>{s.email} · {s.subscriptionStatus}</p></li>)}</ul>{!count(view) && <p className="my-4 text-sm text-slate-500">No subscribed farmers.</p>}<button onClick={() => setView(null)} className="px-4 py-2 border rounded-lg">Close</button></section></AdminDialog>}
  </div>;
 }

@@ -1,3 +1,4 @@
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import React from 'react';
 import LegalPageLayout from '../../components/legal/LegalPageLayout';
 import { openCookiePreferencesModal } from '../../services/cookieConsentService';
@@ -334,11 +335,11 @@ export default function CookiePolicy() {
           <p><strong className="text-slate-900">Platform:</strong> PoultryPro</p>
           <p>
             <strong className="text-slate-900">Privacy Contact:</strong>{' '}
-            <a href="mailto:privacy@poultrypro.ng" className="text-emerald-600 hover:underline">privacy@poultrypro.ng</a>
+            <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>
           </p>
           <p>
             <strong className="text-slate-900">Support:</strong>{' '}
-            <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a>
+            <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>
           </p>
         </div>
       </Section>

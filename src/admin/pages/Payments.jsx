@@ -1,3 +1,4 @@
+import AdminDialog from '../components/AdminDialog';
 import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import AdminDataTable from '../components/AdminDataTable';
@@ -181,7 +182,7 @@ export default function Payments() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">
             Payments & Transactions
@@ -202,7 +203,7 @@ export default function Payments() {
       </div>
 
       {/* 5 Payment Summary Cards (README Section 7A) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Payments Received</span>
           <p className="text-xl sm:text-2xl font-black text-[#15803D] mt-1">
@@ -271,9 +272,9 @@ export default function Payments() {
 
       {/* Official Transaction Receipt Modal (README Section 7) */}
       {selectedReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <AdminDialog onClose={()=>setSelectedReceipt(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full p-6 sm:p-8 space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
               <div className="flex items-center gap-2.5">
                 <IconShieldCheck />
                 <div>
@@ -291,41 +292,41 @@ export default function Payments() {
             </div>
 
             <div className="p-5 bg-slate-50 rounded-xl border border-slate-100 space-y-3 text-xs">
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Transaction ID:</span>
                 <span className="font-mono font-bold text-slate-900">{selectedReceipt.id}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Gateway Reference:</span>
                 <span className="font-mono text-slate-700">{selectedReceipt.reference || 'REF-' + selectedReceipt.id}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Customer (Farmer):</span>
                 <span className="font-bold text-slate-900">{selectedReceipt.farmerName}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Subscription Tier:</span>
                 <span className="font-bold text-slate-900">{selectedReceipt.plan} ({selectedReceipt.billingCycle || 'Annual'})</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Payment Processor:</span>
                 <span className="font-bold text-slate-900">{selectedReceipt.gateway || 'Paystack'} ({selectedReceipt.paymentMethod || 'Debit Card'})</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between flex-wrap gap-3">
                 <span className="text-slate-500">Transaction Date:</span>
                 <span className="text-slate-700">{selectedReceipt.date}</span>
               </div>
-              <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+              <div className="pt-2 border-t border-slate-200 flex justify-between items-center flex-wrap gap-3">
                 <span className="text-xs font-bold text-slate-700 uppercase">Amount Paid:</span>
                 <span className="text-xl font-black text-[#15803D]">₦{(selectedReceipt.amount || 0).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center pt-1">
+              <div className="flex justify-between items-center pt-1 flex-wrap gap-3">
                 <span className="text-xs text-slate-500">Payment Status:</span>
                 <StatusBadge variant={selectedReceipt.status}>{selectedReceipt.status}</StatusBadge>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -343,7 +344,7 @@ export default function Payments() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminDialog>
       )}
     </div>
   );

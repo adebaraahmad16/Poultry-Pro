@@ -1,3 +1,4 @@
+import ResponsiveRecords from '../components/ResponsiveRecords';
 import React, { useState, useEffect } from 'react';
 import {
   Activity, CheckCircle2, AlertTriangle, RefreshCw, Server,
@@ -112,7 +113,7 @@ export default function PlatformHealth() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className={`w-2.5 h-2.5 rounded-full ${sc.dot}`} />
@@ -147,9 +148,9 @@ export default function PlatformHealth() {
       </div>
 
       {/* 4 Quick KPI Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
             <span className="text-xs font-bold text-slate-400 uppercase">API Status</span>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${sc.bg} border ${sc.border}`}>
               <Server className={`w-4 h-4 ${sc.text}`} />
@@ -162,7 +163,7 @@ export default function PlatformHealth() {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
             <span className="text-xs font-bold text-slate-400 uppercase">Latency</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
               <Zap className="w-4 h-4 text-blue-700" />
@@ -177,7 +178,7 @@ export default function PlatformHealth() {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
             <span className="text-xs font-bold text-slate-400 uppercase">7-Day Uptime</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-emerald-700" />
@@ -188,7 +189,7 @@ export default function PlatformHealth() {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
             <span className="text-xs font-bold text-slate-400 uppercase">Offline Cache</span>
             <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
               <HardDrive className="w-4 h-4 text-purple-700" />
@@ -202,8 +203,8 @@ export default function PlatformHealth() {
       {/* Core Service Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Express REST API */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center">
                 <Server className="w-5 h-5" />
@@ -221,15 +222,15 @@ export default function PlatformHealth() {
             Node.js Express server handling all farmer data — flocks, mortality logs, egg production, feed inventory, and Paystack webhook events.
           </p>
           <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Endpoint Latency:</span>
               <span className="font-mono font-bold text-slate-800">{latencyMs !== null ? `${latencyMs} ms` : 'Standby / Local'}</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Runtime:</span>
               <span className="font-mono font-bold text-slate-800">Node.js 20 LTS</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Port:</span>
               <span className="font-mono font-bold text-slate-800">5000</span>
             </div>
@@ -237,8 +238,8 @@ export default function PlatformHealth() {
         </div>
 
         {/* MySQL Database */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center">
                 <Database className="w-5 h-5" />
@@ -256,15 +257,15 @@ export default function PlatformHealth() {
             MySQL InnoDB with transactional guarantees for farm accounts, egg production ledgers, financial records, and immutable audit journals.
           </p>
           <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Pool Capacity:</span>
               <span className="font-mono font-bold text-slate-800">10 Worker Connections</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Engine:</span>
               <span className="font-mono font-bold text-slate-800">InnoDB (Transactional)</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Charset:</span>
               <span className="font-mono font-bold text-slate-800">utf8mb4_unicode_ci</span>
             </div>
@@ -272,8 +273,8 @@ export default function PlatformHealth() {
         </div>
 
         {/* Client Cache */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center">
                 <Wifi className="w-5 h-5" />
@@ -291,15 +292,15 @@ export default function PlatformHealth() {
             Zero-downtime offline cache ensures farmers can record daily egg collections, mortality, and feed usage even during rural cellular blackouts.
           </p>
           <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Strategy:</span>
               <span className="font-mono font-bold text-slate-800">API-First → localStorage</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Sync:</span>
               <span className="font-mono font-bold text-slate-800">On next API success</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <span className="text-slate-400">Last Diagnostic:</span>
               <span className="font-mono font-bold text-slate-800">{lastChecked || 'Just now'}</span>
             </div>
@@ -308,8 +309,8 @@ export default function PlatformHealth() {
       </div>
 
       {/* 7-Day Uptime Chart */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
           <div>
             <h3 className="font-extrabold text-base text-slate-900">7-Day Uptime History</h3>
             <p className="text-xs text-slate-400 mt-0.5">Rolling weekly availability record for platform SLA compliance</p>
@@ -334,7 +335,7 @@ export default function PlatformHealth() {
 
       {/* API Endpoint Status Grid */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="font-extrabold text-base text-slate-900">API Endpoint Registry</h3>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -346,7 +347,7 @@ export default function PlatformHealth() {
           </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <ResponsiveRecords><table className="w-full text-xs">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="px-5 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Endpoint</th>
@@ -388,7 +389,7 @@ export default function PlatformHealth() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></ResponsiveRecords>
         </div>
         <div className="px-5 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center gap-4 text-xs text-slate-500">
           <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Operational</span>
@@ -402,7 +403,7 @@ export default function PlatformHealth() {
       {/* Security & Recent System Log */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Security Posture */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
           <div className="flex items-center gap-2 pb-4 border-b border-slate-100 mb-4">
             <Shield className="w-5 h-5 text-emerald-700" />
             <h3 className="font-extrabold text-base text-slate-900">Security Posture</h3>
@@ -417,7 +418,7 @@ export default function PlatformHealth() {
               { label: 'Admin Role RBAC', value: 'Active (5 role tiers)', ok: true },
               { label: 'Audit Log Trail', value: 'All admin actions recorded', ok: true },
             ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between text-xs py-2 border-b border-slate-50 last:border-0">
+              <div key={i} className="flex items-center justify-between text-xs py-2 border-b border-slate-50 last:border-0 flex-wrap gap-3">
                 <span className="text-slate-600 font-medium">{item.label}</span>
                 <div className="flex items-center gap-2">
                   <span className={`${item.ok ? 'text-emerald-700' : 'text-amber-700'} font-semibold text-right max-w-[160px] text-right`}>
@@ -434,7 +435,7 @@ export default function PlatformHealth() {
         </div>
 
         {/* Recent System Log */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs">
           <div className="flex items-center gap-2 pb-4 border-b border-slate-100 mb-4">
             <Eye className="w-5 h-5 text-slate-700" />
             <h3 className="font-extrabold text-base text-slate-900">Recent System Events</h3>

@@ -1,3 +1,4 @@
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import { DEFAULT_PLANS } from '../../../shared/subscriptionPlans.js';
 /**
  * PoultryPro Super Admin — Seed Data
@@ -175,7 +176,7 @@ export const initialPlatformSettings = {
   adminContactEmail: 'admin@poultrypro.ng',
   adminContactPhone: '+234 803 123 4567',
   adminNotificationEmail: 'alerts@poultrypro.ng',
-  supportEscalationEmail: 'escalations@poultrypro.ng',
+  supportEscalationEmail: SUPPORT_CONTACT.email,
 
   // C. Security Settings
   twoFactorRequired: false,
@@ -270,9 +271,9 @@ export const initialWebsiteContent = {
     ctaSecondary: 'Explore Features'
   },
   contact: {
-    email: 'hello@poultrypro.ng',
-    phone: '+234 803 123 4567',
-    whatsapp: '+234 803 123 4567',
+    email: SUPPORT_CONTACT.email,
+    phone: SUPPORT_CONTACT.phone,
+    whatsapp: SUPPORT_CONTACT.internationalPhone,
     office: 'Plot 14 Agro-Innovation Hub, Fate Road, Ilorin, Kwara State, Nigeria'
   },
   faqs: [

@@ -1,3 +1,5 @@
+import ResponsiveRecords from '../components/ResponsiveRecords';
+import AdminDialog from '../components/AdminDialog';
 import SubscriptionPlansTab from './SubscriptionPlansTab';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -88,9 +90,9 @@ function getSubscriberStatus(farmer) {
 function ConfirmModal({ open, title, description, confirmLabel = 'Confirm', danger = false, onConfirm, onCancel, children }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
-        <div className="flex items-center justify-between">
+    <AdminDialog onClose={onCancel} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-4 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h3 className="text-base font-extrabold text-slate-900">{title}</h3>
           <button onClick={onCancel} className="text-slate-400 hover:text-slate-600"><IconX /></button>
         </div>
@@ -101,7 +103,7 @@ function ConfirmModal({ open, title, description, confirmLabel = 'Confirm', dang
           <button onClick={onConfirm} className={`px-5 py-2 font-bold rounded-xl text-xs text-white transition ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[#15803D] hover:bg-emerald-700'}`}>{confirmLabel}</button>
         </div>
       </div>
-    </div>
+    </AdminDialog>
   );
 }
 
@@ -137,7 +139,7 @@ function OverviewTab({ metrics, payments, farmers, subscriptionPlans, onTabChang
   ];
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(c => (
           <div key={c.label} className={`bg-white p-5 rounded-2xl border ${c.border} shadow-xs`}>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{c.label}</span>
@@ -146,29 +148,29 @@ function OverviewTab({ metrics, payments, farmers, subscriptionPlans, onTabChang
           </div>
         ))}
       </div>
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h2 className="text-sm font-extrabold text-slate-900 mb-4">Subscription Plan Distribution</h2>
         {chartData.every(d => d.value === 0)
           ? <div className="flex items-center justify-center h-32 text-slate-400 text-sm">No subscription data yet</div>
-          : <ResponsiveContainer width="100%" height={180}><BarChart data={chartData} barSize={48}><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" /><XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><Tooltip formatter={v => [`${v} farmers`, 'Subscribers']} /><Bar dataKey="value" radius={[6,6,0,0]}>{chartData.map((e,i) => <Cell key={i} fill={e.fill} />)}</Bar></BarChart></ResponsiveContainer>
+          : <ResponsiveContainer width="100%" height={180}><BarChart accessibilityLayer data={chartData} barSize={48}><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" /><XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} /><YAxis allowDecimals={false} tick={{ fontSize: 11 }} /><Tooltip formatter={v => [`${v} farmers`, 'Subscribers']} /><Bar isAnimationActive={false} dataKey="value" radius={[6,6,0,0]}>{chartData.map((e,i) => <Cell key={i} fill={e.fill} />)}</Bar></BarChart></ResponsiveContainer>
         }
       </div>
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-3">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-3 flex-wrap gap-3">
           <h2 className="text-sm font-extrabold text-slate-900">Recent Subscription Activity</h2>
           <button onClick={() => navigate('/admin/payments')} className="text-xs font-bold text-emerald-700 hover:underline">View All Payments &rarr;</button>
         </div>
         {recentActivity.length === 0
           ? <p className="text-sm text-slate-400 py-6 text-center">No recent activity yet</p>
           : <div className="divide-y divide-slate-100">{recentActivity.map(p => (
-              <div key={p.id} className="py-3 flex items-center justify-between gap-3">
+              <div key={p.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="min-w-0"><p className="text-sm font-bold text-slate-800 truncate">{p.farmerName}</p><p className="text-xs text-slate-400">{p.plan} &middot; {p.billingCycle} &middot; {p.date}</p></div>
                 <div className="flex items-center gap-2 shrink-0"><span className="text-sm font-black text-emerald-700">\u20A6{fmt(p.amount)}</span><StatusBadge variant={p.status}>{p.status}</StatusBadge></div>
               </div>
             ))}</div>
         }
       </div>
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h2 className="text-sm font-extrabold text-slate-900 mb-4">Quick Actions</h2>
         <div className="flex flex-wrap gap-3">
           <button onClick={() => onTabChange('subscribers')} className="px-4 py-2.5 bg-[#15803D] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition">View All Subscriptions</button>
@@ -263,7 +265,7 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <ResponsiveRecords><table className="w-full text-xs">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
                 {['Farmer','Farm','Plan','Billing','Amount','Start Date','Expiry','Status','Actions'].map(h => (
@@ -292,10 +294,10 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
                 );
               })}
             </tbody>
-          </table>
+          </table></ResponsiveRecords>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50 flex-wrap gap-3">
             <span className="text-xs text-slate-500">{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
             <div className="flex items-center gap-2">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg bg-white border border-slate-200 disabled:opacity-40 hover:bg-slate-100 transition"><IconChevronLeft /></button>
@@ -307,16 +309,16 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
       </div>
 
       {selectedFarmer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <AdminDialog onClose={()=>setSelectedFarmer(null)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white flex items-center justify-between p-5 border-b border-slate-100">
+            <div className="sticky top-0 bg-white flex items-center justify-between p-5 border-b border-slate-100 flex-wrap gap-3">
               <h3 className="text-base font-extrabold text-slate-900">Farmer Subscription Details</h3>
               <button onClick={() => setSelectedFarmer(null)} className="text-slate-400 hover:text-slate-600"><IconX /></button>
             </div>
             <div className="p-5 space-y-5">
               <section>
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Farmer Information</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2 text-xs">
                   {[['Full Name', selectedFarmer.fullName],['Email', selectedFarmer.email],['Farm Name', selectedFarmer.farmName || selectedFarmer.businessName],['Registered', fmtDate(selectedFarmer.dateJoined)]].map(([l,v]) => (
                     <div key={l} className="bg-slate-50 rounded-xl p-3 border border-slate-100"><span className="text-slate-400 block mb-0.5">{l}</span><span className="font-bold text-slate-900">{v || '\u2014'}</span></div>
                   ))}
@@ -324,7 +326,7 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
               </section>
               <section>
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Subscription Information</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2 text-xs">
                   {[
                     ['Current Plan', selectedFarmer.subscription || 'Trial'],
                     ['Billing Cycle', selectedFarmer.billingCycle || '\u2014'],
@@ -342,7 +344,7 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
                 {farmerPayments(selectedFarmer.id).length === 0
                   ? <p className="text-xs text-slate-400">No payment records</p>
                   : <div className="space-y-2">{farmerPayments(selectedFarmer.id).slice(0, 5).map(p => (
-                      <div key={p.id} className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100 text-xs">
+                      <div key={p.id} className="flex items-center justify-between bg-slate-50 rounded-xl p-3 border border-slate-100 text-xs flex-wrap gap-3">
                         <div><span className="font-bold text-slate-800">{p.plan}</span><span className="text-slate-400 block">{p.date}</span></div>
                         <div className="flex items-center gap-2"><span className="font-extrabold text-emerald-700">\u20A6{fmt(p.amount)}</span><StatusBadge variant={p.status}>{p.status}</StatusBadge></div>
                       </div>
@@ -360,7 +362,7 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
               </section>
             </div>
           </div>
-        </div>
+        </AdminDialog>
       )}
 
       <ConfirmModal open={action?.type === 'cancel'} title="Cancel Subscription" description={`Cancel subscription for ${action?.farmer?.fullName}?`} confirmLabel="Cancel Subscription" danger onConfirm={confirmAction} onCancel={() => setAction(null)} />
@@ -402,7 +404,7 @@ function TrialsTab({ farmers, updateFarmerSubscription }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-5 gap-4">
         {[['Total Trial Users', trialFarmers.length, 'text-slate-900'],['Active Trials', activeTrials.length, 'text-sky-700'],['Expired Trials', expiredTrials.length, 'text-rose-700'],['Converted to Paid', converted.length, 'text-emerald-700'],['Conversion Rate', `${convRate}%`, 'text-violet-700']].map(([l,v,c]) => (
           <div key={l} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">{l}</span><p className={`text-2xl font-black mt-1 ${c}`}>{v}</p></div>
         ))}
@@ -420,7 +422,7 @@ function TrialsTab({ farmers, updateFarmerSubscription }) {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100"><h2 className="text-sm font-extrabold text-slate-900">Trial Users</h2></div>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <ResponsiveRecords><table className="w-full text-xs">
             <thead><tr className="border-b border-slate-100 bg-slate-50">{['Farmer','Selected Plan','Trial Start','Trial End','Days Remaining','Status','Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-50">
               {trialFarmers.length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">No trial users yet</td></tr>}
@@ -440,7 +442,7 @@ function TrialsTab({ farmers, updateFarmerSubscription }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></ResponsiveRecords>
         </div>
       </div>
       <ConfirmModal open={!!extendTarget} title="Extend Trial Period" onConfirm={handleExtend} onCancel={() => setExtendTarget(null)}>
@@ -453,6 +455,22 @@ function TrialsTab({ farmers, updateFarmerSubscription }) {
 }
 
 /* ══════════ TAB 5 — SETTINGS ══════════ */
+const Toggle = ({ label, k, description, form, handleChange }) => (
+    <div className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 flex-wrap gap-3">
+      <div><p className="text-xs font-bold text-slate-800">{label}</p>{description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}</div>
+      <button type="button" role="switch" aria-label={label} aria-checked={Boolean(form[k])} onClick={() => handleChange(k, !form[k])} className="relative inline-flex min-h-11 w-12 shrink-0 items-center justify-center rounded-xl">
+        <span aria-hidden="true" className={`relative inline-flex h-6 w-10 items-center rounded-full px-1 ${form[k] ? 'bg-[#15803D]' : 'bg-slate-300'}`}><span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${form[k] ? 'translate-x-4' : ''}`} /></span>
+      </button>
+    </div>
+  );
+
+const NumberField = ({ label, k, min = 1, max, form, handleChange }) => (
+    <div className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 flex-wrap gap-3">
+      <label className="text-xs font-bold text-slate-800">{label}</label>
+      <input type="number" min={min} max={max} value={form[k] || ''} onChange={e => handleChange(k, Number(e.target.value))} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-emerald-600" />
+    </div>
+  );
+
 function SettingsTab({ subscriptionSettings, updateSubscriptionSettings }) {
   const [form, setForm] = useState({ ...subscriptionSettings });
   const [toast, setToast] = useState(null);
@@ -461,54 +479,42 @@ function SettingsTab({ subscriptionSettings, updateSubscriptionSettings }) {
   const handleChange = (k, v) => { setForm(f => ({ ...f, [k]: v })); setDirty(true); };
   const handleSave = (e) => { e.preventDefault(); updateSubscriptionSettings(form); setDirty(false); setToast('Subscription settings saved successfully'); };
 
-  const Toggle = ({ label, k, description }) => (
-    <div className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
-      <div><p className="text-xs font-bold text-slate-800">{label}</p>{description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}</div>
-      <button type="button" onClick={() => handleChange(k, !form[k])} className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${form[k] ? 'bg-[#15803D]' : 'bg-slate-300'}`}>
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form[k] ? 'translate-x-4' : 'translate-x-0'}`} />
-      </button>
-    </div>
-  );
 
-  const NumberField = ({ label, k, min = 1, max }) => (
-    <div className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
-      <label className="text-xs font-bold text-slate-800">{label}</label>
-      <input type="number" min={min} max={max} value={form[k] || ''} onChange={e => handleChange(k, Number(e.target.value))} className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-emerald-600" />
-    </div>
-  );
+
+
 
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-6">
         <h2 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100 mb-1">A. General Settings</h2>
-        <Toggle label="Enable New Subscriptions" k="newSubscriptionsEnabled" description="Allow farmers to subscribe to paid plans" />
-        <Toggle label="Enable Free Trials" k="freeTrialsEnabled" description="Grant 14-day trial to new farmers" />
-        <Toggle label="Enable Annual Billing" k="annualBillingEnabled" description="Offer annual billing option to farmers" />
-        <NumberField label="Trial Duration (days)" k="trialDurationDays" min={1} max={90} />
-        <NumberField label="Renewal Reminder (days before)" k="renewalReminderDays" min={1} max={30} />
-        <NumberField label="Expiration Reminder (days before)" k="expirationReminderDays" min={1} max={14} />
+        <Toggle form={form} handleChange={handleChange} label="Enable New Subscriptions" k="newSubscriptionsEnabled" description="Allow farmers to subscribe to paid plans" />
+        <Toggle form={form} handleChange={handleChange} label="Enable Free Trials" k="freeTrialsEnabled" description="Grant 14-day trial to new farmers" />
+        <Toggle form={form} handleChange={handleChange} label="Enable Annual Billing" k="annualBillingEnabled" description="Offer annual billing option to farmers" />
+        <NumberField form={form} handleChange={handleChange} label="Trial Duration (days)" k="trialDurationDays" min={1} max={90} />
+        <NumberField form={form} handleChange={handleChange} label="Renewal Reminder (days before)" k="renewalReminderDays" min={1} max={30} />
+        <NumberField form={form} handleChange={handleChange} label="Expiration Reminder (days before)" k="expirationReminderDays" min={1} max={14} />
       </div>
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-6">
         <h2 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100 mb-1">B. Renewal Settings</h2>
-        <Toggle label="Auto-Renewal Available" k="autoRenewalAvailable" description="Allow farmers to enable automatic renewal" />
-        <NumberField label="Renewal Notification (days before)" k="renewalNotificationDays" min={1} max={30} />
-        <NumberField label="Failed Payment Retry (days)" k="failedPaymentRetryDays" min={1} max={14} />
-        <NumberField label="Grace Period (days after expiry)" k="gracePeriodDays" min={0} max={30} />
+        <Toggle form={form} handleChange={handleChange} label="Auto-Renewal Available" k="autoRenewalAvailable" description="Allow farmers to enable automatic renewal" />
+        <NumberField form={form} handleChange={handleChange} label="Renewal Notification (days before)" k="renewalNotificationDays" min={1} max={30} />
+        <NumberField form={form} handleChange={handleChange} label="Failed Payment Retry (days)" k="failedPaymentRetryDays" min={1} max={14} />
+        <NumberField form={form} handleChange={handleChange} label="Grace Period (days after expiry)" k="gracePeriodDays" min={0} max={30} />
       </div>
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-6">
         <h2 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100 mb-1">C. Notification Settings</h2>
-        <Toggle label="Subscription Activation" k="notifyOnActivation" />
-        <Toggle label="Upcoming Expiry" k="notifyOnUpcomingExpiry" />
-        <Toggle label="Successful Renewal" k="notifyOnRenewal" />
-        <Toggle label="Failed Payment" k="notifyOnFailedPayment" />
-        <Toggle label="Subscription Cancellation" k="notifyOnCancellation" />
-        <Toggle label="Trial Expiration" k="notifyOnTrialExpiry" />
-        <Toggle label="Plan Changes" k="notifyOnPlanChange" />
+        <Toggle form={form} handleChange={handleChange} label="Subscription Activation" k="notifyOnActivation" />
+        <Toggle form={form} handleChange={handleChange} label="Upcoming Expiry" k="notifyOnUpcomingExpiry" />
+        <Toggle form={form} handleChange={handleChange} label="Successful Renewal" k="notifyOnRenewal" />
+        <Toggle form={form} handleChange={handleChange} label="Failed Payment" k="notifyOnFailedPayment" />
+        <Toggle form={form} handleChange={handleChange} label="Subscription Cancellation" k="notifyOnCancellation" />
+        <Toggle form={form} handleChange={handleChange} label="Trial Expiration" k="notifyOnTrialExpiry" />
+        <Toggle form={form} handleChange={handleChange} label="Plan Changes" k="notifyOnPlanChange" />
       </div>
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-6">
         <h2 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100 mb-3">D. Payment Settings</h2>
         <p className="text-xs text-slate-500 mb-4">Payment credentials are managed securely on the backend and are not exposed here.</p>
-        <div className="grid grid-cols-2 gap-3 text-xs">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3 text-xs">
           {[['Payment Gateway', form.paymentGateway],['Gateway Status', form.gatewayStatus],['Currency', `${form.currencySymbol} (${form.paymentCurrency})`],['Verification Mode', form.verificationMode],['Supported Methods', (form.paymentMethods || []).join(', ')]].map(([l,v]) => (
             <div key={l} className="bg-slate-50 rounded-xl p-3 border border-slate-100"><span className="text-slate-400 block mb-0.5">{l}</span><span className={`font-bold ${l === 'Gateway Status' && v === 'Active' ? 'text-emerald-700' : 'text-slate-900'}`}>{v}</span></div>
           ))}
@@ -536,12 +542,12 @@ export default function Subscriptions() {
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h1 className="text-2xl font-extrabold text-slate-900">Subscription Management</h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">Manage subscription plans, monitor farmers' subscriptions, track free trials, and configure subscription settings.</p>
       </div>
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-x-auto">
-        <div className="flex min-w-max border-b border-slate-100">
+        <label className="block p-3 sm:hidden text-sm font-semibold">Subscription section<select aria-label="Subscription section" className="mt-2 w-full rounded-xl border p-3 bg-white" value={activeTab} onChange={e => setActiveTab(e.target.value)}>{TABS.map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}</select></label><div className="hidden sm:flex flex-wrap border-b border-slate-100">
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-5 py-3.5 text-xs font-bold whitespace-nowrap transition-colors border-b-2 ${activeTab === tab.id ? 'border-[#15803D] text-[#15803D] bg-emerald-50/50' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>{tab.label}</button>
           ))}

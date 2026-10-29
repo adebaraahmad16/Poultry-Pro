@@ -7,6 +7,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function Workers() {
   const { workers, refreshAllData } = useFarm();
@@ -68,7 +69,7 @@ export default function Workers() {
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          className="w-full sm:w-auto justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Add Farm Worker
@@ -144,6 +145,13 @@ export default function Workers() {
       </Modal>
 
       <ConfirmModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} title="Delete Worker" message="Are you sure?" />
+
+      {/* Mobile Sticky Action Button */}
+      <StickyRecordButton
+        label="Add Worker"
+        onClick={() => setIsAddOpen(true)}
+        isModalOpen={isAddOpen || !!deletingId}
+      />
     </div>
   );
 }

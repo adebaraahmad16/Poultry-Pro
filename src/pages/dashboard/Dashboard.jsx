@@ -14,6 +14,7 @@ import QuickActionModals from '../../components/dashboard/QuickActionModals';
  * - Every type gets its own metrics, charts, actions and records.
  */
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { selectedTypeIds } = usePoultryData();
   const { activeTypeId, activeType, showSelector } = usePoultry();
   const [activeModal, setActiveModal] = useState(null);

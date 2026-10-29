@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Bird, Facebook, Twitter, Instagram, Linkedin, Youtube } from '../common/Icons';
 import { openCookiePreferencesModal } from '../../services/cookieConsentService';
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 
 const COLUMNS = [
   {
@@ -19,7 +20,7 @@ const COLUMNS = [
       { label: 'How It Works', href: '#how-it-works', type: 'hash' },
       { label: 'FAQs', href: '#faq', type: 'hash' },
       { label: 'Create Account', to: '/register', type: 'route' },
-      { label: 'Contact Us', href: '#', type: 'hash' },
+      { label: 'Contact Us', to: '/contact', type: 'route' },
     ],
   },
   {
@@ -56,6 +57,11 @@ export default function LandingFooter() {
             <p className="mt-3 text-sm leading-relaxed text-slate-400 max-w-xs">
               Smart Management. Healthier Flocks. Better Profits.
             </p>
+            <address className="mt-4 space-y-2 text-sm not-italic">
+              <a href={SUPPORT_CONTACT.emailUrl} className="block break-words text-slate-300 hover:text-emerald-400">Email: 
+                {SUPPORT_CONTACT.email}</a>
+              <a href={SUPPORT_CONTACT.whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-slate-300 hover:text-emerald-400">WhatsApp: {SUPPORT_CONTACT.phone}</a>
+            </address>
             <div className="mt-5 flex items-center gap-2">
               {SOCIALS.map(({ label, icon: Icon }) => (
                 <a

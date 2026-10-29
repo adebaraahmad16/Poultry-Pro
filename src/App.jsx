@@ -13,6 +13,9 @@ import MainLayout from './components/layout/MainLayout';
 
 // Public & Farmer Auth Pages
 import LandingPage from './pages/LandingPage';
+import Contact from './pages/Contact';
+import ContactMessages from './admin/pages/ContactMessages';
+import { ContactProvider } from './admin/context/ContactContext';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -91,11 +94,13 @@ export default function App() {
           <FarmProvider>
             <PoultryProvider>
               <AdminProvider>
+                <ContactProvider>
                 <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                   <ScrollToTop />
                   <Routes>
                     {/* Public Landing & Farmer Auth */}
                     <Route path="/" element={<LandingPage />} />
+                    <Route path="/contact" element={<Contact />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -156,6 +161,7 @@ export default function App() {
                       <Route path="/admin/poultry-types" element={<AdminPoultryTypes />} />
                       <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
                       <Route path="/admin/payments" element={<AdminPayments />} />
+                      <Route path="/admin/contact-messages" element={<ContactMessages />} />
                       <Route path="/admin/notifications" element={<AdminNotifications />} />
                       <Route path="/admin/support" element={<AdminSupport />} />
                       <Route path="/admin/reports" element={<AdminReports />} />
@@ -175,6 +181,7 @@ export default function App() {
                   <CookieConsentBanner />
                   <CookiePreferencesModal />
                 </BrowserRouter>
+                </ContactProvider>
               </AdminProvider>
             </PoultryProvider>
           </FarmProvider>

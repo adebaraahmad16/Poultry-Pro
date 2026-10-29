@@ -1,4 +1,7 @@
-import React, { useEffect } from 'react';
+import useAdminDialog from './useAdminDialog';
+import { MessageSquare } from 'lucide-react';
+import { useContacts } from '../context/ContactContext';
+import React, { useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, Building2, Bird, CreditCard, DollarSign, Bell, Headphones, BarChart3, Globe, UserCheck, ShieldAlert, Settings, Activity, User, LogOut, ChevronLeft, ChevronRight, X } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
@@ -24,6 +27,7 @@ const NAV_GROUPS = [
   {
     title: 'COMMUNICATION',
     items: [
+      { name: 'Contact Messages', path: '/admin/contact-messages', icon: MessageSquare },
       { name: 'Notifications', path: '/admin/notifications', icon: Bell },
       { name: 'Support Center', path: '/admin/support', icon: Headphones }
     ]
@@ -60,23 +64,31 @@ export default function AdminSidebar({
 }) {
   const { currentAdmin, logoutAdmin } = useAdmin();
   const navigate = useNavigate();
-  useEffect(()=>{if(!mobileOpen)return;const close=e=>{if(e.key==='Escape')setMobileOpen(false);};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[mobileOpen,setMobileOpen]);
+  const { stats } = useContacts();
+  const drawer = useRef(null);
+  useAdminDialog(mobileOpen, () => setMobileOpen(false), drawer);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)');
+    const resize = () => { if (media.matches) setMobileOpen(false); };
+    media.addEventListener('change', resize);
+    return () => media.removeEventListener('change', resize);
+  }, [setMobileOpen]);
 
   const handleLogout = () => {
     logoutAdmin();
     navigate('/admin/login', { replace: true });
   };
 
-  const sidebarContent = (
-    <div className="h-full flex flex-col justify-between bg-[#123524] text-white select-none">
+  const sidebarContent = (collapsed, mobile = false) => (
+    <div className="h-full min-h-0 flex flex-col justify-between bg-[#123524] text-white select-none">
       {/* Brand Header */}
-      <div>
-        <div className="h-16 px-4 flex items-center justify-between border-b border-emerald-900/60">
+      <div className="min-h-0 flex flex-1 flex-col">
+        <div className="h-16 shrink-0 px-4 flex items-center justify-between border-b border-emerald-900/60">
           <NavLink to="/admin/dashboard" className="flex items-center gap-2.5 overflow-hidden" aria-label="PoultryPro home">
             <span className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-md shrink-0">
               <Bird className="w-6 h-6 stroke-[2.5]" />
             </span>
-            {!isCollapsed && (
+            {!collapsed && (
               <div className="min-w-0">
                 <span className="text-xl font-extrabold tracking-tight text-white block leading-none">
                   Poultry<span className="text-emerald-400">Pro</span>
@@ -91,14 +103,15 @@ export default function AdminSidebar({
           {/* Mobile Close Button */}
           <button
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden p-1.5 text-emerald-300 hover:text-white rounded-lg"
+            aria-label="Close navigation"
+            className="lg:hidden h-11 w-11 flex items-center justify-center text-emerald-300 hover:text-white rounded-lg"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Admin Badge Banner */}
-        {!isCollapsed && (
+        {!collapsed && (
           <div className="px-4 py-3 bg-[#0d261a] border-b border-emerald-900/40 flex items-center gap-2.5">
             {currentAdmin?.avatar ? (
               <img
@@ -123,10 +136,10 @@ export default function AdminSidebar({
         )}
 
         {/* Navigation Link Groups */}
-        <div className="py-4 px-2 space-y-5 overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
+        <div className="min-h-0 flex-1 py-4 px-2 space-y-5 overflow-y-auto overscroll-contain custom-scrollbar">
           {NAV_GROUPS.map((group) => (
             <div key={group.title} className="space-y-1">
-              {!isCollapsed && (
+              {!collapsed && (
                 <div className="px-3 pb-1 text-[10px] font-black tracking-widest text-emerald-400 uppercase">
                   {group.title}
                 </div>
@@ -139,16 +152,18 @@ export default function AdminSidebar({
                     to={item.path}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
+                      `relative flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
                         isActive
                           ? 'bg-[#15803D] text-white shadow-xs'
                           : 'text-emerald-100/80 hover:bg-emerald-900/50 hover:text-white'
-                      } ${isCollapsed ? 'justify-center px-2' : ''}`
+                      } ${collapsed ? 'justify-center px-2' : ''}`
                     }
-                    title={isCollapsed ? item.name : undefined}
+                    aria-label={collapsed ? item.name : undefined}
+                    title={collapsed ? item.name : undefined}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
-                    {!isCollapsed && <span className="truncate">{item.name}</span>}
+                    {!collapsed && <span className="truncate">{item.name}</span>}
+                    {item.path === '/admin/contact-messages' && stats?.unread > 0 && <span aria-label={`${stats.unread} unread contact messages`} className={`${collapsed ? 'absolute top-0 right-0' : 'ml-auto'} shrink-0 rounded-full bg-blue-600 text-white text-[10px] px-1.5 py-0.5`}>{stats.unread > 99 ? '99+' : stats.unread}</span>}
                   </NavLink>
                 );
               })}
@@ -160,28 +175,28 @@ export default function AdminSidebar({
             <button
               onClick={handleLogout}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-300 hover:bg-rose-950/40 hover:text-rose-200 transition-colors ${
-                isCollapsed ? 'justify-center px-2' : ''
+                collapsed ? 'justify-center px-2' : ''
               }`}
-              title={isCollapsed ? 'Logout' : undefined}
+              title={collapsed ? 'Logout' : undefined}
             >
               <LogOut className="w-4 h-4 shrink-0 text-rose-400" />
-              {!isCollapsed && <span>Logout</span>}
+              {!collapsed && <span>Logout</span>}
             </button>
           </div>
         </div>
       </div>
 
       {/* Collapse Toggle Footer for Desktop */}
-      <div className="p-3 border-t border-emerald-900/60 hidden lg:flex items-center justify-between">
-        {!isCollapsed && (
+      <div className={`${mobile ? 'hidden' : 'hidden lg:flex'} shrink-0 p-3 border-t border-emerald-900/60 items-center justify-between`}>
+        {!collapsed && (
           <span className="text-[11px] text-emerald-300/80 font-medium">v1.2 Commercial Admin</span>
         )}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => setIsCollapsed(!collapsed)}
           className="p-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 hover:text-white transition ml-auto"
-          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
     </div>
@@ -195,7 +210,7 @@ export default function AdminSidebar({
           isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
-        {sidebarContent}
+        {sidebarContent(isCollapsed)}
       </aside>
 
       {/* Mobile Drawer Overlay */}
@@ -205,8 +220,8 @@ export default function AdminSidebar({
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileOpen(false)}
           />
-          <div role="dialog" aria-modal="true" aria-label="Admin navigation" className="relative w-64 max-w-[85vw] h-dvh overflow-y-auto shadow-2xl z-10" onClick={e=>{if(e.target.closest('a'))setMobileOpen(false);}}>
-            {sidebarContent}
+          <div ref={drawer} id="admin-mobile-navigation" tabIndex={-1} role="dialog" aria-modal="true" aria-label="Admin navigation" className="relative w-[85vw] max-w-80 h-dvh min-h-0 shadow-2xl z-10 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] bg-[#123524]" onClick={e=>{if(e.target.closest('a'))setMobileOpen(false);}}>
+            {sidebarContent(false, true)}
           </div>
         </div>
       )}

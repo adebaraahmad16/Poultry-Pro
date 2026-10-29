@@ -124,7 +124,7 @@ export default function RevenueAnalytics() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h1 className="text-2xl font-extrabold text-slate-900">Revenue Analytics</h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
           Track subscription revenue, billing trends, and growth metrics. All values in Nigerian Naira (NGN).
@@ -132,7 +132,7 @@ export default function RevenueAnalytics() {
       </div>
 
       {/* Revenue Overview KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Revenue Collected" value={fmtCurrency(totalRevenue)} sub="Verified payments only" color="text-emerald-700" border="border-emerald-200" />
         <StatCard label="Monthly Recurring Revenue" value={fmtCurrency(mrr)} sub="From active paid tiers" color="text-slate-900" />
         <StatCard label="Annual Recurring Revenue" value={fmtCurrency(arr)} sub="MRR \u00D7 12" color="text-slate-900" />
@@ -144,10 +144,10 @@ export default function RevenueAnalytics() {
       </div>
 
       {/* Revenue Over Time */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="text-sm font-extrabold text-slate-900">Revenue Over Time</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {DATE_FILTERS.map(f => (
               <button key={f.value} onClick={() => setDateRange(f.value)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl transition ${dateRange === f.value ? 'bg-[#15803D] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
@@ -160,12 +160,12 @@ export default function RevenueAnalytics() {
           ? <div className="flex items-center justify-center h-48 text-slate-400 text-sm">No revenue data in this period</div>
           : (
             <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={revenueOverTime}>
+              <LineChart accessibilityLayer data={revenueOverTime}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis tickFormatter={v => `\u20A6${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
                 <Tooltip content={<CurrencyTooltip />} />
-                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#15803D" strokeWidth={2.5} dot={false} />
+                <Line isAnimationActive={false} type="monotone" dataKey="revenue" name="Revenue" stroke="#15803D" strokeWidth={2.5} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           )
@@ -174,18 +174,18 @@ export default function RevenueAnalytics() {
 
       {/* Revenue by Plan + Billing Cycle */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
           <h2 className="text-sm font-extrabold text-slate-900 mb-4">Revenue by Subscription Plan</h2>
           {!hasData
             ? <div className="flex items-center justify-center h-48 text-slate-400 text-sm">No revenue data yet</div>
             : (
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={revenueByPlan} barSize={36}>
+                <BarChart accessibilityLayer data={revenueByPlan} barSize={36}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} />
                   <YAxis tickFormatter={v => `\u20A6${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
                   <Tooltip content={<CurrencyTooltip />} />
-                  <Bar dataKey="value" name="Revenue" radius={[6,6,0,0]}>
+                  <Bar isAnimationActive={false} dataKey="value" name="Revenue" radius={[6,6,0,0]}>
                     {revenueByPlan.map((e, i) => <Cell key={i} fill={PLAN_COLORS[e.name] || '#64748b'} />)}
                   </Bar>
                 </BarChart>
@@ -194,15 +194,15 @@ export default function RevenueAnalytics() {
           }
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
           <h2 className="text-sm font-extrabold text-slate-900 mb-4">Monthly vs Annual Billing Revenue</h2>
           {!hasData || cycleSplit.every(d => d.value === 0)
             ? <div className="flex items-center justify-center h-48 text-slate-400 text-sm">No revenue data yet</div>
             : (
               <div className="flex items-center gap-6">
                 <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={cycleSplit} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" paddingAngle={3}>
+                  <PieChart accessibilityLayer>
+                    <Pie isAnimationActive={false} data={cycleSplit} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" paddingAngle={3}>
                       {cycleSplit.map((e, i) => <Cell key={i} fill={CYCLE_COLORS[i % CYCLE_COLORS.length]} />)}
                     </Pie>
                     <Tooltip content={<CurrencyTooltip />} />
@@ -216,18 +216,18 @@ export default function RevenueAnalytics() {
       </div>
 
       {/* Subscription Growth */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h2 className="text-sm font-extrabold text-slate-900 mb-4">Subscription Growth (Paying Subscribers)</h2>
         {subscriptionGrowth.length === 0
           ? <div className="flex items-center justify-center h-48 text-slate-400 text-sm">No subscriber data yet</div>
           : (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={subscriptionGrowth} barSize={28}>
+              <BarChart accessibilityLayer data={subscriptionGrowth} barSize={28}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                 <Tooltip formatter={v => [`${v} subscribers`, 'New Paying']} />
-                <Bar dataKey="subscribers" name="New Subscribers" fill="#2563EB" radius={[4,4,0,0]} />
+                <Bar isAnimationActive={false} dataKey="subscribers" name="New Subscribers" fill="#2563EB" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           )
@@ -235,9 +235,9 @@ export default function RevenueAnalytics() {
       </div>
 
       {/* Plan Breakdown Summary */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h2 className="text-sm font-extrabold text-slate-900 mb-4">Plan Subscriber Breakdown</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Trial / Free', value: trialFarmers.length, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200' },
             { label: 'Basic Plan', value: starterFarmers.length, color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200' },

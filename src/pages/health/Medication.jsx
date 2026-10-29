@@ -8,6 +8,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/common/Badge';
+import StickyRecordButton from '../../components/common/StickyRecordButton';
 
 export default function Medication() {
   const [params, setParams] = useSearchParams();
@@ -239,9 +240,9 @@ export default function Medication() {
 
         <button
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          className="w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           + Record Medication
         </button>
       </div>
@@ -448,6 +449,14 @@ export default function Medication() {
         onConfirm={handleDelete}
         title="Delete Medication Record"
         message="Are you sure you want to delete this medication course record from your treatment history?"
+      />
+
+      {/* Sticky Mobile Record Button */}
+      <StickyRecordButton
+        onClick={handleOpenAdd}
+        label="Record Medication"
+        color="bg-blue-600 hover:bg-blue-700 shadow-blue-900/30"
+        isModalOpen={isAddOpen || !!deletingId}
       />
     </div>
   );

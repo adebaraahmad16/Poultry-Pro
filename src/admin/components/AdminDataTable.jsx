@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
+import ResponsiveRecords from './ResponsiveRecords';
 import { Search, ChevronLeft, ChevronRight, SlidersHorizontal } from '../../components/common/Icons';
 
 export default function AdminDataTable({
@@ -15,10 +16,12 @@ export default function AdminDataTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sort, setSort] = useState('');
+  const searchId = useId();
 
   // Search & Filter
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
+    const result = data.filter((item) => {
       // Filter by category/status
       if (filterKey && activeFilter !== 'All') {
         const itemVal = item[filterKey];
@@ -41,14 +44,24 @@ export default function AdminDataTable({
         return String(val).toLowerCase().includes(q);
       });
     });
-  }, [data, searchTerm, activeFilter, filterKey]);
+    if (sort) {
+      const [key, direction] = sort.split(':');
+      result.sort((a, b) => {
+        const comparison = typeof a[key] === 'number' && typeof b[key] === 'number'
+          ? a[key] - b[key] : String(a[key] ?? '').localeCompare(String(b[key] ?? ''), undefined, { numeric: true });
+        return direction === 'desc' ? -comparison : comparison;
+      });
+    }
+    return result;
+  }, [data, searchTerm, activeFilter, filterKey, sort]);
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
+  const page = Math.min(currentPage, totalPages);
   const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (page - 1) * pageSize;
     return filteredData.slice(start, start + pageSize);
-  }, [filteredData, currentPage, pageSize]);
+  }, [filteredData, page, pageSize]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -64,9 +77,11 @@ export default function AdminDataTable({
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
       {/* Search & Filter Bar */}
       <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative min-w-0 w-full flex-1 sm:max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
+            id={searchId}
+            aria-label={searchPlaceholder}
             type="text"
             value={searchTerm}
             onChange={handleSearchChange}
@@ -76,12 +91,13 @@ export default function AdminDataTable({
         </div>
 
         {filterKey && filterOptions.length > 0 && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex min-w-0 items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-slate-400" />
             <select
+              aria-label={filterLabel}
               value={activeFilter}
               onChange={handleFilterChange}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-2xs"
+              className="min-w-0 w-full sm:w-auto px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-2xs"
             >
               <option value="All">{filterLabel}: All</option>
               {filterOptions.map((opt) => (
@@ -92,10 +108,14 @@ export default function AdminDataTable({
             </select>
           </div>
         )}
+        <select aria-label="Sort records" className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={sort} onChange={event => { setSort(event.target.value); setCurrentPage(1); }}>
+          <option value="">Default order</option>
+          {columns.filter(col => col.accessor).flatMap(col => ['asc', 'desc'].map(direction => <option key={`${col.accessor}:${direction}`} value={`${col.accessor}:${direction}`}>{col.header}: {direction === 'asc' ? 'ascending' : 'descending'}</option>))}
+        </select>
       </div>
 
       {/* Table Surface */}
-      <div className="overflow-x-auto">
+      <ResponsiveRecords pageSize={pageSize}>
         <table className="w-full text-left text-xs sm:text-sm">
           <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
             <tr>
@@ -137,14 +157,14 @@ export default function AdminDataTable({
             )}
           </tbody>
         </table>
-      </div>
+      </ResponsiveRecords>
 
       {/* Pagination Footer */}
       <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
         <div>
-          Showing <span className="font-bold text-slate-800">{filteredData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
+          Showing <span className="font-bold text-slate-800">{filteredData.length === 0 ? 0 : (page - 1) * pageSize + 1}</span> to{' '}
           <span className="font-bold text-slate-800">
-            {Math.min(currentPage * pageSize, filteredData.length)}
+            {Math.min(page * pageSize, filteredData.length)}
           </span>{' '}
           of <span className="font-bold text-slate-800">{filteredData.length}</span> entries
         </div>
@@ -152,19 +172,21 @@ export default function AdminDataTable({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            aria-label="Previous page"
+            disabled={page === 1}
+            onClick={() => setCurrentPage(Math.max(1, page - 1))}
             className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="px-3 py-1 font-bold text-slate-700">
-            Page {currentPage} of {totalPages}
+            Page {page} of {totalPages}
           </span>
           <button
             type="button"
-            disabled={currentPage >= totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            aria-label="Next page"
+            disabled={page >= totalPages}
+            onClick={() => setCurrentPage(Math.min(totalPages, page + 1))}
             className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
             <ChevronRight className="w-4 h-4" />

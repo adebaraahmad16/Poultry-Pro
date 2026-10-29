@@ -101,7 +101,7 @@ export default function AdminProfile() {
   return (
     <div className="space-y-6 pb-16 max-w-4xl">
       {/* Top Header */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Administrator Profile & Security</h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -269,7 +269,7 @@ export default function AdminProfile() {
 
         {/* Permissions & Security Box */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-3">
             <div>
               <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-emerald-700" />
@@ -289,7 +289,7 @@ export default function AdminProfile() {
             ))}
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
             <div>
               <h4 className="font-bold text-slate-800">Two-Factor Authentication (2FA)</h4>
               <p className="text-2xs text-slate-400">Enforces Authenticator app TOTP verification on login</p>
@@ -310,7 +310,7 @@ export default function AdminProfile() {
 
         {/* Change Password Card */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-3">
             <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
               <Lock className="w-4 h-4 text-emerald-700" />
               Update Administrator Password

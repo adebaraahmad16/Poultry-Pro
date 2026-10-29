@@ -1,3 +1,4 @@
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import React from 'react';
 import LegalPageLayout from '../../components/legal/LegalPageLayout';
 import { Link } from 'react-router-dom';
@@ -374,7 +375,7 @@ export default function TermsOfService() {
         </ul>
         <p>
           Where reasonably practicable, we will notify you of the reason for any suspension or termination. You may contact
-          us at <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a> to
+          us at <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a> to
           appeal a suspension decision.
         </p>
         <p className="text-amber-800 bg-amber-50 p-3 rounded-lg text-xs">
@@ -386,7 +387,7 @@ export default function TermsOfService() {
       <Section id="account-deletion" number="16" title="Account Deletion">
         <p>
           You may request deletion of your PoultryPro account at any time by contacting us at{' '}
-          <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a>.
+          <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>.
         </p>
         <p>When we receive a deletion request, we will:</p>
         <ul className="list-disc list-inside space-y-1 pl-2">
@@ -443,11 +444,11 @@ export default function TermsOfService() {
           <p><strong className="text-slate-900">Platform:</strong> PoultryPro</p>
           <p>
             <strong className="text-slate-900">Support Email:</strong>{' '}
-            <a href="mailto:support@poultrypro.ng" className="text-emerald-600 hover:underline">support@poultrypro.ng</a>
+            <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>
           </p>
           <p>
             <strong className="text-slate-900">General Enquiries:</strong>{' '}
-            <a href="mailto:hello@poultrypro.ng" className="text-emerald-600 hover:underline">hello@poultrypro.ng</a>
+            <a href={SUPPORT_CONTACT.emailUrl} className="text-emerald-600 hover:underline">{SUPPORT_CONTACT.email}</a>
           </p>
         </div>
         <p className="text-amber-800 bg-amber-50 p-3 rounded-lg text-xs mt-3">

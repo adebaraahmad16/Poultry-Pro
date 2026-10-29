@@ -5,6 +5,7 @@
 import { getItem, setItem, KEYS } from './storageService';
 import { flockService } from './flockService';
 import { mortalityMutations, vaccinationMutations, medicationMutations } from './supabase/mutationService.js';
+import { getSelectedFarmId } from './farmScope.js';
 function resolveFarmId(customId) {
   return customId || getSelectedFarmId() || getItem(KEYS.USER, {})?.farmId;
 }
@@ -21,7 +22,7 @@ export const healthService = {
       date: data.date || new Date().toISOString().split('T')[0],
     });
     // Deduct birds from target flock
-    flockService.recordMortality(data.flockId, data.count);
+    await flockService.recordMortality(data.flockId, data.count);
     return record;
   },
 
