@@ -1,2 +1,15 @@
 [functions.submit-contact]
 verify_jwt = false
+
+[functions.trial-reminders]
+# Authenticated only by the backend-only cron secret; no browser invocation.
+verify_jwt = false
+
+[functions.subscription-email-webhook]
+# Raw-body Svix signature verification is required inside the function.
+verify_jwt = false
+
+[functions.verify-admin-payment]
+# The function verifies the supplied user token with Supabase Auth and checks its
+# administrator profile before using server-side credentials.
+verify_jwt = false

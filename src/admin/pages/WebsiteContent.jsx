@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import { SUPPORT_CONTACT } from '../../config/supportContact';
 import React, { useState } from 'react';
 import { Globe, Save, CheckCircle2, Plus, Trash2, HelpCircle, Phone, Mail } from '../../components/common/Icons';
@@ -11,28 +12,28 @@ export default function WebsiteContent() {
   const [newFaqQ, setNewFaqQ] = useState('');
   const [newFaqA, setNewFaqA] = useState('');
 
-  const handleSave = (e) => {
+  const [handleSave, handleSaveSaving] = useSaveAction(async (e) => {
     e.preventDefault();
-    updateCmsContent(form);
+    await updateCmsContent(form);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
-  };
+  });
 
-  const handleAddFaq = (e) => {
+  const [handleAddFaq, handleAddFaqSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!newFaqQ || !newFaqA) return;
     const updatedFaqs = [...(form.faqs || []), { q: newFaqQ, a: newFaqA }];
     setForm({ ...form, faqs: updatedFaqs });
-    updateCmsContent({ ...form, faqs: updatedFaqs });
+    await updateCmsContent({ ...form, faqs: updatedFaqs });
     setNewFaqQ('');
     setNewFaqA('');
-  };
+  });
 
-  const handleDeleteFaq = (index) => {
+  const [handleDeleteFaq, handleDeleteFaqSaving] = useSaveAction(async (index) => {
     const updatedFaqs = form.faqs.filter((_, i) => i !== index);
     setForm({ ...form, faqs: updatedFaqs });
-    updateCmsContent({ ...form, faqs: updatedFaqs });
-  };
+    await updateCmsContent({ ...form, faqs: updatedFaqs });
+  });
 
   return (
     <div className="space-y-8 pb-12">
@@ -203,13 +204,13 @@ export default function WebsiteContent() {
         </div>
 
         <div className="flex justify-end">
-          <button
+          <button disabled={handleSaveSaving}
             type="submit"
             className="px-6 py-3 bg-[#15803D] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2"
-          >
+          >{handleSaveSaving ? 'Saving...' : <>
             <Save className="w-4 h-4" />
             Save & Publish Website Changes
-          </button>
+          </>}</button>
         </div>
       </form>
 
@@ -230,14 +231,14 @@ export default function WebsiteContent() {
                 <span className="font-extrabold text-sm text-slate-900 block">{faq.q}</span>
                 <p className="text-xs text-slate-500 leading-relaxed">{faq.a}</p>
               </div>
-              <button
+              <button disabled={handleDeleteFaqSaving}
                 type="button"
                 onClick={() => handleDeleteFaq(index)}
                 className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg shrink-0"
                 title="Remove FAQ"
-              >
+              >{handleDeleteFaqSaving ? 'Saving...' : <>
                 <Trash2 className="w-4 h-4" />
-              </button>
+              </>}</button>
             </div>
           ))}
         </div>
@@ -261,14 +262,14 @@ export default function WebsiteContent() {
               className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm"
             />
           </div>
-          <button
+          <button disabled={handleAddFaqSaving}
             type="button"
             onClick={handleAddFaq}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center gap-1.5"
-          >
+          >{handleAddFaqSaving ? 'Saving...' : <>
             <Plus className="w-3.5 h-3.5" />
             Add to Landing Page
-          </button>
+          </>}</button>
         </div>
       </div>
     </div>

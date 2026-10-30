@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import { Link } from 'react-router-dom';
 import React, { useState } from 'react';
 import { UserCheck, Plus, Trash2, Phone, Mail } from '../../components/common/Icons';
@@ -23,20 +24,20 @@ export default function Workers() {
     assignedPen: 'House 1 & 2'
   });
 
-  const handleCreate = async (e) => {
+  const [handleCreate, handleCreateSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     try { await workerService.addWorker(form); setLimitError(''); } catch(e) { setLimitError(e.message); return; }
     refreshAllData();
     setIsAddOpen(false);
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (deletingId) {
       try { await workerService.deleteWorker(deletingId); } catch(e) { setLimitError(e.message); return; }
       refreshAllData();
       setDeletingId(null);
     }
-  };
+  });
 
   const columns = [
     { header: 'Worker Name', accessor: 'name' },
@@ -138,9 +139,9 @@ export default function Workers() {
               />
             </div>
           </div>
-          <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">
+          <button disabled={handleCreateSaving} type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">{handleCreateSaving ? 'Saving...' : <>
             Save Staff Member
-          </button>
+          </>}</button>
         </form>
       </Modal>
 

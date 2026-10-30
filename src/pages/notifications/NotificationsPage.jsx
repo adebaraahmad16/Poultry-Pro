@@ -36,6 +36,7 @@ const CATEGORIES = [
   { id: 'inventory', label: 'Inventory Alerts', icon: Wheat },
   { id: 'health', label: 'Poultry Health & Mortality', icon: Activity },
   { id: 'subscription', label: 'Subscription & Payments', icon: CreditCard },
+  { id: 'free_trial', label: 'Free Trial', icon: Calendar },
   { id: 'announcement', label: 'System Announcements', icon: MessageSquare },
 ];
 
@@ -395,7 +396,7 @@ export default function NotificationsPage() {
                               }}
                               className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
                             >
-                              Open Section &rarr;
+                              {n.category === 'free_trial' ? 'Upgrade Now' : 'Open Section'} &rarr;
                             </button>
                           )}
                         </div>
@@ -517,7 +518,7 @@ export default function NotificationsPage() {
                     }}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
                   >
-                    Open Action Link
+                    {selectedDetail.category === 'free_trial' ? 'Upgrade Now' : 'Open Action Link'}
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 )}

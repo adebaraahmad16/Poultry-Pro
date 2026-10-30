@@ -43,7 +43,7 @@ export default function MobileSidebar({ isOpen, onClose }) {
         >
           <X className="w-5 h-5" />
         </button>
-        <Sidebar className="w-full border-r-0" />
+        <Sidebar scrollScope="mobile" className="w-full border-r-0" />
       </div>
     </div>
   );

@@ -24,10 +24,12 @@ import {
   Bell
 } from '../common/Icons';
 import { useAuth } from '../../context/AuthContext';
+import useSidebarScroll from './useSidebarScroll';
 import { NotebookPen as DailyRecordsIcon } from '../common/Icons';
 
-export default function Sidebar({ className = "" }) {
-  const { logout } = useAuth();
+export default function Sidebar({ className = "", scrollScope = "desktop" }) {
+  const { logout, user } = useAuth();
+  const scroll = useSidebarScroll(`farmer:${user?.id || 'signed-out'}:${scrollScope}`);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -116,7 +118,7 @@ export default function Sidebar({ className = "" }) {
       </div>
 
       {/* Navigation List */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <div ref={scroll} data-sidebar-scroll="farmer" className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-6">
         {navGroups.map((group, idx) => (
           <div key={idx}>
             <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">

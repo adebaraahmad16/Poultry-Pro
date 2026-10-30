@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DollarSign, Plus, Trash2, Edit2, Filter, TrendingUp, CheckCircle2, Clock } from '../../components/common/Icons';
@@ -90,7 +91,7 @@ export default function Sales() {
     setIsAddOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  const [handleSubmit, handleSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     const qty = Number(form.quantity);
     const price = Number(form.unitPrice);
@@ -132,9 +133,9 @@ export default function Sales() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleUpdateStatus = async (id, currentStatus) => {
+  const [handleUpdateStatus, handleUpdateStatusSaving] = useSaveAction(async (id, currentStatus) => {
     const next = currentStatus === 'Paid' ? 'Pending' : 'Paid';
     try {
       await salesService.updateSaleStatus(id, next);
@@ -143,9 +144,9 @@ export default function Sales() {
     } catch (err) {
       toast.error('Update Failed', err.message);
     }
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       await salesService.deleteSale(deletingId);
@@ -155,7 +156,7 @@ export default function Sales() {
     } catch (err) {
       toast.error('Delete Failed', err.message);
     }
-  };
+  });
 
   // Filter logic
   const now = new Date();
@@ -221,15 +222,15 @@ export default function Sales() {
     {
       header: 'Payment Status',
       render: (r) => (
-        <button
+        <button disabled={handleUpdateStatusSaving}
           onClick={() => handleUpdateStatus(r.id, r.paymentStatus)}
           title="Click to toggle status"
           className="cursor-pointer"
-        >
+        >{handleUpdateStatusSaving ? 'Saving...' : <>
           <Badge variant={r.paymentStatus === 'Paid' ? 'green' : r.paymentStatus === 'Pending' ? 'amber' : 'purple'}>
             {r.paymentStatus || 'Paid'}
           </Badge>
-        </button>
+        </>}</button>
       )
     },
     {
@@ -524,11 +525,11 @@ export default function Sales() {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={handleSubmitSaving || (isSaving)}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-            >
+            >{handleSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving...' : editingRecord ? 'Save Changes' : 'Record Sale'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

@@ -1,3 +1,4 @@
+import { normalizeProfile, resolveProfileAvatar } from '../profileService.js';
 /**
  * Supabase Authentication Service
  * Wraps Supabase Auth for PoultryPro farmer sign-up, sign-in, and session management.
@@ -141,16 +142,26 @@ export async function getSession() {
  * Fetch the farmer profile including farm data.
  * Self-healing: backfills profile.farm_id if missing but farm exists via owner_id.
  */
-export async function getProfile(userId) {
+const profileRequests = new Map();
+export function getProfile(userId) {
+  if (!profileRequests.has(userId)) {
+    const request = readProfile(userId).finally(() => { if (profileRequests.get(userId) === request) profileRequests.delete(userId); });
+    profileRequests.set(userId, request);
+  }
+  return profileRequests.get(userId);
+}
+
+async function readProfile(userId) {
   if (!supabase || !userId) return null;
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, phone, role, farm_id')
+    .select('id, full_name, email, phone, role, farm_id, avatar_url, created_at, updated_at')
     .eq('id', userId)
     .maybeSingle();
 
-  if (error || !profile) return { id: userId, role: 'farmer' };
+  if (error) throw new Error(error.message);
+  if (!profile) throw new Error('Your account profile could not be found. Please contact support.');
 
   let farm = null;
   if (profile.farm_id) {
@@ -166,7 +177,8 @@ export async function getProfile(userId) {
     }
   }
 
-  return {
+  return resolveProfileAvatar(normalizeProfile({
+    ...profile,
     id: profile.id,
     email: profile.email,
     fullName: profile.full_name,
@@ -175,7 +187,7 @@ export async function getProfile(userId) {
     farmId: profile.farm_id || farm?.id || null,
     farmName: farm?.name || 'My Farm',
     poultryTypes: farm?.poultry_types || [],
-  };
+  }));
 }
 
 /**
@@ -194,8 +206,13 @@ export async function sendPasswordReset(email) {
  */
 export function onAuthStateChange(callback) {
   if (!supabase) return () => {};
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session);
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Leave the auth callback before querying the same Supabase client.
+    setTimeout(async () => {
+      // Ignore a queued event from an earlier account/session transition.
+      const current = await supabase.auth.getSession();
+      callback(current.error ? session : current.data?.session, event);
+    }, 0);
   });
   return () => subscription.unsubscribe();
 }

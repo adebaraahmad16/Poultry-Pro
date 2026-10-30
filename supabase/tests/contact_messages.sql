@@ -7,12 +7,12 @@ BEGIN
  PERFORM public.save_contact_enquiry(payload, 'integration-test-ip');
  SELECT id INTO STRICT enquiry FROM public.contact_messages WHERE request_id=(payload->>'request_id')::uuid;
  IF NOT EXISTS(SELECT 1 FROM public.contact_messages WHERE id=enquiry AND is_read=false AND status='new') THEN RAISE EXCEPTION 'Incorrect defaults'; END IF;
- SELECT id INTO STRICT alert FROM public.notifications WHERE related_entity_type='contact_message' AND related_entity_id=enquiry::text;
+ SELECT id INTO STRICT alert FROM public.notifications WHERE category='contact' AND id='contact:'||enquiry::text;
  PERFORM public.save_contact_enquiry(payload, 'integration-test-ip');
- SELECT count(*) INTO n FROM public.notifications WHERE related_entity_type='contact_message' AND related_entity_id=enquiry::text;
+ SELECT count(*) INTO n FROM public.notifications WHERE category='contact' AND id='contact:'||enquiry::text;
  IF n<>1 THEN RAISE EXCEPTION 'Duplicate notification'; END IF;
  BEGIN
-   PERFORM public.save_contact_enquiry(jsonb_set(payload,'message',to_jsonb('A different message with the same request ID.'::text)), 'integration-test-ip');
+   PERFORM public.save_contact_enquiry(jsonb_set(payload,'{message}',to_jsonb('A different message with the same request ID.'::text)), 'integration-test-ip');
    RAISE EXCEPTION 'Changed retry content accepted';
  EXCEPTION WHEN raise_exception THEN
    IF SQLERRM <> 'Contact request already used' THEN RAISE; END IF;
@@ -24,10 +24,10 @@ BEGIN
  UPDATE public.contact_messages SET is_read=true WHERE id=enquiry;
  IF NOT EXISTS(SELECT 1 FROM public.contact_messages WHERE id=enquiry AND is_read=true AND status='resolved') THEN RAISE EXCEPTION 'Read changed resolution'; END IF;
  FOR n IN 1..4 LOOP
-   payload = jsonb_set(payload,'request_id',to_jsonb(gen_random_uuid()::text));
+   payload = jsonb_set(payload,'{request_id}',to_jsonb(gen_random_uuid()::text));
    PERFORM public.save_contact_enquiry(payload,'integration-test-ip');
  END LOOP;
- payload = jsonb_set(payload,'request_id',to_jsonb(gen_random_uuid()::text));
+ payload = jsonb_set(payload,'{request_id}',to_jsonb(gen_random_uuid()::text));
  BEGIN
    PERFORM public.save_contact_enquiry(payload,'integration-test-ip');
    RAISE EXCEPTION 'Rate limit failed';

@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import { Headphones, Send, CheckCircle2, AlertCircle, Clock, MessageSquare, User } from '../../components/common/Icons';
@@ -16,11 +17,11 @@ export default function Support() {
   const resolvedCount = tickets.filter((t) => t.status === 'Resolved').length;
   const highPriorityCount = tickets.filter((t) => t.priority === 'High').length;
 
-  const handleSendReply = (e) => {
+  const [handleSendReply, handleSendReplySaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!replyText.trim() || !activeTicket) return;
 
-    replyToTicket(activeTicket.id, replyText);
+    await replyToTicket(activeTicket.id, replyText);
     setReplyText('');
 
     // Update active view
@@ -38,13 +39,13 @@ export default function Support() {
       ]
     };
     setActiveTicket(updated);
-  };
+  });
 
-  const handleStatusChange = (newStatus) => {
+  const [handleStatusChange, handleStatusChangeSaving] = useSaveAction(async (newStatus) => {
     if (!activeTicket) return;
-    updateTicketStatus(activeTicket.id, newStatus);
+    await updateTicketStatus(activeTicket.id, newStatus);
     setActiveTicket({ ...activeTicket, status: newStatus });
-  };
+  });
 
   const columns = [
     {
@@ -220,32 +221,32 @@ export default function Support() {
                   onChange={(e) => setReplyText(e.target.value)}
                   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
                 />
-                <button
+                <button disabled={handleSendReplySaving}
                   type="submit"
                   className="px-5 py-3 bg-[#15803D] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5"
-                >
+                >{handleSendReplySaving ? 'Saving...' : <>
                   <Send className="w-4 h-4" />
                   Reply
-                </button>
+                </>}</button>
               </form>
 
               <div className="flex items-center justify-between text-xs pt-1 flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-slate-500 font-semibold">Change Status:</span>
-                  <button
+                  <button disabled={handleStatusChangeSaving}
                     type="button"
                     onClick={() => handleStatusChange('Resolved')}
                     className="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg font-bold hover:bg-emerald-100 transition"
-                  >
+                  >{handleStatusChangeSaving ? 'Saving...' : <>
                     Mark as Resolved
-                  </button>
-                  <button
+                  </>}</button>
+                  <button disabled={handleStatusChangeSaving}
                     type="button"
                     onClick={() => handleStatusChange('Open')}
                     className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition"
-                  >
+                  >{handleStatusChangeSaving ? 'Saving...' : <>
                     Reopen Ticket
-                  </button>
+                  </>}</button>
                 </div>
                 <button
                   type="button"

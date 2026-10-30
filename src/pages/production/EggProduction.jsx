@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Egg, Plus, Trash2, Edit2, Calendar, TrendingUp, Filter } from '../../components/common/Icons';
@@ -86,7 +87,7 @@ export default function EggProduction() {
     setIsAddOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  const [handleSubmit, handleSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!form.flockId && flocks.length > 0) {
       toast.error('Please select a flock.', { title: 'Validation Error' });
@@ -131,9 +132,9 @@ export default function EggProduction() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       await eggService.deleteRecord(deletingId);
@@ -144,7 +145,7 @@ export default function EggProduction() {
     } finally {
       setDeletingId(null);
     }
-  };
+  });
 
   // Filter eggs
   const todayStr = new Date().toISOString().split('T')[0];
@@ -456,11 +457,11 @@ export default function EggProduction() {
             </button>
             <button 
               type="submit" 
-              disabled={isSaving}
+              disabled={handleSubmitSaving || (isSaving)}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
+            >{handleSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving…' : editingRecord ? 'Update Record' : 'Save Egg Record'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

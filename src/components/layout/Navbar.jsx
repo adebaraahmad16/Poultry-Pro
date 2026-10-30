@@ -1,13 +1,24 @@
+import { useProfile } from '../../context/ProfileContext';
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Menu, ChevronDown, Building2 } from '../common/Icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useFarm } from '../../context/FarmContext';
 import NotificationDropdown from './NotificationDropdown';
 import GlobalSearchModal from './GlobalSearchModal';
 
 export default function Navbar({ onOpenMobileMenu }) {
-  const { user } = useAuth();
+  const { logout } = useAuth();
+  const { fullName, avatarUrl } = useProfile();
+  const name = fullName.trim() || 'Farmer';
+  const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+  useEffect(() => {
+    const close = event => { if (event.type === 'keydown' ? event.key === 'Escape' : !profileRef.current?.contains(event.target)) setProfileOpen(false); };
+    document.addEventListener('pointerdown', close); document.addEventListener('keydown', close);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', close); };
+  }, []);
   const { farm, notifications } = useFarm();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -100,18 +111,21 @@ export default function Navbar({ onOpenMobileMenu }) {
         </div>
 
         {/* User Profile Avatar */}
-        <Link
-          to="/settings/profile"
-          className="flex items-center gap-2.5 pl-2 border-l border-slate-200 hover:opacity-80 transition-opacity"
-        >
-          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center ring-2 ring-emerald-500/20">
-            {(user?.name || 'U').charAt(0).toUpperCase()}
-          </div>
-          <div className="hidden sm:block text-left">
-            <p className="text-xs font-semibold text-slate-800 leading-tight">{user?.name || 'Farm Owner'}</p>
-            <p className="text-[10px] font-medium text-emerald-600">{user?.role || 'Owner'}</p>
-          </div>
-        </Link>
+        <div className="relative min-w-0" ref={profileRef}>
+          <button type="button" aria-label={`Account menu for ${name}`} aria-expanded={profileOpen} onClick={() => setProfileOpen(open => !open)} className="flex min-h-11 min-w-11 max-w-full items-center gap-2 rounded-xl px-1 text-left focus-visible:outline-emerald-600">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-bold text-emerald-800 ring-2 ring-emerald-500/20">
+              {avatarUrl ? <img key={avatarUrl} src={avatarUrl} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+            </span>
+            <span className="hidden max-w-[140px] min-[425px]:block sm:max-w-[180px] text-xs font-semibold text-slate-800 truncate"><span className="sm:hidden">{name.split(/\s+/)[0]}</span><span className="hidden sm:inline">{name}</span></span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+          </button>
+          {profileOpen && <div className="absolute right-0 z-40 mt-2 w-56 max-w-[calc(100vw-24px)] rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+            <p className="break-words border-b p-3 text-sm font-semibold text-slate-800">{name}</p>
+            <Link to="/settings/profile" onClick={() => setProfileOpen(false)} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-slate-50">My Profile</Link>
+            <Link to="/settings" onClick={() => setProfileOpen(false)} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-slate-50">Account Settings</Link>
+            <button type="button" onClick={async () => { setProfileOpen(false); await logout(); navigate('/login', { replace: true }); }} className="min-h-11 w-full rounded-lg px-3 text-left text-sm text-red-700 hover:bg-red-50">Logout</button>
+          </div>}
+        </div>
       </div>
 
       <GlobalSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />

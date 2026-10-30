@@ -1,4 +1,6 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import ResponsiveRecords from '../components/ResponsiveRecords';
+import TrialReminderMonitor from '../components/TrialReminderMonitor';
 import AdminDialog from '../components/AdminDialog';
 import SubscriptionPlansTab from './SubscriptionPlansTab';
 import React, { useState, useMemo } from 'react';
@@ -217,7 +219,7 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
     if (type === 'extend') setExtendDays(30);
   };
 
-  const confirmAction = async () => {
+  const [confirmAction, confirmActionSaving] = useSaveAction(async () => {
     try {
     const { type, farmer } = action;
     if (type === 'change_plan') {
@@ -238,7 +240,7 @@ function SubscribersTab({ farmers, payments, subscriptionPlans, updateFarmerSubs
     setAction(null);
     setSelectedFarmer(null);
     } catch(e) { setToast(e.message); }
-  };
+  });
 
   const inputCls = "px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-600";
 
@@ -387,20 +389,20 @@ function TrialsTab({ farmers, updateFarmerSubscription }) {
   const [extendTarget, setExtendTarget] = useState(null);
   const [extendDays, setExtendDays] = useState(7);
 
-  const trialFarmers = useMemo(() => farmers.filter(f => getSubscriberStatus(f) === 'Trial' || f.trialEndsAt), [farmers]);
-  const activeTrials = trialFarmers.filter(f => { const dr = daysRemaining(f.trialEndsAt); return dr === null || dr > 0; });
+  const trialFarmers = useMemo(() => farmers.filter(f => !f.convertedFromTrial && ['Trial','Expired'].includes(getSubscriberStatus(f)) && f.trialEndsAt), [farmers]);
+  const activeTrials = trialFarmers.filter(f => getSubscriberStatus(f) === 'Trial' && daysRemaining(f.trialEndsAt) > 0);
   const expiredTrials = trialFarmers.filter(f => { const dr = daysRemaining(f.trialEndsAt); return dr !== null && dr <= 0; });
   const converted = farmers.filter(f => f.convertedFromTrial === true);
   const totalEver = trialFarmers.length + converted.length;
   const convRate = totalEver > 0 ? Math.round((converted.length / totalEver) * 100) : 0;
 
-  const handleExtend = async () => {
+  const [handleExtend, handleExtendSaving] = useSaveAction(async () => {
     try {
       await updateFarmerSubscription(extendTarget.id, 'extend_trial', { days: Number(extendDays) });
       setToast(`Trial extended by ${extendDays} days for ${extendTarget.fullName}`);
       setExtendTarget(null);
     } catch(e) {setToast(e.message);}
-  };
+  });
 
   return (
     <div className="space-y-6">
@@ -433,7 +435,7 @@ function TrialsTab({ farmers, updateFarmerSubscription }) {
                   <tr key={f.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3"><p className="font-bold text-slate-900">{f.fullName}</p><p className="text-slate-400">{f.email}</p></td>
                     <td className="px-4 py-3 font-bold text-slate-700">{f.subscription || 'Not Selected'}</td>
-                    <td className="px-4 py-3 text-slate-500">{fmtDate(f.dateJoined)}</td>
+                    <td className="px-4 py-3 text-slate-500">{fmtDate(f.subscriptionStartDate)}</td>
                     <td className="px-4 py-3 text-slate-500">{fmtDate(f.trialEndsAt)}</td>
                     <td className="px-4 py-3">{dr === null ? <span className="text-slate-400">\u2014</span> : <span className={`font-bold ${expired ? 'text-rose-600' : dr <= 3 ? 'text-amber-600' : 'text-emerald-700'}`}>{expired ? 'Expired' : `${dr} days`}</span>}</td>
                     <td className="px-4 py-3"><SubStatusBadge status={expired ? 'Expired' : 'Trial'} /></td>
@@ -445,6 +447,7 @@ function TrialsTab({ farmers, updateFarmerSubscription }) {
           </table></ResponsiveRecords>
         </div>
       </div>
+      <TrialReminderMonitor />
       <ConfirmModal open={!!extendTarget} title="Extend Trial Period" onConfirm={handleExtend} onCancel={() => setExtendTarget(null)}>
         <p className="text-sm text-slate-600 mb-3">Extend trial for <strong>{extendTarget?.fullName}</strong>. This action will be recorded in the audit log.</p>
         <div className="space-y-2"><label className="block text-xs font-bold text-slate-700 uppercase">Extension (days)</label><input type="number" min="1" max="30" value={extendDays} onChange={e => setExtendDays(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600" /></div>
@@ -477,7 +480,7 @@ function SettingsTab({ subscriptionSettings, updateSubscriptionSettings }) {
   const [dirty, setDirty] = useState(false);
 
   const handleChange = (k, v) => { setForm(f => ({ ...f, [k]: v })); setDirty(true); };
-  const handleSave = (e) => { e.preventDefault(); updateSubscriptionSettings(form); setDirty(false); setToast('Subscription settings saved successfully'); };
+  const [handleSave, handleSaveSaving] = useSaveAction(async (e) => { e.preventDefault(); await updateSubscriptionSettings(form); setDirty(false); setToast('Subscription settings saved successfully'); });
 
 
 
@@ -521,7 +524,7 @@ function SettingsTab({ subscriptionSettings, updateSubscriptionSettings }) {
         </div>
       </div>
       <div className="flex justify-end">
-        <button type="submit" disabled={!dirty} className={`px-6 py-2.5 font-bold text-xs rounded-xl text-white transition ${dirty ? 'bg-[#15803D] hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'}`}>Save Settings</button>
+        <button type="submit" disabled={handleSaveSaving || (!dirty)} className={`px-6 py-2.5 font-bold text-xs rounded-xl text-white transition ${dirty ? 'bg-[#15803D] hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'}`}>{handleSaveSaving ? 'Saving...' : <>Save Settings</>}</button>
       </div>
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </form>

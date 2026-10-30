@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, AlertTriangle, Clock, ArrowRight } from './Icons';
 import { useFarm } from '../../context/FarmContext';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
 
 export default function TrialBanner() {
-  const { subscription, remainingTrialDays, isTrial, isSubscriptionExpired, currentPlan } = useFarm();
+  const { subscription, subscriptionFromDatabase, isTrial, isSubscriptionExpired, currentPlan } = useFarm();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(timer); }, []);
+  const expiration = new Date(subscription?.trialEndsAt).getTime();
+  const remainingTrialDays = Number.isFinite(expiration) ? Math.max(0, Math.ceil((expiration-now)/86400000)) : 0;
 
   if (!subscription) return null;
+  if (isSupabaseConfigured() && !subscriptionFromDatabase) return null;
 
   // Case 1: Subscription or Trial is Expired
   if (isSubscriptionExpired || subscription.status === 'expired') {
@@ -18,7 +24,7 @@ export default function TrialBanner() {
               <AlertTriangle className="w-3.5 h-3.5" />
             </div>
             <span>
-              <strong>14-Day Free Trial Expired:</strong> Your farm records remain safely stored and viewable. Activate a subscription to create new flocks and records.
+              <strong>{subscription.status === 'trial' || subscription.status === 'expired' && subscription.trialUsed && !subscription.agreedPrice ? 'Free Trial Expired:' : 'Subscription Expired:'}</strong> Your farm records remain safely stored and viewable. Activate a subscription to create new flocks and records.
             </span>
           </div>
           <Link
@@ -34,7 +40,7 @@ export default function TrialBanner() {
   }
 
   // Case 2: On 14-Day Free Trial
-  if (isTrial || subscription.status === 'trial') {
+  if ((isTrial || subscription.status === 'trial') && Number.isFinite(expiration)) {
     const isUrgent = remainingTrialDays <= 3;
 
     return (
@@ -50,6 +56,10 @@ export default function TrialBanner() {
                 {remainingTrialDays} {remainingTrialDays === 1 ? 'day' : 'days'} remaining
               </span>{' '}
               on your {currentPlan?.name || 'Basic'} plan.
+              <span className="block mt-1 font-normal">Expires {new Date(expiration).toLocaleString('en-GB', { timeZone: 'UTC', dateStyle: 'medium', timeStyle: 'short' })} UTC</span>
+              <span role="progressbar" aria-label="Free trial time remaining" aria-valuemin={0} aria-valuemax={14} aria-valuenow={Math.min(14, remainingTrialDays)} className="block mt-2 h-1.5 max-w-xs rounded-full bg-blue-100">
+                <span className="block h-full rounded-full bg-emerald-600" style={{width:`${Math.min(100,remainingTrialDays/14*100)}%`}} />
+              </span>
             </span>
           </div>
 
@@ -62,7 +72,7 @@ export default function TrialBanner() {
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
             >
-              <span>{isUrgent ? 'Activate Now' : 'Upgrade Plan'}</span>
+              <span>Upgrade Now</span>
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>

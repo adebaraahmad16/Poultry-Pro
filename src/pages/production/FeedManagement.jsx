@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Wheat, Plus, MinusCircle, Trash2, Edit2, AlertTriangle, Filter, CheckCircle2 } from '../../components/common/Icons';
@@ -128,7 +129,7 @@ export default function FeedManagement() {
   };
 
   // Stock Form Submission
-  const handleStockSubmit = async (e) => {
+  const [handleStockSubmit, handleStockSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!stockForm.name.trim()) {
       toast.error('Feed name is required.', { title: 'Validation Error' });
@@ -173,10 +174,10 @@ export default function FeedManagement() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
   // Feeding Form Submission
-  const handleFeedingSubmit = async (e) => {
+  const [handleFeedingSubmit, handleFeedingSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!feedingForm.flockId && flocks.length > 0) {
       toast.error('Please select a target flock.', { title: 'Validation Error' });
@@ -223,9 +224,9 @@ export default function FeedManagement() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       if (deletingType === 'stock') {
@@ -242,7 +243,7 @@ export default function FeedManagement() {
     } finally {
       setDeletingId(null);
     }
-  };
+  });
 
   // Calculations
   const totalBags = feeds.reduce((s, f) => s + Number(f.quantityBags || 0), 0);
@@ -603,11 +604,11 @@ export default function FeedManagement() {
             </button>
             <button 
               type="submit" 
-              disabled={isSaving}
+              disabled={handleStockSubmitSaving || (isSaving)}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
+            >{handleStockSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving…' : editingFeedItem ? 'Update Stock' : 'Save Feed Stock'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>
@@ -702,11 +703,11 @@ export default function FeedManagement() {
             </button>
             <button 
               type="submit" 
-              disabled={isSaving}
+              disabled={handleFeedingSubmitSaving || (isSaving)}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
+            >{handleFeedingSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving…' : editingDailyRecord ? 'Update Feeding' : 'Save Feeding Record'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

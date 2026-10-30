@@ -10,7 +10,7 @@ export function poultryTypeId(value) {
   return Object.keys(POULTRY_SCOPES).find(id=>POULTRY_SCOPES[id].some(t=>t.toLowerCase()===text))||null;
 }
 export function availableTypeIds(profile,flocks=[]) {
-  return [...new Set([...(Array.isArray(profile?.poultryTypes)?profile.poultryTypes:[]),...flocks.map(f=>f.type)].map(poultryTypeId).filter(id=>id&&id!=='all'))];
+  return [...new Set([...(Array.isArray(profile?.poultryTypes)?profile.poultryTypes:Array.isArray(profile?.poultry_types)?profile.poultry_types:[]),...(Array.isArray(flocks)?flocks:[]).map(f=>f?.type)].map(poultryTypeId).filter(id=>id&&id!=='all'))];
 }
 export function scopeFarmData(data,typeId='all') {
   if(typeId==='all') return data;

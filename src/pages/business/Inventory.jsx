@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Package, Plus, Trash2, Edit2, ArrowDownRight, ArrowUpRight, AlertTriangle, Filter, CheckCircle2, DollarSign } from '../../components/common/Icons';
@@ -98,7 +99,7 @@ export default function Inventory() {
     setIsMovementOpen(true);
   };
 
-  const handleSaveItem = async (e) => {
+  const [handleSaveItem, handleSaveItemSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
       toast.error('Validation Error', 'Item name is required.');
@@ -108,10 +109,10 @@ export default function Inventory() {
     setIsSaving(true);
     try {
       if (editingRecord) {
-        inventoryService.updateItem(editingRecord.id, form);
+        await inventoryService.updateItem(editingRecord.id, form);
         toast.success('Item Updated!', `${form.name} details have been updated.`);
       } else {
-        inventoryService.addItem(form);
+        await inventoryService.addItem(form);
         toast.success('Item Added!', `${form.name} has been added to farm inventory.`);
       }
       refreshAllData();
@@ -122,9 +123,9 @@ export default function Inventory() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleSaveMovement = async (e) => {
+  const [handleSaveMovement, handleSaveMovementSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     const qty = Number(movementForm.quantity);
     if (!movementForm.itemId) {
@@ -139,7 +140,7 @@ export default function Inventory() {
     setIsSaving(true);
     try {
       const selectedItem = inventory.find(i => i.id === movementForm.itemId);
-      inventoryService.recordMovement(movementForm.itemId, qty, movementForm.type, movementForm.notes);
+      await inventoryService.recordMovement(movementForm.itemId, qty, movementForm.type, movementForm.notes, movementForm.date);
       toast.success(
         movementForm.type === 'addition' ? 'Stock Added!' : 'Stock Usage Recorded!',
         `${qty} ${selectedItem?.unit || 'units'} ${movementForm.type === 'addition' ? 'added to' : 'deducted from'} ${selectedItem?.name || 'inventory'}.`
@@ -151,19 +152,19 @@ export default function Inventory() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleDelete = () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
-      inventoryService.deleteItem(deletingId);
+      await inventoryService.deleteItem(deletingId);
       toast.success('Item Deleted!', 'The inventory item has been removed.');
       refreshAllData();
       setDeletingId(null);
     } catch (err) {
       toast.error('Delete Failed', err.message);
     }
-  };
+  });
 
   // Filtered inventory
   const filteredInventory = (inventory || []).filter(item => {
@@ -472,11 +473,11 @@ export default function Inventory() {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={handleSaveItemSaving || (isSaving)}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-            >
+            >{handleSaveItemSaving ? 'Saving...' : <>
               {isSaving ? 'Saving...' : editingRecord ? 'Save Changes' : 'Add Item'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>
@@ -583,11 +584,11 @@ export default function Inventory() {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={handleSaveMovementSaving || (isSaving)}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-            >
+            >{handleSaveMovementSaving ? 'Saving...' : <>
               {isSaving ? 'Recording...' : 'Record Movement'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

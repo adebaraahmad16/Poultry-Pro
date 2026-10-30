@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import AdminDialog from '../components/AdminDialog';
 import ContactAlerts from '../components/ContactAlerts';
 import React, { useState } from 'react';
@@ -56,7 +57,7 @@ export default function Notifications() {
     return farmers.length;
   };
 
-  const handleSend = async (e) => {
+  const [handleSend, handleSendSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.message.trim()) {
       toast.warning('Please enter both a headline and a message.', { title: 'Missing Fields' });
@@ -93,7 +94,7 @@ export default function Notifications() {
     } finally {
       setIsSending(false);
     }
-  };
+  });
 
   const columns = [
     {
@@ -315,12 +316,12 @@ export default function Notifications() {
 
             <button
               type="submit"
-              disabled={isSending}
+              disabled={handleSendSaving || (isSending)}
               className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
-            >
+            >{handleSendSaving ? 'Saving...' : <>
               <Send className="w-4 h-4" />
               {isSending ? 'Dispatching...' : `Publish to ${calculateRecipientCount()} Farmer(s)`}
-            </button>
+            </>}</button>
           </div>
         </form>
       </div>
@@ -421,11 +422,11 @@ export default function Notifications() {
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={isSending}
+                disabled={handleSendSaving || (isSending)}
                 className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white rounded-xl shadow-md"
-              >
+              >{handleSendSaving ? 'Saving...' : <>
                 {isSending ? 'Publishing...' : 'Confirm & Publish'}
-              </button>
+              </>}</button>
             </div>
           </div>
         </AdminDialog>

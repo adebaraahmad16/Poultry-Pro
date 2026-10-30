@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -115,7 +116,7 @@ export default function Mortality() {
     setIsAddOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  const [handleSubmit, handleSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!form.flockId && flocks.length > 0) {
       toast.error('Please select an affected flock.', { title: 'Validation Error' });
@@ -163,9 +164,9 @@ export default function Mortality() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       await healthService.deleteMortalityRecord(deletingId);
@@ -176,7 +177,7 @@ export default function Mortality() {
     } finally {
       setDeletingId(null);
     }
-  };
+  });
 
   // Date boundaries for filtering and KPIs
   const now = new Date();
@@ -652,11 +653,11 @@ export default function Mortality() {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={handleSubmitSaving || (isSaving)}
               className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
+            >{handleSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving…' : editingRecord ? 'Update Record' : 'Save Mortality Record'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

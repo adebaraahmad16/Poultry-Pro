@@ -21,8 +21,7 @@ export const healthService = {
       count: Number(data.count),
       date: data.date || new Date().toISOString().split('T')[0],
     });
-    // Deduct birds from target flock
-    await flockService.recordMortality(data.flockId, data.count);
+    // The database saves the record and adjusts the flock atomically.
     return record;
   },
 
@@ -51,9 +50,7 @@ export const healthService = {
 
   updateVaccinationStatus: async (id, status, customFarmId) => {
     const farmId = resolveFarmId(customFarmId);
-    const vacs = getItem(KEYS.VACCINATIONS, []);
-    const existing = vacs.find(v => v.id === id);
-    if (existing) return vaccinationMutations.update(farmId, id, { ...existing, status });
+    return vaccinationMutations.update(farmId, id, { status });
   },
 
   deleteVaccination: async (id, customFarmId) => {

@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, Building2, Bird, CreditCard, DollarSign, Bell, Headphones, BarChart3, Globe, UserCheck, ShieldAlert, Settings, Activity, User, LogOut, ChevronLeft, ChevronRight, X } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
+import useSidebarScroll from '../../components/layout/useSidebarScroll';
 
 const NAV_GROUPS = [
   {
@@ -65,6 +66,8 @@ export default function AdminSidebar({
   const { currentAdmin, logoutAdmin } = useAdmin();
   const navigate = useNavigate();
   const { stats } = useContacts();
+  const desktopScroll = useSidebarScroll(`admin:${currentAdmin?.id || 'signed-out'}:desktop`);
+  const mobileScroll = useSidebarScroll(`admin:${currentAdmin?.id || 'signed-out'}:mobile:${mobileOpen}`);
   const drawer = useRef(null);
   useAdminDialog(mobileOpen, () => setMobileOpen(false), drawer);
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function AdminSidebar({
         )}
 
         {/* Navigation Link Groups */}
-        <div className="min-h-0 flex-1 py-4 px-2 space-y-5 overflow-y-auto overscroll-contain custom-scrollbar">
+        <div ref={mobile ? mobileScroll : desktopScroll} data-sidebar-scroll={mobile ? 'admin-mobile' : 'admin-desktop'} className="min-h-0 flex-1 py-4 px-2 space-y-5 overflow-y-auto overscroll-contain custom-scrollbar">
           {NAV_GROUPS.map((group) => (
             <div key={group.title} className="space-y-1">
               {!collapsed && (

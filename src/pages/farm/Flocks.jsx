@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layers, Plus, Trash2, Eye, Edit2, Filter, AlertTriangle, CheckCircle2 } from '../../components/common/Icons';
@@ -91,7 +92,7 @@ export default function Flocks() {
     setIsAddOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  const [handleSubmit, handleSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
 
     if (!form.name.trim()) {
@@ -137,9 +138,9 @@ export default function Flocks() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       await flockService.delete(deletingId);
@@ -149,7 +150,7 @@ export default function Flocks() {
     } catch (err) {
       toast.error('Delete Failed', err.message);
     }
-  };
+  });
 
   const filteredFlocks = flocks.filter((f) => filterType === 'All' || f.type === filterType);
 
@@ -453,11 +454,11 @@ export default function Flocks() {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={handleSubmitSaving || (isSaving)}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-            >
+            >{handleSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving...' : editingFlock ? 'Save Flock Changes' : 'Create Flock'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

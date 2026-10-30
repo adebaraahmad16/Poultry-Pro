@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import ResponsiveRecords from '../components/ResponsiveRecords';
 import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
@@ -15,24 +16,24 @@ export default function AdminManagement() {
     role: 'Support Admin'
   });
 
-  const handleCreate = (e) => {
+  const [handleCreate, handleCreateSaving] = useSaveAction(async (e) => {
     e.preventDefault();
-    addAdminStaff({
+    await addAdminStaff({
       ...form,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
     });
     alert(`Administrator account created for ${form.name} (${form.role}).`);
     setIsAddOpen(false);
     setForm({ name: '', email: '', phone: '', role: 'Support Admin' });
-  };
+  });
 
-  const handleToggle = (staff) => {
+  const [handleToggle, handleToggleSaving] = useSaveAction(async (staff) => {
     if (staff.id === currentAdmin?.id) {
       alert('You cannot suspend your own active administrator account.');
       return;
     }
-    toggleAdminStatus(staff.id);
-  };
+    await toggleAdminStatus(staff.id);
+  });
 
   return (
     <div className="space-y-8 pb-12">
@@ -131,15 +132,15 @@ export default function AdminManagement() {
                   <td className="px-6 py-4 text-right">
                     <button
                       onClick={() => handleToggle(staff)}
-                      disabled={staff.id === currentAdmin?.id}
+                      disabled={handleToggleSaving || (staff.id === currentAdmin?.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed ${
                         staff.status === 'Active'
                           ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                           : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                       }`}
-                    >
+                    >{handleToggleSaving ? 'Saving...' : <>
                       {staff.status === 'Active' ? 'Suspend Access' : 'Reactivate'}
-                    </button>
+                    </>}</button>
                   </td>
                 </tr>
               ))}
@@ -217,12 +218,12 @@ export default function AdminManagement() {
                 >
                   Cancel
                 </button>
-                <button
+                <button disabled={handleCreateSaving}
                   type="submit"
                   className="px-5 py-2 bg-[#15803D] hover:bg-emerald-700 text-white font-bold rounded-xl"
-                >
+                >{handleCreateSaving ? 'Saving...' : <>
                   Confirm & Create Admin
-                </button>
+                </>}</button>
               </div>
             </form>
           </div>

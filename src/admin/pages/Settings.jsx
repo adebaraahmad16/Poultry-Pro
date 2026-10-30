@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import { SUPPORT_CONTACT } from '../../config/supportContact';
 import React, { useState } from 'react';
 import {
@@ -22,12 +23,12 @@ export default function Settings() {
     }
   }, [platformSettings]);
 
-  const handleSave = (e) => {
+  const [handleSave, handleSaveSaving] = useSaveAction(async (e) => {
     e.preventDefault();
-    updateSettings(form);
+    await updateSettings(form);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3500);
-  };
+  });
 
   const tabs = [
     { id: 'general', label: 'General & Brand', icon: Globe },
@@ -798,13 +799,13 @@ export default function Settings() {
           <p className="text-2xs text-slate-400">
             Changes to platform parameters will take effect immediately across all active sessions.
           </p>
-          <button
+          <button disabled={handleSaveSaving}
             type="submit"
             className="px-6 py-3 bg-[#15803D] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer active:scale-95"
-          >
+          >{handleSaveSaving ? 'Saving...' : <>
             <Save className="w-4 h-4" />
             <span>Save Platform Settings</span>
-          </button>
+          </>}</button>
         </div>
       </form>
     </div>

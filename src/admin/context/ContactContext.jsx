@@ -1,29 +1,44 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useAdmin } from './AdminContext';
 import { getContactStats } from '../../services/contactService';
+import { adminRequestMessage, isAdminAccessError } from '../../services/adminAccess';
 const Context = createContext();
 export function ContactProvider({ children }) {
-  const { isAdminLoggedIn } = useAdmin();
-  const [stats, setStats] = useState(null);
-  const [error, setError] = useState('');
-  const generation = useRef(0);
-  const refresh = useCallback(async () => {
-    if (!isAdminLoggedIn) return;
-    const request = ++generation.current;
-    try {
-      const next = await getContactStats();
-      if (request === generation.current) { setStats(next); setError(''); }
-    }
-    catch { if (request === generation.current) { setStats(null); setError('Contact messages could not be loaded. Please retry.'); } }
-  }, [isAdminLoggedIn]);
+  const { supabaseAdminReady, currentAdmin } = useAdmin();
+  const ready = Boolean(supabaseAdminReady);
+  const owner = ready ? currentAdmin?.id : null;
+  const [result, setResult] = useState({ owner: null, stats: null, error: '' });
+  const active = useRef(null); active.current = owner;
+  const pending = useRef(null);
+  const blocked = useRef(false);
+  const refresh = useCallback(({ manual = true } = {}) => {
+    if (!ready || !owner || (!manual && blocked.current)) return Promise.resolve();
+    if (pending.current?.owner === owner) return pending.current.promise;
+    const request = (async () => {
+      try {
+        const stats = await getContactStats();
+        if (active.current === owner) { blocked.current = false; setResult({ owner, stats, error: '' }); }
+      } catch (error) {
+        if (active.current === owner) {
+          blocked.current = isAdminAccessError(error);
+          setResult({ owner, stats: null, error: adminRequestMessage(error) });
+        }
+      }
+    })().finally(() => { if (pending.current?.promise === request) pending.current = null; });
+    pending.current = { owner, promise: request };
+    return request;
+  }, [ready, owner]);
   useEffect(() => {
-    if (!isAdminLoggedIn) { generation.current++; setStats(null); setError(''); return; }
-    refresh();
-    const timer = setInterval(refresh, 15000);
-    window.addEventListener('focus', refresh);
-    window.addEventListener('contact-messages-changed', refresh);
-    return () => { generation.current++; clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('contact-messages-changed', refresh); };
-  }, [isAdminLoggedIn, refresh]);
-  return <Context.Provider value={{ stats, error, refresh }}>{children}</Context.Provider>;
+    blocked.current = false;
+    if (!ready || !owner) return;
+    const automatic = () => { if (document.visibilityState !== 'hidden') refresh({ manual: false }); };
+    automatic();
+    const timer = setInterval(automatic, 15000);
+    window.addEventListener('focus', automatic);
+    window.addEventListener('contact-messages-changed', automatic);
+    return () => { clearInterval(timer); window.removeEventListener('focus', automatic); window.removeEventListener('contact-messages-changed', automatic); };
+  }, [ready, owner, refresh]);
+  const current = ready && result.owner === owner;
+  return <Context.Provider value={{ ready, stats: current ? result.stats : null, error: current ? result.error : '', refresh }}>{children}</Context.Provider>;
 }
 export const useContacts = () => useContext(Context);

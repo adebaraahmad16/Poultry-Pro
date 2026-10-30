@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import AdminDialog from '../components/AdminDialog';
 import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../context/AdminContext';
@@ -64,9 +65,9 @@ export default function Payments() {
     });
   }, [payments, planFilter]);
 
-  const handleVerify = (paymentId) => {
-    verifyPayment(paymentId);
-  };
+  const [handleVerify, handleVerifySaving] = useSaveAction(async (paymentId) => {
+    await verifyPayment(paymentId);
+  });
 
   const handleExportCSV = () => {
     if (!payments.length) {
@@ -165,14 +166,14 @@ export default function Payments() {
             <IconReceipt />
           </button>
           {r.status === 'Pending' && (
-            <button
+            <button disabled={handleVerifySaving}
               onClick={() => handleVerify(r.id)}
               className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#15803D] rounded-lg transition"
               title="Verify Gateway Settlement"
               aria-label="Verify Gateway Settlement"
-            >
+            >{handleVerifySaving ? 'Saving...' : <>
               <IconCheckCircle />
-            </button>
+            </>}</button>
           )}
         </div>
       )
@@ -278,7 +279,7 @@ export default function Payments() {
               <div className="flex items-center gap-2.5">
                 <IconShieldCheck />
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Verified Payment Receipt</h3>
+                  <h3 className="text-base font-extrabold text-slate-900">{selectedReceipt.status === 'Successful' ? 'Verified Payment Receipt' : 'Payment Details'}</h3>
                   <span className="text-xs text-slate-400 font-mono">PoultryPro Nigeria Platform</span>
                 </div>
               </div>

@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import PlanCards from '../../components/subscriptions/PlanCards';
@@ -16,9 +17,9 @@ export default function SubscriptionPlansTab() {
 
  const edit = p => { setEditing(p); setDraft(structuredClone(p)); setMessage(''); };
  const review = e => { e.preventDefault(); try { validatePlan(draft); setConfirm(draft); } catch(e) { setMessage(e.message); } };
- const save = async () => {
+ const [save, saveSaving] = useSaveAction(async () => {
   setBusy(true); try { await savePlan(confirm.id,confirm); setConfirm(null);setEditing(null);setMessage('Plan saved. Published prices, features and limits are updated.'); } catch(e) {setMessage(e.message);} finally {setBusy(false);}
- };
+ });
  const input = 'w-full border border-slate-300 bg-white rounded-lg p-2 text-sm mt-1';
  const count = p => subscribers.filter(s => s.planId === p.id).length;
  return <div className="space-y-5">
@@ -46,7 +47,7 @@ export default function SubscriptionPlansTab() {
    {message && <p role="alert" className="text-red-700 text-sm">{message}</p>}
    <div className="flex flex-wrap justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDraft(structuredClone(editing))} className="px-4 py-2 border rounded-lg">Reset Changes</button><button type="button" onClick={() => setEditing(null)} className="px-4 py-2 border rounded-lg">Cancel</button><button className="px-4 py-2 bg-[#15803D] text-white rounded-lg">Save Changes</button></div>
   </form></section></AdminDialog>}
-  {confirm && <AdminDialog onClose={()=>{if(!busy)setConfirm(null)}} className="fixed inset-0 z-[60] bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-labelledby="confirm-plan-title" className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full space-y-4"><h3 id="confirm-plan-title" className="font-bold">Confirm Plan Changes</h3><p className="text-sm">Publish changes to {confirm.name}? New selections will use this configuration. Existing subscriptions retain their agreed price. Usage limits apply immediately; disabling a plan preserves its subscribers.</p>{message && <p role="alert" className="text-sm text-red-700">{message}</p>}<div className="flex justify-end gap-2"><button disabled={busy} onClick={() => setConfirm(null)} className="px-4 py-2 border rounded-lg">Cancel</button><button disabled={busy} onClick={save} className="px-4 py-2 bg-[#15803D] text-white rounded-lg">{busy ? 'Saving…' : 'Confirm and Save'}</button></div></section></AdminDialog>}
+  {confirm && <AdminDialog onClose={()=>{if(!busy)setConfirm(null)}} className="fixed inset-0 z-[60] bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-labelledby="confirm-plan-title" className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full space-y-4"><h3 id="confirm-plan-title" className="font-bold">Confirm Plan Changes</h3><p className="text-sm">Publish changes to {confirm.name}? New selections will use this configuration. Existing subscriptions retain their agreed price. Usage limits apply immediately; disabling a plan preserves its subscribers.</p>{message && <p role="alert" className="text-sm text-red-700">{message}</p>}<div className="flex justify-end gap-2"><button disabled={busy} onClick={() => setConfirm(null)} className="px-4 py-2 border rounded-lg">Cancel</button><button disabled={saveSaving || (busy)} onClick={save} className="px-4 py-2 bg-[#15803D] text-white rounded-lg">{saveSaving ? 'Saving...' : <>{busy ? 'Saving…' : 'Confirm and Save'}</>}</button></div></section></AdminDialog>}
   {view && <AdminDialog onClose={()=>setView(null)} className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"><section role="dialog" aria-modal="true" aria-label="Plan subscribers" className="bg-white rounded-2xl p-4 sm:p-6 max-w-lg w-full max-h-[80vh] overflow-auto"><h3 className="font-bold text-lg">{view.name} Subscribers ({count(view)})</h3><ul className="divide-y my-4">{subscribers.filter(s => s.planId === view.id).map(s => <li key={s.id} className="py-3 text-sm"><strong>{s.fullName}</strong><p>{s.email} · {s.subscriptionStatus}</p></li>)}</ul>{!count(view) && <p className="my-4 text-sm text-slate-500">No subscribed farmers.</p>}<button onClick={() => setView(null)} className="px-4 py-2 border rounded-lg">Close</button></section></AdminDialog>}
  </div>;
 }

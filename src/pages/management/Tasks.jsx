@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState } from 'react';
 import { CheckSquare, Plus, Trash2, Clock, CheckCircle2, AlertCircle } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
@@ -14,32 +15,32 @@ export default function Tasks() {
 
   const [form, setForm] = useState({
     title: '',
-    assignedTo: workers[0]?.name || 'Suleiman Ibrahim',
+    assignedTo: workers[0]?.name || '',
     dueDate: new Date().toISOString().split('T')[0],
     priority: 'High',
     status: 'Pending',
     notes: ''
   });
 
-  const handleCreate = (e) => {
+  const [handleCreate, handleCreateSaving] = useSaveAction(async (e) => {
     e.preventDefault();
-    taskService.addTask(form);
+    await taskService.addTask(form);
     refreshAllData();
     setIsAddOpen(false);
-  };
+  });
 
-  const handleMoveStatus = (id, newStatus) => {
-    taskService.updateTaskStatus(id, newStatus);
+  const [handleMoveStatus, handleMoveStatusSaving] = useSaveAction(async (id, newStatus) => {
+    await taskService.updateTaskStatus(id, newStatus);
     refreshAllData();
-  };
+  });
 
-  const handleDelete = () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (deletingId) {
-      taskService.deleteTask(deletingId);
+      await taskService.deleteTask(deletingId);
       refreshAllData();
       setDeletingId(null);
     }
-  };
+  });
 
   const columns = ['Pending', 'In Progress', 'Completed'];
 
@@ -95,20 +96,20 @@ export default function Tasks() {
 
                       <div className="flex items-center gap-1">
                         {colStatus !== 'Pending' && (
-                          <button
+                          <button disabled={handleMoveStatusSaving}
                             onClick={() => handleMoveStatus(task.id, colStatus === 'Completed' ? 'In Progress' : 'Pending')}
                             className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 rounded text-slate-600"
-                          >
+                          >{handleMoveStatusSaving ? 'Saving...' : <>
                             ← Prev
-                          </button>
+                          </>}</button>
                         )}
                         {colStatus !== 'Completed' && (
-                          <button
+                          <button disabled={handleMoveStatusSaving}
                             onClick={() => handleMoveStatus(task.id, colStatus === 'Pending' ? 'In Progress' : 'Completed')}
                             className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 hover:bg-emerald-200 rounded text-emerald-800"
-                          >
+                          >{handleMoveStatusSaving ? 'Saving...' : <>
                             Next →
-                          </button>
+                          </>}</button>
                         )}
                       </div>
                     </div>
@@ -160,9 +161,9 @@ export default function Tasks() {
               </select>
             </div>
           </div>
-          <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
+          <button disabled={handleCreateSaving} type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">{handleCreateSaving ? 'Saving...' : <>
             Save Task
-          </button>
+          </>}</button>
         </form>
       </Modal>
 

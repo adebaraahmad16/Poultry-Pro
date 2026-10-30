@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useLayoutEffect, useRef } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import MobileSidebar from './MobileSidebar';
@@ -8,6 +8,9 @@ import PoultrySelector from './PoultrySelector';
 import { useRawFarm } from '../../context/FarmContext';
 
 export default function MainLayout() {
+  const main = useRef(null);
+  const { pathname } = useLocation();
+  useLayoutEffect(() => { if (main.current) main.current.scrollTop = 0; }, [pathname]);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const {activeTypeId,selectedFarmId,dataLoading,dataError,refreshAllData}=useRawFarm();
 
@@ -25,9 +28,10 @@ export default function MainLayout() {
         <PoultrySelector compact />
         <TrialBanner />
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main ref={main} className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="min-w-0 max-w-7xl mx-auto">
-            {dataError?<div role="alert" className="rounded-xl bg-red-50 p-5 text-red-800">{dataError}<button className="ml-3 underline" onClick={refreshAllData}>Retry</button></div>:dataLoading?<p role="status" className="p-6 text-sm text-slate-500">Loading selected farm records…</p>:<Outlet key={`${selectedFarmId}:${activeTypeId}`} />}
+            {dataError && <div role="alert" className="rounded-xl bg-red-50 p-5 text-red-800">{dataError}<button className="ml-3 underline" onClick={refreshAllData}>Retry</button></div>}
+            {dataLoading?<p role="status" className="p-6 text-sm text-slate-500">Loading selected farm records…</p>:<Outlet key={`${selectedFarmId}:${activeTypeId}`} />}
           </div>
         </main>
       </div>

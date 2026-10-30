@@ -93,7 +93,7 @@ export default function PoultryTypes() {
               <div className="flex items-center justify-between pt-2 flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => toggleCategoryStatus(cat.id)}
+                  onClick={async () => await toggleCategoryStatus(cat.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                     cat.status === 'Active'
                       ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'

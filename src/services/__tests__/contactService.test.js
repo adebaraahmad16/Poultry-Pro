@@ -38,7 +38,7 @@ globalThis.__contactDB = {
 };
 let events = 0;
 globalThis.window = {dispatchEvent: () => events++};
-const source = (await readFile(new URL('../contactService.js',import.meta.url),'utf8')).replace("import { supabase } from '../lib/supabaseClient';", 'const supabase = globalThis.__contactDB;');
+const source = (await readFile(new URL('../contactService.js',import.meta.url),'utf8')).replace("import { supabase } from '../lib/supabaseClient';", 'const supabase = globalThis.__contactDB;').replace("import { requireSupabaseAdmin } from './adminAccess';", "const requireSupabaseAdmin = async () => ({userId:'test-admin'});");
 const {getContactStats,updateContact,submitContact} = await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 globalThis.__contactDB.functions = { invoke: async (name, options) => {
   assert.equal(name, 'submit-contact');

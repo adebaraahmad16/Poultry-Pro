@@ -28,6 +28,8 @@ Run `supabase/tests/contact_messages.sql` through a staging SQL connection to ve
 
 ## Workspace verification (29 October 2026)
 
+Update on 30 October: the read-only schema probe now finds `contact_messages`; anonymous reads are denied (`401 / 42501`). The earlier missing-table result below is historical. Deployed submission delivery and authenticated RLS checks remain unverified. Admin fixture browser checks now cover contact layouts, status independence, and notification links; see `admin-responsiveness.md`.
+
 - Production build passed (`npm.cmd run build`).
 - Contact service and validation tests passed, including bounded request bodies, Unicode messages, failed submissions, rejected invalid updates, and the six read/resolution combinations.
 - A read-only request to the configured Supabase project returned `404 / PGRST205` for `contact_messages`: the migration is not deployed there. The existing notifications endpoint is present. No remote records were written or changed.

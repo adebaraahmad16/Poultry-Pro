@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState } from 'react';
 import { Users, Plus, Trash2, Phone, Mail, MapPin } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
@@ -23,20 +24,20 @@ export default function Customers() {
     notes: ''
   });
 
-  const handleCreate = (e) => {
+  const [handleCreate, handleCreateSaving] = useSaveAction(async (e) => {
     e.preventDefault();
-    customerService.createCustomer(form);
+    await customerService.createCustomer(form);
     refreshAllData();
     setIsAddOpen(false);
-  };
+  });
 
-  const handleDelete = () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (deletingId) {
-      customerService.deleteCustomer(deletingId);
+      await customerService.deleteCustomer(deletingId);
       refreshAllData();
       setDeletingId(null);
     }
-  };
+  });
 
   const columns = [
     { header: 'Customer Name', accessor: 'name' },
@@ -135,9 +136,9 @@ export default function Customers() {
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
             />
           </div>
-          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl">
+          <button disabled={handleCreateSaving} type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl">{handleCreateSaving ? 'Saving...' : <>
             Save Customer Profile
-          </button>
+          </>}</button>
         </form>
       </Modal>
 

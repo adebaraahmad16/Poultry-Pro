@@ -1,23 +1,29 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js';
-import { getItem, setItem, KEYS } from './storageService.js';
+import { getItem, KEYS } from './storageService.js';
 
 const NOTIFS_KEY = KEYS.NOTIFICATIONS || 'poultrypro_notifications';
+// Reading remote alerts must not emit a farm mutation: FarmContext would reload
+// alerts again and continuously queue another complete farm refresh.
+const cacheNotifications = notifications => {
+  try { localStorage.setItem(NOTIFS_KEY, JSON.stringify(notifications)); }
+  catch { /* A blocked browser cache must not prevent displaying server data. */ }
+};
 
 /**
  * Normalizes notification object structure
  */
 function normalizeNotification(raw) {
-  const isRead = raw.is_read !== undefined ? Boolean(raw.is_read) : Boolean(raw.read);
+  const isRead = raw.is_read !== undefined ? Boolean(raw.is_read) : Boolean(raw.isRead ?? raw.read);
   return {
     id: String(raw.id),
-    userId: raw.user_id || raw.recipient_user_id || '',
-    farmId: raw.farm_id || null,
+    userId: raw.user_id || raw.userId || raw.recipient_user_id || '',
+    farmId: raw.farm_id || raw.farmId || null,
     title: raw.title || 'Notification',
     message: raw.message || '',
     type: (raw.type || 'info').toLowerCase(), // 'success' | 'warning' | 'error' | 'info'
-    category: raw.category || 'farm', // 'farm' | 'inventory' | 'health' | 'subscription' | 'announcement'
-    priority: raw.priority || 'normal', // 'low' | 'normal' | 'high' | 'urgent'
-    actionUrl: raw.action_url || raw.actionUrl || '',
+    category: raw.category === 'admin_broadcast' ? 'announcement' : raw.category || 'farm',
+    priority: raw.priority || (raw.type === 'error' ? 'urgent' : raw.type === 'warning' ? 'high' : 'normal'),
+    actionUrl: raw.action_url || raw.actionUrl || (['free_trial','subscription'].includes(raw.category) ? '/settings/subscription' : String(raw.id).startsWith('feed-stock-') ? '/production/feed' : String(raw.id).startsWith('mortality-spike-') ? '/health/mortality' : ''),
     isRead,
     read: isRead, // backwards compatibility
     createdAt: raw.created_at || raw.createdAt || new Date().toISOString(),
@@ -30,6 +36,7 @@ function normalizeNotification(raw) {
  */
 export async function fetchNotifications(userId, farmId) {
   let localNotifs = getItem(NOTIFS_KEY, []).map(normalizeNotification);
+  if (isSupabaseConfigured()) localNotifs = localNotifs.filter(n => n.userId === userId && Boolean(userId));
 
   if (isSupabaseConfigured() && supabase && userId) {
     try {
@@ -45,13 +52,10 @@ export async function fetchNotifications(userId, farmId) {
         // Merge remote with local deduplicating by ID
         const mergedMap = new Map();
         remote.forEach(n => mergedMap.set(n.id, n));
-        localNotifs.forEach(n => {
-          if (!mergedMap.has(n.id)) mergedMap.set(n.id, n);
-        });
         const merged = Array.from(mergedMap.values()).sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
-        setItem(NOTIFS_KEY, merged);
+        cacheNotifications(merged);
         return merged;
       }
     } catch (err) {
@@ -68,14 +72,14 @@ export async function fetchNotifications(userId, farmId) {
 export async function markNotificationAsRead(id, userId) {
   const notifs = getItem(NOTIFS_KEY, []).map(normalizeNotification);
   const updated = notifs.map(n => n.id === id ? { ...n, isRead: true, read: true, readAt: new Date().toISOString() } : n);
-  setItem(NOTIFS_KEY, updated);
+  cacheNotifications(updated);
   window.dispatchEvent(new CustomEvent('notifications-updated', { detail: updated }));
 
   if (isSupabaseConfigured() && supabase && userId) {
     try {
       await supabase
         .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
+        .update({ is_read: true })
         .eq('id', id);
     } catch (err) {
       console.warn('Supabase mark read error:', err.message);
@@ -91,14 +95,14 @@ export async function markAllNotificationsAsRead(userId) {
   const notifs = getItem(NOTIFS_KEY, []).map(normalizeNotification);
   const now = new Date().toISOString();
   const updated = notifs.map(n => ({ ...n, isRead: true, read: true, readAt: now }));
-  setItem(NOTIFS_KEY, updated);
+  cacheNotifications(updated);
   window.dispatchEvent(new CustomEvent('notifications-updated', { detail: updated }));
 
   if (isSupabaseConfigured() && supabase && userId) {
     try {
       await supabase
         .from('notifications')
-        .update({ is_read: true, read_at: now })
+        .update({ is_read: true })
         .eq('user_id', userId);
     } catch (err) {
       console.warn('Supabase mark all read error:', err.message);
@@ -113,7 +117,7 @@ export async function markAllNotificationsAsRead(userId) {
 export async function deleteNotification(id, userId) {
   const notifs = getItem(NOTIFS_KEY, []).map(normalizeNotification);
   const updated = notifs.filter(n => n.id !== id);
-  setItem(NOTIFS_KEY, updated);
+  cacheNotifications(updated);
   window.dispatchEvent(new CustomEvent('notifications-updated', { detail: updated }));
 
   if (isSupabaseConfigured() && supabase && userId) {
@@ -132,7 +136,7 @@ export async function deleteNotification(id, userId) {
 export async function clearReadNotifications(userId) {
   const notifs = getItem(NOTIFS_KEY, []).map(normalizeNotification);
   const updated = notifs.filter(n => !n.isRead);
-  setItem(NOTIFS_KEY, updated);
+  cacheNotifications(updated);
   window.dispatchEvent(new CustomEvent('notifications-updated', { detail: updated }));
 
   if (isSupabaseConfigured() && supabase && userId) {
@@ -157,7 +161,7 @@ export async function createNotification(notif, userId) {
 
   const notifs = getItem(NOTIFS_KEY, []).map(normalizeNotification);
   const updated = [normalized, ...notifs];
-  setItem(NOTIFS_KEY, updated);
+  cacheNotifications(updated);
   window.dispatchEvent(new CustomEvent('notifications-updated', { detail: updated }));
 
   if (isSupabaseConfigured() && supabase && userId) {
@@ -170,8 +174,6 @@ export async function createNotification(notif, userId) {
         message: normalized.message,
         type: normalized.type,
         category: normalized.category,
-        priority: normalized.priority,
-        action_url: normalized.actionUrl,
         is_read: false,
       });
     } catch (err) {
@@ -256,7 +258,8 @@ export async function evaluateFarmSmartAlerts({
   }
 
   // 3. Subscription & Trial Alerts
-  if (preferences.subscriptionAlerts !== false && subscription) {
+  // Trial lifecycle alerts are created by the scheduled backend, never by login/refresh.
+  if (preferences.subscriptionAlerts !== false && subscription && !(isSupabaseConfigured() && (subscription.status === 'trial' || subscription.trialUsed))) {
     const trialEnd = subscription.trialEndsAt ? new Date(subscription.trialEndsAt) : null;
     const renewalDate = subscription.renewalDate ? new Date(subscription.renewalDate) : null;
     const targetDate = trialEnd || renewalDate;

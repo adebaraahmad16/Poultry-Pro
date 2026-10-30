@@ -1,3 +1,4 @@
+import { createTask, updateTaskStatus, deleteOperation } from './supabase/operationsService';
 /**
  * managementService — workers, tasks, notifications, farm & user profile.
  * Delegates mutations to Supabase with localStorage fallback.
@@ -23,36 +24,10 @@ export const workerService = {
 };
 
 export const taskService = {
-  getTasks: () => getItem(KEYS.TASKS, []),
-
-  addTask: (task) => {
-    const tasks = getItem(KEYS.TASKS, []);
-    const newTask = {
-      ...task,
-      id: `task-${Date.now()}`,
-      status: task.status || 'Pending',
-      dueDate: task.dueDate || new Date().toISOString().split('T')[0]
-    };
-    const updated = [newTask, ...tasks];
-    setItem(KEYS.TASKS, updated);
-    window.dispatchEvent(new CustomEvent('storage-update', { detail: { key: KEYS.TASKS } }));
-    return newTask;
-  },
-
-  updateTaskStatus: (id, status) => {
-    const tasks = getItem(KEYS.TASKS, []);
-    const updated = tasks.map((t) => (t.id === id ? { ...t, status } : t));
-    setItem(KEYS.TASKS, updated);
-    window.dispatchEvent(new CustomEvent('storage-update', { detail: { key: KEYS.TASKS } }));
-  },
-
-  deleteTask: (id) => {
-    const tasks = getItem(KEYS.TASKS, []);
-    const updated = tasks.filter((t) => t.id !== id);
-    setItem(KEYS.TASKS, updated);
-    window.dispatchEvent(new CustomEvent('storage-update', { detail: { key: KEYS.TASKS } }));
-    return true;
-  }
+  getTasks: () => getItem(KEYS.TASKS, []), // Display cache only.
+  addTask: createTask,
+  updateTaskStatus,
+  deleteTask: id => deleteOperation('tasks', id),
 };
 
 export const notificationService = {
@@ -101,40 +76,19 @@ export const farmProfileService = {
 
   getUser: () => getItem(KEYS.USER, {}),
 
-  updateFarm: async (data) => {
+  updateFarm: async data => {
     const farmId = getSelectedFarmId();
-    if (isSupabaseConfigured() && farmId) {
-      try {
-        await updateFarm(farmId, data);
-      } catch (err) {
-        console.warn('Supabase updateFarm error, saving locally:', err);
-      }
-    }
-    const current = getItem(KEYS.FARM, {});
-    const updated = { ...current, ...data };
-    setItem(KEYS.FARM, updated);
+    if (!isSupabaseConfigured() || !farmId) throw new Error('Select your farm and reconnect to Supabase before saving.');
+    const saved = await updateFarm(farmId, data);
+    setItem(KEYS.FARM, saved);
     window.dispatchEvent(new CustomEvent('storage-update', { detail: { key: KEYS.FARM } }));
-    return updated;
+    return saved;
   },
-
-  updateUser: async (data) => {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const patch = {};
-          if (data.fullName !== undefined) patch.full_name = data.fullName;
-          if (data.phone !== undefined) patch.phone = data.phone;
-          await supabase.from('profiles').update(patch).eq('id', user.id);
-        }
-      } catch (err) {
-        console.warn('Supabase updateUser error, saving locally:', err);
-      }
-    }
-    const current = getItem(KEYS.USER, {});
-    const updated = { ...current, ...data };
-    setItem(KEYS.USER, updated);
-    window.dispatchEvent(new CustomEvent('storage-update', { detail: { key: KEYS.USER } }));
-    return updated;
+  updateUser: async data => {
+    const { saveProfile } = await import('./profileService.js');
+    const saved = await saveProfile(data);
+    setItem(KEYS.USER, saved);
+    window.dispatchEvent(new CustomEvent('profile-updated', { detail: saved }));
+    return saved;
   }
 };

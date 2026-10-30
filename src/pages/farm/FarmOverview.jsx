@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState } from 'react';
 import { Building2, MapPin, Users, Layers, Bird, Calendar, Edit3, ShieldCheck } from '../../components/common/Icons';
 import { useFarm } from '../../context/FarmContext';
@@ -17,7 +18,7 @@ export default function FarmOverview() {
     currency: farm.currency || '₦'
   });
 
-  const handleUpdate = async (e) => {
+  const [handleUpdate, handleUpdateSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     try { 
       await farmProfileService.updateFarm(formData); 
@@ -28,7 +29,7 @@ export default function FarmOverview() {
       toast.error(e.message || 'Failed to update farm profile.', { title: 'Update Failed' }); 
       return; 
     }
-  };
+  });
 
   return (
     <div className="space-y-6 pb-12">
@@ -185,9 +186,9 @@ export default function FarmOverview() {
               />
             </div>
           </div>
-          <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">
+          <button disabled={handleUpdateSaving} type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl">{handleUpdateSaving ? 'Saving...' : <>
             Save Changes
-          </button>
+          </>}</button>
         </form>
       </Modal>
     </div>

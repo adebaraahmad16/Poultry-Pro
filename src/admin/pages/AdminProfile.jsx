@@ -1,3 +1,6 @@
+import { useProfile } from '../../context/ProfileContext';
+import { changeAccountPassword } from '../../services/profileService';
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useRef } from 'react';
 import {
   User, ShieldCheck, Mail, Phone, Lock, Save, CheckCircle2,
@@ -9,12 +12,13 @@ import StatusBadge from '../components/StatusBadge';
 
 export default function AdminProfile() {
   const { currentAdmin, updateAdminProfile } = useAdmin();
+  const { uploadAvatar, saving: avatarSaving, userId } = useProfile();
   const fileInputRef = useRef(null);
 
-  const [name, setName] = useState(currentAdmin?.name || 'Adebara Ahmad');
+  const [name, setName] = useState(currentAdmin?.name || 'Administrator');
   const [email, setEmail] = useState(currentAdmin?.email || 'admin@poultrypro.ng');
   const [phone, setPhone] = useState(currentAdmin?.phone || '+234 803 123 4567');
-  const [avatar, setAvatar] = useState(currentAdmin?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80');
+  const [avatar, setAvatar] = useState(currentAdmin?.avatar || '');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -25,31 +29,14 @@ export default function AdminProfile() {
   const [photoNotice, setPhotoNotice] = useState('');
 
   // Handle local image file upload (PNG, JPG, WEBP, etc.)
-  const handleImageFileChange = (e) => {
-    const file = e.target.files?.[0];
+  const [handleImageFileChange, imageSaving] = useSaveAction(async event => {
+    const file = event.target.files?.[0];
     if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setPwError('Please select a valid image file (JPG, PNG, WEBP).');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setPwError('Image size must be smaller than 5MB.');
-      return;
-    }
-
-    setPwError('');
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result;
-      if (dataUrl) {
-        setAvatar(dataUrl);
-        setPhotoNotice('New profile photo loaded! Click "Save Profile & Security Settings" below to apply.');
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+    try {
+      const saved = await uploadAvatar(file);
+      setAvatar(saved.avatarDisplayUrl || saved.avatar_url); setPhotoNotice('Profile picture saved successfully.');
+    } finally { event.target.value = ''; }
+  });
 
   const handleUrlPrompt = () => {
     const url = window.prompt('Enter new Avatar Image URL:', avatar);
@@ -59,7 +46,7 @@ export default function AdminProfile() {
     }
   };
 
-  const handleSave = (e) => {
+  const [handleSave, handleSaveSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     setPwError('');
 
@@ -73,13 +60,17 @@ export default function AdminProfile() {
       return;
     }
 
-    // Persist to AdminContext & localStorage
-    updateAdminProfile({
+    // Persist the verified profile before publishing the new header state.
+    await updateAdminProfile({
       name,
       email,
       phone,
       avatar
     });
+    if (newPassword) {
+      try { await changeAccountPassword(currentPassword, newPassword, userId); }
+      catch (error) { throw new Error(`Profile saved, but the password was not updated: ${error.message}`); }
+    }
 
     setSuccess(true);
     setPhotoNotice('');
@@ -87,7 +78,7 @@ export default function AdminProfile() {
     setNewPassword('');
     setConfirmPassword('');
     setTimeout(() => setSuccess(false), 3500);
-  };
+  });
 
   const adminPermissions = [
     'Super Admin Platform Authority',
@@ -145,7 +136,7 @@ export default function AdminProfile() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp" disabled={avatarSaving || imageSaving}
               onChange={handleImageFileChange}
               className="hidden"
             />
@@ -235,7 +226,7 @@ export default function AdminProfile() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  readOnly aria-label="Verified administrator email"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-emerald-600"
                 />
               </div>
@@ -363,13 +354,13 @@ export default function AdminProfile() {
 
         {/* Submit Button */}
         <div className="flex justify-end pt-2">
-          <button
+          <button disabled={handleSaveSaving}
             type="submit"
             className="px-6 py-3 bg-[#15803D] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer active:scale-95"
-          >
+          >{handleSaveSaving ? 'Saving...' : <>
             <Save className="w-4 h-4" />
             <span>Save Profile & Security Settings</span>
-          </button>
+          </>}</button>
         </div>
       </form>
     </div>

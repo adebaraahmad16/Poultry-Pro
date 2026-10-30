@@ -94,18 +94,24 @@ export async function savePlan(id, changes) {
     if (changes.description !== undefined) patch.description = changes.description;
     if (changes.monthlyPrice !== undefined) patch.monthly_price = changes.monthlyPrice;
     if (changes.annualPrice !== undefined) patch.annual_price = changes.annualPrice;
-    if (changes.flockLimit !== undefined) patch.max_flocks = changes.flockLimit;
-    if (changes.birdLimit !== undefined) patch.max_birds = changes.birdLimit;
-    if (changes.poultryTypeLimit !== undefined) patch.max_poultry_types = changes.poultryTypeLimit;
-    if (changes.staffLimit !== undefined) patch.max_users = changes.staffLimit;
-    if (changes.locationLimit !== undefined) patch.max_farms = changes.locationLimit;
+    if (changes.maxFlocks !== undefined) patch.max_flocks = changes.maxFlocks;
+    if (changes.maxBirds !== undefined) patch.max_birds = changes.maxBirds;
+    if (changes.maxPoultryTypes !== undefined) patch.max_poultry_types = changes.maxPoultryTypes;
+    if (changes.maxUsers !== undefined) patch.max_users = changes.maxUsers;
+    if (changes.maxFarms !== undefined) patch.max_farms = changes.maxFarms;
     if (changes.capabilities !== undefined) patch.capabilities = changes.capabilities;
     if (changes.status !== undefined) patch.status = changes.status;
-    if (changes.popular !== undefined) patch.is_most_popular = changes.popular;
+    if (changes.isMostPopular !== undefined) patch.is_most_popular = changes.isMostPopular;
 
-    const { error } = await supabase.from('subscription_plans').update(patch).eq('id', id);
+    const { data, error } = await supabase.from('subscription_plans').update(patch).eq('id', id).select().single();
     if (error) throw new Error(error.message);
-    return refreshCatalog();
+    if (!data?.id) throw new Error('The database did not confirm the plan update.');
+    const saved = { id: data.id, name: data.name, description: data.description, monthlyPrice: Number(data.monthly_price), annualPrice: Number(data.annual_price), maxFlocks: data.max_flocks, maxBirds: data.max_birds, maxPoultryTypes: data.max_poultry_types, maxUsers: data.max_users, maxFarms: data.max_farms, capabilities: data.capabilities, status: data.status, isMostPopular: data.is_most_popular };
+    const next = catalog.map(plan => plan.id === id ? saved : plan);
+    catalog = next.map(plan => presentPlan(plan, next));
+    applyPlanCatalog(catalog);
+    window.dispatchEvent(new CustomEvent('admin_plans_updated', { detail: catalog }));
+    return catalog;
   }
 
   await request(`/subscription/plans/${id}`, { method: 'PUT', headers: authHeaders(true), body: JSON.stringify(changes) });

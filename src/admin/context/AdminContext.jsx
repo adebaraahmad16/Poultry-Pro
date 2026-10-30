@@ -1,6 +1,11 @@
+import { useAuth } from '../../context/AuthContext';
+import { requireSupabaseAdmin } from '../../services/adminAccess';
+import { getProfile } from '../../services/supabase/authService';
+import { loadAdminConfiguration, saveAdminConfiguration, saveFarmerStatus, saveSubscriber, publishNotification, loadBroadcasts, verifyGatewayPayment } from '../services/adminPersistence';
+import { SUPPORT_CONTACT } from '../../config/supportContact';
 import { request, refreshCatalog } from '../../services/planCatalog';
 import { isBackendConfigured } from '../../services/apiConfig';
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { adminService, initializeAdminStorage } from '../services/adminService';
 import { initialAdminUsers } from '../services/adminMockData';
 import { subscriptionService } from '../../services/subscriptionService';
@@ -56,6 +61,12 @@ const getFarmerSubscriptionStatus = (farmer) => {
 const AdminContext = createContext();
 
 export const AdminProvider = ({ children }) => {
+  const sharedAuth = useAuth();
+  const authRef = useRef(sharedAuth); authRef.current = sharedAuth;
+  const initialized = useRef(false);
+  const adminRefresh = useRef(null);
+  const queuedAdminRefresh = useRef(false);
+  const [supabaseAdminId, setSupabaseAdminId] = useState(null);
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -76,8 +87,15 @@ export const AdminProvider = ({ children }) => {
   const [cmsContent, setCmsContent] = useState({});
   const [subscriptionSettings, setSubscriptionSettings] = useState({});
 
-  const refreshAllAdminData = useCallback(async () => {
-    setLoading(true);
+  const refreshAllAdminData = useCallback(() => {
+    if (isSupabaseConfigured() && authRef.current.loading) return Promise.resolve();
+    const identity = authRef.current.user?.id || '';
+    if (adminRefresh.current) {
+      if (adminRefresh.current.identity !== identity) queuedAdminRefresh.current = true;
+      return adminRefresh.current.promise;
+    }
+    const pending = (async () => {
+    if (!initialized.current) setLoading(true);
     setAuthError('');
     setDataError('');
     try {
@@ -100,26 +118,39 @@ export const AdminProvider = ({ children }) => {
       if (isSupabaseConfigured() && supabase) {
         try {
           // Check if the current user is an admin via Supabase auth
-          const { data: { session } } = await supabase.auth.getSession();
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) throw sessionError;
           if (session?.user) {
+            const access = await requireSupabaseAdmin();
+            if (access.userId !== session.user.id) throw new Error('The administrator session changed. Please retry.');
             // Verify admin role from profiles table
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('role, full_name, email')
-              .eq('id', session.user.id)
-              .single();
+            const profile = authRef.current.user?.id === session.user.id ? authRef.current.user : await getProfile(session.user.id);
 
-            if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+            if (['admin','super_admin','Super Admin'].includes(profile?.role)) {
               const superAdmin = initialAdminUsers[0];
               const adminObj = {
                 ...superAdmin,
-                email: profile.email || superAdmin.email,
-                name: profile.full_name || superAdmin.name,
+                id: session.user.id,
+                avatar: profile.avatarDisplayUrl || profile.avatar_url || '',
+                phone: profile.phone || '',
+                email: profile.email || session.user.email,
+                name: profile.full_name || 'Administrator',
                 lastLogin: new Date().toLocaleString(),
               };
               adminService.setCurrentAdmin(adminObj);
               setCurrentAdmin(adminObj);
               setIsAdminLoggedIn(true);
+              setSupabaseAdminId(access.userId);
+
+              try {
+                const configuration = await loadAdminConfiguration();
+                setPlatformSettings({ ...configuration.settings, supportEscalationEmail: SUPPORT_CONTACT.email });
+                setSubscriptionSettings(configuration.subscriptionSettings);
+                setCmsContent({ ...configuration.cms, contact: { ...configuration.cms.contact, email: SUPPORT_CONTACT.email, phone: SUPPORT_CONTACT.phone, whatsapp: SUPPORT_CONTACT.internationalPhone } });
+                setCategories(configuration.categories);
+              } catch (error) { setDataError(error.message); }
+              try { setNotifications(await loadBroadcasts()); }
+              catch (error) { setDataError(error.message); }
 
               // Load farmers, farms, and subscriptions reliably without foreign key joins
               const [
@@ -129,16 +160,34 @@ export const AdminProvider = ({ children }) => {
               ] = await Promise.all([
                 supabase
                   .from('profiles')
-                  .select('id, full_name, email, phone, role, created_at, farm_id')
+                  .select('*')
                   .eq('role', 'farmer')
                   .order('created_at', { ascending: false }),
                 supabase
                   .from('farms')
-                  .select('id, owner_id, name, location, poultry_types'),
+                  .select('*'),
                 supabase
                   .from('farm_subscriptions')
                   .select('*')
               ]);
+
+              if (allFarms) {
+                const { data: flockRows, error: flockError } = await supabase.from('flocks').select('id,farm_id,type,current_birds,status');
+                if (flockError) setDataError(flockError.message);
+                setFarms(allFarms.map(farm => {
+                  const flocks = (flockRows || []).filter(flock => flock.farm_id === farm.id);
+                  const groups = new Map();
+                  for (const flock of flocks) { const item = groups.get(flock.type) || { type: flock.type, totalFlocks: 0, totalBirds: 0 }; item.totalFlocks++; item.totalBirds += Number(flock.current_birds || 0); groups.set(flock.type, item); }
+                  return { ...farm, farmerName: farmersProfiles?.find(f => f.id === farm.owner_id)?.full_name || '', poultryTypes: farm.poultry_types || [], totalFlocks: flocks.length, totalBirds: flocks.reduce((sum,f) => sum + Number(f.current_birds || 0), 0), breakdown: [...groups.values()] };
+                }));
+                const orders = await supabase.from('subscription_orders').select('*').order('created_at', { ascending: false });
+                if (orders.error) setDataError(orders.error.message);
+                else setPayments((orders.data || []).map(order => {
+                  const farm = allFarms.find(f => f.id === order.farm_id);
+                  const owner = farmersProfiles?.find(f => f.id === farm?.owner_id);
+                  return { ...order, farmerId: owner?.id, farmerName: owner?.full_name || '', plan: order.plan_id, amount: Number(order.amount), billingCycle: order.billing_cycle, date: order.created_at, paymentMethod: order.payment_method, gateway: 'Paystack', status: ['success','successful','paid'].includes(order.status?.toLowerCase()) ? 'Successful' : order.status === 'pending' ? 'Pending' : order.status };
+                }));
+              }
 
               if (!farmersError && Array.isArray(farmersProfiles)) {
                 const mapped = farmersProfiles.map(f => {
@@ -151,15 +200,19 @@ export const AdminProvider = ({ children }) => {
                     fullName: f.full_name,
                     email: f.email,
                     phone: f.phone,
-                    status: 'Active',
+                    status: f.account_status || 'Active',
                     dateJoined: f.created_at?.split('T')[0] || '',
                     farmId: f.farm_id || farm?.id,
                     farmName: farm?.name || 'My Farm',
                     location: farm?.location || '',
                     poultryTypes: farm?.poultry_types || [],
-                    planId,
-                    subscription: planId,
-                    subscriptionStatus: subStatus === 'trial' ? 'Trial' : subStatus === 'active' ? 'Active' : subStatus === 'expired' ? 'Expired' : 'Trial',
+                    planId: planId.toLowerCase(),
+                    subscription: ({ BASIC: 'Basic', PROFESSIONAL: 'Pro', ENTERPRISE: 'Enterprise' }[planId] || planId),
+                    subscriptionStartDate: sub?.created_at,
+                    subscriptionExpiry: sub?.renewal_date || sub?.trial_ends_at,
+                    trialEndsAt: sub?.trial_ends_at,
+                    convertedFromTrial: Boolean(sub?.trial_ends_at) && Number(sub?.agreed_price) > 0,
+                    subscriptionStatus: ({trial:'Trial',active:'Active',expired:'Expired',cancelled:'Cancelled',past_due:'Past Due',pending:'Pending Activation'}[subStatus] || subStatus),
                     billingCycle: sub?.billing_cycle || 'monthly',
                     subscriptionData: sub ? {
                       planId,
@@ -180,19 +233,20 @@ export const AdminProvider = ({ children }) => {
             }
           } else {
             // No session
-            const cachedAdmin = adminService.getCurrentAdmin();
-            if (cachedAdmin) {
-              setCurrentAdmin(cachedAdmin);
-              setIsAdminLoggedIn(true);
-            } else {
-              setCurrentAdmin(null);
-              setIsAdminLoggedIn(false);
-            }
+            // Cached UI identity is not a Supabase Auth session.
+            adminService.clearCurrentAdmin();
+            setSupabaseAdminId(null);
+            setCurrentAdmin(null);
+            setIsAdminLoggedIn(false);
             setFarmers([]);
           }
         } catch (supaErr) {
+          setSupabaseAdminId(null);
+          setIsAdminLoggedIn(false);
+          setCurrentAdmin(null);
+          setAuthError(supaErr.message || 'Unable to verify administrator access.');
           console.warn('Supabase admin data load error:', supaErr.message);
-          setDataError('Could not load farmer data from Supabase.');
+          setDataError(supaErr.message || 'Could not load administrator data from Supabase.');
           setFarmers([]);
         }
       } else if (!isBackendConfigured()) {
@@ -238,13 +292,21 @@ export const AdminProvider = ({ children }) => {
       setIsAdminLoggedIn(false);
       setAuthError(error.message || 'Unable to verify administrator access. Please retry.');
     } finally {
+      initialized.current = true;
       setLoading(false);
     }
+    })().finally(() => {
+      adminRefresh.current = null;
+      if (queuedAdminRefresh.current) { queuedAdminRefresh.current = false; queueMicrotask(refreshAllAdminData); }
+    });
+    adminRefresh.current = { identity, promise: pending };
+    return pending;
   }, []);
 
   useEffect(() => {
-    refreshAllAdminData();
+    if (!sharedAuth.loading) refreshAllAdminData();
     const expired = () => {
+      setSupabaseAdminId(null);
       setCurrentAdmin(null);
       setIsAdminLoggedIn(false);
       setAuthError('');
@@ -253,7 +315,7 @@ export const AdminProvider = ({ children }) => {
     };
     window.addEventListener('admin_session_expired',expired);
     return () => window.removeEventListener('admin_session_expired',expired);
-  }, [refreshAllAdminData]);
+  }, [refreshAllAdminData, sharedAuth.loading, sharedAuth.user?.id, sharedAuth.user?.role]);
 
   useEffect(() => {
     const changed = event => setSubscriptionPlans(event.detail);
@@ -269,22 +331,23 @@ export const AdminProvider = ({ children }) => {
       if (error) throw new Error(error.message);
 
       // Verify this user has admin role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, full_name, email')
-        .eq('id', data.user.id)
-        .single();
+      const profile = await getProfile(data.user.id);
 
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+      if (!profile || !['admin','super_admin','Super Admin'].includes(profile.role)) {
         await supabase.auth.signOut();
         throw new Error('Access denied. This account does not have admin privileges.');
       }
 
+      const access = await requireSupabaseAdmin();
+      setSupabaseAdminId(access.userId);
       const superAdmin = initialAdminUsers[0];
       const adminObj = {
         ...superAdmin,
+        id: data.user.id,
+        avatar: profile.avatarDisplayUrl || profile.avatar_url || '',
+        phone: profile.phone || '',
         email: email || superAdmin.email,
-        name: profile.full_name || superAdmin.name,
+        name: profile.full_name || 'Administrator',
         lastLogin: new Date().toLocaleString(),
       };
       adminService.setCurrentAdmin(adminObj);
@@ -313,22 +376,21 @@ export const AdminProvider = ({ children }) => {
     return true;
   };
 
-  const updateAdminProfile = (profileData) => {
-    const updated = {
-      ...(currentAdmin || initialAdminUsers[0]),
-      ...profileData,
-      role: 'Super Admin' // Ensure always Super Admin
-    };
-    adminService.setCurrentAdmin(updated);
-    setCurrentAdmin(updated);
-    adminService.updateAdminUser(updated);
-    setAdminStaff([updated]);
-    adminService.logAction('Updated Admin Profile', `${updated.name} updated profile details & avatar`);
-    setAuditLogs(adminService.getAuditLogs());
+  const updateAdminProfile = async profileData => {
+    const saved = await authRef.current.updateProfile({ full_name: profileData.name, phone: profileData.phone, avatar_url: profileData.avatar });
+    const updated = { ...currentAdmin, id: saved.id, name: saved.full_name, email: saved.email, phone: saved.phone, avatar: saved.avatarDisplayUrl || saved.avatar_url };
+    adminService.setCurrentAdmin(updated); setCurrentAdmin(updated);
     return updated;
   };
+  useEffect(() => {
+    const profile = sharedAuth.user;
+    if (profile && ['admin','super_admin','Super Admin'].includes(profile.role)) setCurrentAdmin(previous => previous ? { ...previous, id: profile.id, name: profile.full_name, email: profile.email, phone: profile.phone, avatar: profile.avatarDisplayUrl || profile.avatar_url } : previous);
+  }, [sharedAuth.user]);
 
   const logoutAdmin = () => {
+    setSupabaseAdminId(null);
+    initialized.current = false;
+    if (isSupabaseConfigured()) sharedAuth.logout().catch(error => setAuthError(error.message));
     setAuthError('');
     setDataError('');
     localStorage.removeItem('poultrypro_admin_token');
@@ -341,16 +403,14 @@ export const AdminProvider = ({ children }) => {
   };
 
   // Farmer & Farm Actions
-  const updateFarmerStatus = (id, newStatus) => {
-    const updated = adminService.updateFarmerStatus(id, newStatus);
-    setFarmers(updated);
-    setAuditLogs(adminService.getAuditLogs());
+  const updateFarmerStatus = async (id, newStatus) => {
+    await saveFarmerStatus(id, newStatus);
+    setFarmers(previous => previous.map(f => f.id === id ? { ...f, status: newStatus } : f));
   };
 
-  const toggleCategoryStatus = (id) => {
-    const updated = adminService.toggleCategoryStatus(id);
-    setCategories(updated);
-    setAuditLogs(adminService.getAuditLogs());
+  const toggleCategoryStatus = async id => {
+    const next = categories.map(category => category.id === id ? { ...category, status: category.status === 'Active' ? 'Disabled' : 'Active' } : category);
+    setCategories(await saveAdminConfiguration('categories', next));
   };
 
   const updateSubscriptionPlan = async (id, data) => {
@@ -359,64 +419,19 @@ export const AdminProvider = ({ children }) => {
     setAuditLogs(adminService.getAuditLogs());
   };
 
-  const verifyPayment = (id) => {
-    const updated = adminService.verifyPayment(id);
-    setPayments(updated);
-    setAuditLogs(adminService.getAuditLogs());
+  const verifyPayment = async id => {
+    const payment = payments.find(row => row.id === id);
+    if (!payment) throw new Error('Select a valid payment record.');
+    if (payment.status === 'Successful') return payment;
+    const saved = await verifyGatewayPayment(payment.reference);
+    setPayments(previous => previous.map(row => row.id === id ? { ...row, status: 'Successful' } : row));
+    await refreshAllAdminData();
+    return saved;
   };
-
-  const sendNotification = async (notifData) => {
-    const newNotif = adminService.sendNotification(notifData);
-    setNotifications(adminService.getNotifications());
-    setAuditLogs(adminService.getAuditLogs());
-
-    // Also persist broadcast announcement into Supabase notifications for target farmers
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        let targets = farmers || [];
-        if (notifData.targetAudience === 'Basic Plan Users') {
-          targets = targets.filter(f => f.planId === 'basic' || (!f.planId && ['Basic','Starter','Free'].includes(f.subscription)));
-        } else if (notifData.targetAudience === 'Pro Users') {
-          targets = targets.filter(f => f.planId === 'professional' || (!f.planId && ['Pro','Professional'].includes(f.subscription)));
-        } else if (notifData.targetAudience === 'Enterprise Users') {
-          targets = targets.filter(f => f.planId === 'enterprise' || (!f.planId && ['Enterprise'].includes(f.subscription)));
-        } else if (notifData.targetFarmerId) {
-          targets = targets.filter(f => f.id === notifData.targetFarmerId);
-        }
-
-        const priorityType = notifData.priority === 'Urgent Announcement' || notifData.priority === 'urgent'
-          ? 'error'
-          : notifData.priority === 'Important Notice' || notifData.priority === 'high'
-          ? 'warning'
-          : 'info';
-
-        const priorityLevel = notifData.priority === 'Urgent Announcement' || notifData.priority === 'urgent'
-          ? 'urgent'
-          : notifData.priority === 'Important Notice' || notifData.priority === 'high'
-          ? 'high'
-          : 'normal';
-
-        const rows = targets.map(f => ({
-          user_id: f.id,
-          farm_id: f.farmId || null,
-          title: notifData.title,
-          message: notifData.message,
-          type: priorityType,
-          category: 'announcement',
-          priority: priorityLevel,
-          action_url: '/notifications',
-          is_read: false
-        }));
-
-        if (rows.length > 0) {
-          await supabase.from('notifications').insert(rows);
-        }
-      } catch (err) {
-        console.warn('Supabase admin dispatch broadcast warning:', err.message);
-      }
-    }
-
-    return newNotif;
+  const sendNotification = async values => {
+    const published = await publishNotification(values, farmers);
+    setNotifications(previous => [published, ...previous.filter(row => row.id !== published.id)]);
+    return published;
   };
 
   const replyToTicket = (id, replyText) => {
@@ -448,59 +463,28 @@ export const AdminProvider = ({ children }) => {
     setAuditLogs(adminService.getAuditLogs());
   };
 
-  const updateSettings = (newSettings) => {
-    const updated = adminService.updateSettings(newSettings);
-    setPlatformSettings(updated);
-    setAuditLogs(adminService.getAuditLogs());
+  const updateSettings = async values => {
+    const saved = await saveAdminConfiguration('platform', { ...values, supportEscalationEmail: SUPPORT_CONTACT.email });
+    setPlatformSettings(saved); return saved;
   };
-
-  const updateCmsContent = (newCms) => {
-    const updated = adminService.updateCmsContent(newCms);
-    setCmsContent(updated);
-    setAuditLogs(adminService.getAuditLogs());
+  const updateCmsContent = async values => {
+    const saved = await saveAdminConfiguration('website', { ...values, contact: { ...values.contact, email: SUPPORT_CONTACT.email, phone: SUPPORT_CONTACT.phone, whatsapp: SUPPORT_CONTACT.internationalPhone } });
+    setCmsContent(saved); return saved;
   };
-
-  const updateSubscriptionSettings = (newSettings) => {
-    const updated = adminService.updateSubscriptionSettings(newSettings);
-    setSubscriptionSettings(updated);
-    setAuditLogs(adminService.getAuditLogs());
+  const updateSubscriptionSettings = async values => {
+    const saved = await saveAdminConfiguration('subscriptions', values); setSubscriptionSettings(saved); return saved;
   };
-
   const updateFarmerSubscription = async (farmerId, action, data = {}) => {
     if (isSupabaseConfigured() && supabase) {
-      try {
-        if (action === 'extendTrial') {
-          const days = data.days || 14;
-          const newTrialEnd = new Date(Date.now() + days * 86400000).toISOString();
-          await supabase
-            .from('farm_subscriptions')
-            .update({ trial_ends_at: newTrialEnd, status: 'trial' })
-            .eq('user_id', farmerId);
-        } else if (action === 'changePlan') {
-          await supabase
-            .from('farm_subscriptions')
-            .update({ plan_id: (data.planId || 'BASIC').toLowerCase(), status: 'active' })
-            .eq('user_id', farmerId);
-        } else if (action === 'cancel') {
-          await supabase
-            .from('farm_subscriptions')
-            .update({ status: 'cancelled' })
-            .eq('user_id', farmerId);
-        }
-        await refreshAllAdminData();
-        return;
-      } catch (err) {
-        console.warn('Supabase updateFarmerSubscription error:', err);
-      }
+      const farmer = farmers.find(f => f.id === farmerId);
+      if (!farmer) throw new Error('Select a valid farmer.');
+      await saveSubscriber(farmer, action, data, subscriptionPlans);
+      await refreshAllAdminData();
+      return;
     }
-
     const headers = { Authorization: `Bearer ${localStorage.getItem('poultrypro_admin_token') || ''}` };
-    try {
-      await request(`/subscription/subscribers/${farmerId}`, { method: 'PATCH', headers, body: JSON.stringify({ action, data }) });
-      setFarmers(await request('/subscription/subscribers', { headers }));
-    } catch (err) {
-      console.warn('Backend updateFarmerSubscription error:', err);
-    }
+    await request(`/subscription/subscribers/${farmerId}`, { method: 'PATCH', headers, body: JSON.stringify({ action, data }) });
+    setFarmers(await request('/subscription/subscribers', { headers }));
   };
 
   // ─── Real Aggregated Platform Statistics ─────────────────────────────────
@@ -605,8 +589,9 @@ export const AdminProvider = ({ children }) => {
     <AdminContext.Provider
       value={{
         currentAdmin,
-        isAdminLoggedIn,
-        loading,
+        isAdminLoggedIn: isSupabaseConfigured() ? isAdminLoggedIn && !sharedAuth.loading && sharedAuth.user?.id === currentAdmin?.id && supabaseAdminId === currentAdmin?.id && ['admin','super_admin','Super Admin'].includes(sharedAuth.user?.role) : isAdminLoggedIn,
+        supabaseAdminReady: isAdminLoggedIn && !sharedAuth.loading && !loading && Boolean(supabaseAdminId) && sharedAuth.user?.id === supabaseAdminId && ['admin','super_admin','Super Admin'].includes(sharedAuth.user?.role),
+        loading: loading || (isSupabaseConfigured() && sharedAuth.loading),
         authError,
         dataError,
         loginAdmin,

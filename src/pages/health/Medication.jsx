@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Pill, Plus, Trash2, Edit2, Calendar, Filter, Activity, Clock } from '../../components/common/Icons';
@@ -79,7 +80,7 @@ export default function Medication() {
     setIsAddOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  const [handleSubmit, handleSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!form.medicationName.trim()) {
       toast.error('Medication name is required.', { title: 'Validation Error' });
@@ -119,9 +120,9 @@ export default function Medication() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       await healthService.deleteMedication(deletingId);
@@ -132,7 +133,7 @@ export default function Medication() {
     } finally {
       setDeletingId(null);
     }
-  };
+  });
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -433,11 +434,11 @@ export default function Medication() {
             </button>
             <button 
               type="submit" 
-              disabled={isSaving}
+              disabled={handleSubmitSaving || (isSaving)}
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
+            >{handleSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving…' : editingRecord ? 'Update Medication' : 'Save Medication Record'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

@@ -1,3 +1,4 @@
+import { getInventory, getTasks } from './operationsService';
 /**
  * Supabase Farm Data Service
  * All farm-related CRUD operations via Supabase tables with RLS applied.
@@ -13,7 +14,7 @@ export async function getFarm(farmId) {
     .select('*')
     .eq('id', farmId)
     .maybeSingle();
-  if (error) { console.warn('getFarm error:', error.message); return null; }
+  if (error) throw new Error(error.message);
   return data ? mapFarm(data) : null;
 }
 
@@ -89,48 +90,24 @@ export async function getFlocks(farmId) {
  * by omitting any columns that the remote Postgres table does not support.
  */
 async function safeInsert(table, payload) {
-  let row = { ...payload };
-  if (!row.id) {
-    row.id = generateRowId();
-  }
-  for (let i = 0; i < 4; i++) {
-    const { data, error } = await supabase.from(table).insert(row).select().maybeSingle();
-    if (!error) return data || row;
-
-    // If Postgres complains about null id, provide one
-    if (error.message.includes('null value in column "id"')) {
-      row.id = generateRowId();
-      continue;
-    }
-
-    const match = error.message.match(/column "([^"]+)" of relation/i) 
-      || error.message.match(/Could not find the '([^']+)' column/i);
-    if (match && match[1] && row[match[1]] !== undefined && match[1] !== 'id') {
-      console.warn(`[Supabase] Column "${match[1]}" does not exist on table "${table}". Retrying without it.`);
-      delete row[match[1]];
-      continue;
-    }
-    throw new Error(error.message);
-  }
+  const row = { ...payload, id: payload.id || generateRowId() };
+  const { data, error } = await supabase.from(table).insert(row).select().single();
+  if (error) throw new Error(error.message);
+  if (!data?.id) throw new Error(`The ${table} record was not saved. Check your permissions and retry.`);
+  return data;
 }
-
-/**
- * Safely updates a record in Supabase with auto-recovery for missing columns.
- */
 async function safeUpdate(table, id, updates) {
-  let row = { ...updates };
-  for (let i = 0; i < 4; i++) {
-    const { data, error } = await supabase.from(table).update(row).eq('id', id).select().maybeSingle();
-    if (!error) return data || { id, ...row };
-    const match = error.message.match(/column "([^"]+)" of relation/i) 
-      || error.message.match(/Could not find the '([^']+)' column/i);
-    if (match && match[1] && row[match[1]] !== undefined) {
-      console.warn(`[Supabase] Column "${match[1]}" does not exist on table "${table}". Retrying without it.`);
-      delete row[match[1]];
-      continue;
-    }
-    throw new Error(error.message);
-  }
+  if (!id) throw new Error('Select a valid record before saving changes.');
+  const { data, error } = await supabase.from(table).update(updates).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
+  if (!data?.id) throw new Error(`The ${table} record was not updated. Check your permissions and retry.`);
+  return data;
+}
+async function confirmedDelete(table, id) {
+  if (!supabase || !id) throw new Error('Select a valid record before deleting.');
+  const { data, error } = await supabase.from(table).delete().eq('id', id).select('id').single();
+  if (error) throw new Error(error.message);
+  if (!data?.id) throw new Error('The record was not deleted. Check your permissions and retry.');
 }
 
 export async function createFlock(farmId, flock) {
@@ -141,21 +118,20 @@ export async function createFlock(farmId, flock) {
 
 export async function updateFlock(flockId, updates) {
   if (!supabase) throw new Error('Not configured');
-  const data = await safeUpdate('flocks', flockId, toFlockRow(updates));
+  const data = await safeUpdate('flocks', flockId, toFlockRow(updates, true));
   return mapFlock(data);
 }
 
 export async function deleteFlock(flockId) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('flocks').delete().eq('id', flockId);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('flocks', flockId);
 }
 
-function toFlockRow(f) {
+function toFlockRow(f, partial = false) {
   const initial = Number(f.initialBirds) || 0;
   const current = f.currentBirds !== undefined ? Number(f.currentBirds) : initial;
   const cost = Number(f.costPerBird) || 0;
-  return {
+  const row = {
     name: f.name || 'Untitled Flock',
     type: f.type || 'Broilers',
     breed: f.breed || '',
@@ -167,8 +143,14 @@ function toFlockRow(f) {
     date_acquired: f.acquisitionDate || f.dateAcquired || new Date().toISOString().split('T')[0],
     cost_per_bird: cost,
     total_cost: cost * initial,
+    source: f.source || '',
     notes: f.notes || '',
   };
+  if (!partial) return row;
+  const fields = {name:['name'],type:['type'],breed:['breed'],initial_birds:['initialBirds'],current_birds:['currentBirds'],age_weeks:['ageWeeks'],pen:['pen','housingType'],status:['status'],date_acquired:['acquisitionDate','dateAcquired'],cost_per_bird:['costPerBird'],source:['source'],notes:['notes']};
+  const patch = Object.fromEntries(Object.entries(fields).filter(([,keys]) => keys.some(key => f[key] !== undefined)).map(([column]) => [column,row[column]]));
+  if (f.costPerBird !== undefined && f.initialBirds !== undefined) patch.total_cost = row.total_cost;
+  return patch;
 }
 
 function mapFlock(row) {
@@ -182,11 +164,12 @@ function mapFlock(row) {
     initialBirds: row.initial_birds,
     currentBirds: row.current_birds,
     ageWeeks: row.age_weeks,
-    housingType: row.housing_type || row.pen || '',
+    housingType: row.pen || row.housing_type || '',
     status: row.status,
-    acquisitionDate: row.acquisition_date || row.date_acquired,
+    acquisitionDate: row.date_acquired || row.acquisition_date,
     costPerBird: row.cost_per_bird,
-    pen: row.pen || '',
+    pen: row.pen || row.housing_type || '',
+    source: row.source || '',
     notes: row.notes || '',
     createdAt: row.created_at,
   };
@@ -242,13 +225,12 @@ export async function updateEgg(id, record) {
 
 export async function deleteEgg(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('egg_production').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('egg_production', id);
 }
 
 function mapEgg(row) {
   if (!row) return null;
-  return { id: row.id, farmId: row.farm_id, flockId: row.flock_id, date: row.date, goodEggs: row.good_eggs, brokenEggs: row.broken_eggs, notes: row.notes, createdAt: row.created_at };
+  return { id: row.id, farmId: row.farm_id, flockId: row.flock_id, date: row.date, goodEggs: row.good_eggs, brokenEggs: row.broken_eggs, rejectedEggs: row.rejected_eggs, totalEggs: row.total_eggs, flockName: row.flock_name, notes: row.notes, createdAt: row.created_at };
 }
 
 // ─── Feed Inventory ────────────────────────────────────────────────────────
@@ -266,7 +248,12 @@ export async function createFeed(farmId, record) {
     farm_id: farmId,
     flock_id: record.flockId || null,
     date: record.date || new Date().toISOString().split('T')[0],
-    feed_type: record.feedType || 'General Feed',
+    name: record.name || record.feedType || 'General Feed',
+    supplier: record.supplier || '',
+    status: record.status || 'In Stock',
+    unit_price: Number(record.unitPrice ?? record.costPerBag ?? 0),
+    min_stock_threshold_bags: Number(record.minStockThresholdBags ?? 5),
+    feed_type: record.feedType || record.type || 'General Feed',
     quantity_bags: Number(record.quantityBags) || 0,
     bag_weight_kg: Number(record.bagWeightKg) || 25,
     cost_per_bag: Number(record.costPerBag) || 0,
@@ -278,6 +265,7 @@ export async function createFeed(farmId, record) {
 export async function updateFeed(id, record) {
   if (!supabase) throw new Error('Not configured');
   const patch = {};
+  for (const [key,column] of [['name','name'],['supplier','supplier'],['status','status'],['unitPrice','unit_price'],['minStockThresholdBags','min_stock_threshold_bags']]) if (record[key] !== undefined) patch[column] = record[key];
   if (record.flockId !== undefined) patch.flock_id = record.flockId || null;
   if (record.date !== undefined) patch.date = record.date;
   if (record.feedType !== undefined) patch.feed_type = record.feedType;
@@ -291,13 +279,12 @@ export async function updateFeed(id, record) {
 
 export async function deleteFeed(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('feed_inventory').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('feed_inventory', id);
 }
 
 function mapFeed(row) {
   if (!row) return null;
-  return { id: row.id, farmId: row.farm_id, flockId: row.flock_id, date: row.date, feedType: row.feed_type, quantityBags: row.quantity_bags, bagWeightKg: row.bag_weight_kg, costPerBag: row.cost_per_bag, notes: row.notes, createdAt: row.created_at };
+  return { id: row.id, farmId: row.farm_id, name: row.name, type: row.feed_type, supplier: row.supplier, status: row.status, unitPrice: row.unit_price ?? row.cost_per_bag, minStockThresholdBags: row.min_stock_threshold_bags, flockId: row.flock_id, date: row.date, feedType: row.feed_type, quantityBags: row.quantity_bags, bagWeightKg: row.bag_weight_kg, costPerBag: row.cost_per_bag, notes: row.notes, createdAt: row.created_at };
 }
 
 // ─── Mortality ─────────────────────────────────────────────────────────────
@@ -309,41 +296,17 @@ export async function getMortality(farmId) {
   return (data || []).map(mapMortality);
 }
 
-export async function createMortality(farmId, record) {
-  if (!supabase) throw new Error('Not configured');
-  const count = Number(record.count !== undefined ? record.count : record.birdsDead) || 0;
-  const data = await safeInsert('mortality_records', {
-    farm_id: farmId,
-    flock_id: record.flockId || null,
-    date: record.date || new Date().toISOString().split('T')[0],
-    count: count,
-    cause: record.cause || record.suspectedCause || null,
-    notes: record.notes || null,
-  });
-  return mapMortality(data);
-}
-
-export async function updateMortality(id, record) {
-  if (!supabase) throw new Error('Not configured');
-  const patch = {};
-  if (record.flockId !== undefined) patch.flock_id = record.flockId || null;
-  if (record.date !== undefined) patch.date = record.date;
-  if (record.count !== undefined || record.birdsDead !== undefined) {
-    patch.count = Number(record.count !== undefined ? record.count : record.birdsDead) || 0;
-  }
-  if (record.cause !== undefined || record.suspectedCause !== undefined) {
-    patch.cause = record.cause || record.suspectedCause || null;
-  }
-  if (record.notes !== undefined) patch.notes = record.notes || null;
-  const data = await safeUpdate('mortality_records', id, patch);
-  return mapMortality(data);
-}
-
-export async function deleteMortality(id) {
-  if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('mortality_records').delete().eq('id', id);
+async function mortalityChange(action, id, farmId, payload = {}) {
+  if (!supabase || !farmId) throw new Error('Select a valid farm before changing mortality records.');
+  const { data, error } = await supabase.rpc('apply_mortality_record', { p_action: action, p_id: id, p_farm_id: farmId, p_payload: payload });
   if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.id) throw new Error('The database did not confirm the mortality change.');
+  return mapMortality(row);
 }
+export const createMortality = (farmId, record) => mortalityChange('create', record.id || generateRowId(), farmId, { ...record, count: Number(record.count ?? record.birdsDead), cause: record.cause ?? record.suspectedCause ?? null });
+export const updateMortality = (id, record) => mortalityChange('update', id, record.farmId, record);
+export const deleteMortality = (id, farmId) => mortalityChange('delete', id, farmId);
 
 function mapMortality(row) {
   if (!row) return null;
@@ -360,34 +323,28 @@ export async function getVaccinations(farmId) {
   return (data || []).map(mapVaccination);
 }
 
+function vaccinationPayload(record, creating = false) {
+  const patch = {};
+  const fields = {flockId:'flock_id',flockName:'flock_name',diseasePrevented:'disease_prevented',birdsVaccinated:'birds_vaccinated',cost:'cost',method:'method',nextDueDate:'next_due_date',administeredBy:'administered_by',status:'status',notes:'notes'};
+  for (const [key,column] of Object.entries(fields)) if (record[key] !== undefined) patch[column] = ['flockId','nextDueDate'].includes(key) ? record[key] || null : record[key];
+  if (record.date !== undefined || record.scheduledDate !== undefined) patch.scheduled_date = record.date || record.scheduledDate;
+  if (record.vaccineName !== undefined || record.vaccine !== undefined) patch.vaccine = record.vaccineName || record.vaccine;
+  if (record.dosage !== undefined || record.dose !== undefined) patch.dose = record.dosage ?? record.dose;
+  if (creating && !patch.scheduled_date) patch.scheduled_date = new Date().toISOString().split('T')[0];
+  return patch;
+}
 export async function createVaccination(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const data = await safeInsert('vaccinations', {
-    farm_id: farmId,
-    flock_id: record.flockId || null,
-    scheduled_date: record.date || record.scheduledDate || new Date().toISOString().split('T')[0],
-    vaccine: record.vaccineName || record.vaccine || '',
-    status: record.status || 'Scheduled',
-    notes: record.notes || '',
-  });
-  return mapVaccination(data);
+  return mapVaccination(await safeInsert('vaccinations', {farm_id:farmId,...vaccinationPayload(record,true)}));
 }
-
 export async function updateVaccination(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const data = await safeUpdate('vaccinations', id, {
-    scheduled_date: record.date || record.scheduledDate,
-    vaccine: record.vaccineName || record.vaccine,
-    status: record.status,
-    notes: record.notes,
-  });
-  return mapVaccination(data);
+  return mapVaccination(await safeUpdate('vaccinations',id,vaccinationPayload(record)));
 }
 
 export async function deleteVaccination(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('vaccinations').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('vaccinations', id);
 }
 
 function mapVaccination(row) {
@@ -396,8 +353,15 @@ function mapVaccination(row) {
     id: row.id,
     farmId: row.farm_id,
     flockId: row.flock_id,
-    date: row.date || row.scheduled_date,
-    vaccineName: row.vaccine_name || row.vaccine || '',
+    date: row.scheduled_date || row.date,
+    vaccineName: row.vaccine || row.vaccine_name || '',
+    vaccine: row.vaccine || row.vaccine_name || '',
+    scheduledDate: row.scheduled_date || row.date,
+    flockName: row.flock_name,
+    diseasePrevented: row.disease_prevented,
+    birdsVaccinated: row.birds_vaccinated,
+    cost: row.cost,
+    administeredBy: row.administered_by,
     dose: row.dose || '',
     method: row.method || '',
     nextDueDate: row.next_due_date,
@@ -417,38 +381,26 @@ export async function getMedications(farmId) {
   return (data || []).map(mapMedication);
 }
 
+function medicationPayload(record, creating = false) {
+  const patch = {};
+  const fields = {flockId:'flock_id',flockName:'flock_name',medicationName:'medication_name',dosage:'dosage',durationDays:'duration_days',reason:'reason',cost:'cost',status:'status',notes:'notes',endDate:'end_date'};
+  for (const [key,column] of Object.entries(fields)) if (record[key] !== undefined) patch[column] = ['flockId','endDate'].includes(key) ? record[key] || null : record[key];
+  if (record.date !== undefined || record.startDate !== undefined) patch.start_date = record.date || record.startDate;
+  if (creating && !patch.start_date) patch.start_date = new Date().toISOString().split('T')[0];
+  return patch;
+}
 export async function createMedication(farmId, record) {
   if (!supabase) throw new Error('Not configured');
-  const data = await safeInsert('medications', {
-    farm_id: farmId,
-    flock_id: record.flockId || null,
-    start_date: record.date || record.startDate || new Date().toISOString().split('T')[0],
-    medication_name: record.medicationName || '',
-    dosage: record.dosage || '',
-    reason: record.reason || '',
-    cost: Number(record.cost) || 0,
-    notes: record.notes || '',
-  });
-  return mapMedication(data);
+  return mapMedication(await safeInsert('medications',{farm_id:farmId,...medicationPayload(record,true)}));
 }
-
 export async function updateMedication(id, record) {
   if (!supabase) throw new Error('Not configured');
-  const data = await safeUpdate('medications', id, {
-    start_date: record.date || record.startDate,
-    medication_name: record.medicationName,
-    dosage: record.dosage,
-    reason: record.reason,
-    cost: Number(record.cost) || 0,
-    notes: record.notes,
-  });
-  return mapMedication(data);
+  return mapMedication(await safeUpdate('medications',id,medicationPayload(record)));
 }
 
 export async function deleteMedication(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('medications').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('medications', id);
 }
 
 function mapMedication(row) {
@@ -457,7 +409,11 @@ function mapMedication(row) {
     id: row.id,
     farmId: row.farm_id,
     flockId: row.flock_id,
-    date: row.date || row.start_date,
+    date: row.start_date || row.date,
+    startDate: row.start_date || row.date,
+    endDate: row.end_date,
+    status: row.status,
+    flockName: row.flock_name,
     medicationName: row.medication_name || '',
     dosage: row.dosage || '',
     durationDays: row.duration_days,
@@ -513,8 +469,7 @@ export async function updateCustomer(id, record) {
 
 export async function deleteCustomer(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('customers').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('customers', id);
 }
 
 function mapCustomer(row) {
@@ -588,8 +543,7 @@ export async function updateSale(id, record) {
 
 export async function deleteSale(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('sales').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('sales', id);
 }
 
 function mapSale(row) {
@@ -655,8 +609,7 @@ export async function updateExpense(id, record) {
 
 export async function deleteExpense(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('expenses').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('expenses', id);
 }
 
 function mapExpense(row) {
@@ -713,8 +666,7 @@ export async function updateWorker(id, record) {
 
 export async function deleteWorker(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('workers').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('workers', id);
 }
 
 function mapWorker(row) {
@@ -773,8 +725,7 @@ export async function updateDailyRecord(id, record) {
 
 export async function deleteDailyRecord(id) {
   if (!supabase) throw new Error('Not configured');
-  const { error } = await supabase.from('daily_records').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await confirmedDelete('daily_records', id);
 }
 
 function mapDailyRecord(row) {
@@ -815,6 +766,7 @@ function mapSubscription(row) {
     planId: (row.plan_id || 'basic').toUpperCase(),
     status: row.status || 'trial',
     billingCycle: row.billing_cycle || 'monthly',
+    agreedPrice: row.agreed_price ?? null,
     startDate: row.created_at,
     trialEndsAt: row.trial_ends_at,
     renewalDate: row.renewal_date || row.current_period_end || row.trial_ends_at,
@@ -832,44 +784,128 @@ export async function loadAllFarmData(farmId) {
     return { farm: null, flocks: [], feeds: [], eggs: [], mortality: [], vaccinations: [], medications: [], customers: [], sales: [], expenses: [], workers: [], dailyRecords: [], subscription: null };
   }
 
-  const results = await Promise.allSettled([
-    getFarm(farmId),           // 0 — null on failure
-    getFlocks(farmId),         // 1 — array
-    getFeeds(farmId),          // 2 — array
-    getEggs(farmId),           // 3 — array
-    getMortality(farmId),      // 4 — array
-    getVaccinations(farmId),   // 5 — array
-    getMedications(farmId),    // 6 — array
-    getCustomers(farmId),      // 7 — array
-    getSales(farmId),          // 8 — array
-    getExpenses(farmId),       // 9 — array
-    getWorkers(farmId),        // 10 — array
-    getDailyRecords(farmId),   // 11 — array
-    getFarmSubscription(farmId), // 12 — null on failure
-  ]);
+ const requests = [
+  getFarm(farmId),               // 0
+  getFlocks(farmId),             // 1
+  getFeeds(farmId),              // 2
+  getEggs(farmId),               // 3
+  getMortality(farmId),          // 4
+  getVaccinations(farmId),       // 5
+  getMedications(farmId),        // 6
+  getCustomers(farmId),          // 7
+  getSales(farmId),              // 8
+  getExpenses(farmId),           // 9
+  getWorkers(farmId),            // 10
+  getDailyRecords(farmId),       // 11
+  getFarmSubscription(farmId),   // 12
+  getInventory(farmId),          // 13
+  getTasks(farmId),              // 14
+];
 
-  // r.value is ONLY set on fulfilled promises; use r.reason for error logging
-  const getValue = (r, defaultValue) => {
-    if (r.status === 'fulfilled') return r.value;
-    console.warn('Farm data load partial failure:', r.reason?.message || r.reason);
+const results = await Promise.allSettled(requests);
+
+const names = [
+  'farm',
+  'flocks',
+  'feeds',
+  'eggs',
+  'mortality',
+  'vaccinations',
+  'medications',
+  'customers',
+  'sales',
+  'expenses',
+  'workers',
+  'dailyRecords',
+  'subscription',
+  'inventory',
+  'tasks',
+];
+
+const failedFields = results.flatMap((result, index) =>
+  result.status === 'rejected' ? [names[index]] : []
+);
+
+const errors = results.flatMap((result, index) =>
+  result.status === 'rejected'
+    ? [
+        `${names[index]}: ${
+          result.reason?.message || 'Unable to load records'
+        }`,
+      ]
+    : []
+);
+
+// Safely retrieve results from Promise.allSettled.
+const getValue = (result, defaultValue) => {
+  if (!result) {
+    console.warn('Farm data load: Missing request result');
     return defaultValue;
-  };
+  }
 
-  const [farm, flocks, feeds, eggs, mortality, vaccinations, medications, customers, sales, expenses, workers, dailyRecords, subscription] = [
-    getValue(results[0],  null),
-    getValue(results[1],  []),
-    getValue(results[2],  []),
-    getValue(results[3],  []),
-    getValue(results[4],  []),
-    getValue(results[5],  []),
-    getValue(results[6],  []),
-    getValue(results[7],  []),
-    getValue(results[8],  []),
-    getValue(results[9],  []),
-    getValue(results[10], []),
-    getValue(results[11], []),
-    getValue(results[12], null),
-  ];
+  if (result.status === 'fulfilled') {
+    return result.value ?? defaultValue;
+  }
 
-  return { farm, flocks: flocks || [], feeds: feeds || [], eggs: eggs || [], mortality: mortality || [], vaccinations: vaccinations || [], medications: medications || [], customers: customers || [], sales: sales || [], expenses: expenses || [], workers: workers || [], dailyRecords: dailyRecords || [], subscription };
+  console.warn(
+    'Farm data load partial failure:',
+    result.reason?.message || result.reason
+  );
+
+  return defaultValue;
+};
+
+const [
+  farm,
+  flocks,
+  feeds,
+  eggs,
+  mortality,
+  vaccinations,
+  medications,
+  customers,
+  sales,
+  expenses,
+  workers,
+  dailyRecords,
+  subscription,
+  inventory,
+  tasks,
+] = [
+  getValue(results[0], null),
+  getValue(results[1], []),
+  getValue(results[2], []),
+  getValue(results[3], []),
+  getValue(results[4], []),
+  getValue(results[5], []),
+  getValue(results[6], []),
+  getValue(results[7], []),
+  getValue(results[8], []),
+  getValue(results[9], []),
+  getValue(results[10], []),
+  getValue(results[11], []),
+  getValue(results[12], null),
+  getValue(results[13], []),
+  getValue(results[14], []),
+];
+
+return {
+  inventory,
+  tasks,
+  failedFields,
+  errors,
+  farm,
+  flocks,
+  feeds,
+  eggs,
+  mortality,
+  vaccinations,
+  medications,
+  customers,
+  sales,
+  expenses,
+  workers,
+  dailyRecords,
+  subscription,
+};  return { inventory: getValue(results[13], []), tasks: getValue(results[14], []), failedFields, errors, farm, flocks: flocks || [], feeds: feeds || [], eggs: eggs || [], mortality: mortality || [], vaccinations: vaccinations || [], medications: medications || [], customers: customers || [], sales: sales || [], expenses: expenses || [], workers: workers || [], dailyRecords: dailyRecords || [], subscription };
 }

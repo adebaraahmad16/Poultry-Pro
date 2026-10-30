@@ -1,6 +1,6 @@
 import { useAuth } from './AuthContext';
 import { usePlanCatalog } from '../components/subscriptions/usePlanCatalog';
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { inventoryService } from '../services/businessService';
 import { taskService, notificationService } from '../services/managementService';
 import { PLANS } from '../constants/plans';
@@ -10,14 +10,15 @@ import { localDate } from '../../shared/dailyRecords';
 import { availableTypeIds, poultryTypeId, scopeFarmData, selectionKey, restoreSelection } from '../../shared/poultryScope';
 import { setSelectedFarmId, setSelectedPoultryType } from '../services/farmScope';
 import { isSupabaseConfigured } from '../lib/supabaseClient.js';
-import { loadAllFarmData } from '../services/supabase/farmDataService.js';
+import { loadAllFarmData, getFarmSubscription } from '../services/supabase/farmDataService.js';
 import { 
   fetchNotifications, 
   evaluateFarmSmartAlerts, 
   subscribeToNotificationChanges 
 } from '../services/notificationStore.js';
 
-const FarmContext = createContext();
+const FarmContext = createContext(null);
+const readSelection = key => { try { return localStorage.getItem(key); } catch { return null; } };
 
 export const FarmProvider = ({ children }) => {
   usePlanCatalog();
@@ -38,45 +39,83 @@ export const FarmProvider = ({ children }) => {
   const [weightRecords, setWeightRecords] = useState([]);
   const [dailyRecords, setDailyRecords] = useState([]);
   const refreshing = useRef(false);
+  const queuedRefresh = useRef(false);
   const [notifications, setNotifications] = useState([]);
   const [accessibleFarms, setAccessibleFarms] = useState([]);
-  const [selectedFarmId, updateSelectedFarmId] = useState('');
+  const [farmSelection, setFarmSelection] = useState({ userId: null, id: '' });
+  const selectedFarmId = farmSelection.userId === user?.id ? farmSelection.id : '';
+  const updateSelectedFarmId = useCallback(id => setFarmSelection({ userId: user?.id || null, id }), [user?.id]);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
   const [loadedScope, setLoadedScope] = useState('');
+  const [subscriptionDatabaseScope, setSubscriptionDatabaseScope] = useState('');
   const loadedScopeRef = useRef(''); loadedScopeRef.current = loadedScope;
   const refreshScope = useRef('');
   const [selection, setSelection] = useState({ key: '', id: 'all' });
-  const effectiveFarmId = selectedFarmId || user?.farmId || farm?.id || '';
+  const profileFarmId = user?.farmId || user?.farm_id || '';
+  const ownLoadedFarm = loadedScope.startsWith(`${user?.id}:`) ? farm?.id : '';
+  const effectiveFarmId = selectedFarmId || profileFarmId || ownLoadedFarm || '';
   const scopeId = `${user?.id || ''}:${effectiveFarmId}`;
   const scopeRef = useRef(scopeId); scopeRef.current = scopeId;
-  const types = availableTypeIds(farm, flocks);
   const preferenceKey = selectionKey(user?.id, effectiveFarmId);
-  const isScopeMatch = Boolean(loadedScope && (loadedScope === scopeId || (loadedScope.startsWith(`${user?.id}:`) && (loadedScope.split(':')[1] === effectiveFarmId || !effectiveFarmId))));
-  const activeTypeId = isScopeMatch ? restoreSelection(selection.key === preferenceKey ? selection.id : localStorage.getItem(preferenceKey), types) : 'all';
-  setSelectedPoultryType(activeTypeId);
+  const isScopeMatch = Boolean(isLoggedIn && !authLoading && loadedScope && loadedScope === scopeId);
+  const types = useMemo(() => isScopeMatch ? availableTypeIds(farm, flocks) : [], [isScopeMatch, farm, flocks]);
+  const activeTypeId = isScopeMatch ? restoreSelection(selection.key === preferenceKey ? selection.id : readSelection(preferenceKey), types) : 'all';
 
-  const selectPoultryType = id => {
+  useEffect(() => {
+    setSelectedPoultryType(activeTypeId);
+    if (isScopeMatch && user?.id && effectiveFarmId && readSelection(preferenceKey) !== activeTypeId) {
+      try { localStorage.setItem(preferenceKey, activeTypeId); } catch { /* Preferences may be disabled; in-memory selection still works. */ }
+    }
+  }, [activeTypeId, isScopeMatch, user?.id, effectiveFarmId, preferenceKey]);
+  useEffect(() => { setSelectedFarmId(effectiveFarmId); }, [effectiveFarmId]);
+  useEffect(() => () => { setSelectedFarmId(''); setSelectedPoultryType('all'); }, []);
+
+  const selectPoultryType = useCallback(id => {
+    if (authLoading || !isLoggedIn || !isScopeMatch) return;
     const valid = poultryTypeId(id);
     if (valid !== 'all' && !types.includes(valid)) return;
-    setSelection({ key: preferenceKey, id: valid }); localStorage.setItem(preferenceKey, valid);
-  };
+    setSelection(current => current.key === preferenceKey && current.id === valid ? current : { key: preferenceKey, id: valid });
+  }, [authLoading, isLoggedIn, isScopeMatch, types, preferenceKey]);
 
   const selectFarm = id => {
     if (!accessibleFarms.some(f => f.id === id)) return;
-    const nextKey = selectionKey(user.id, id);
-    setSelection({ key: nextKey, id: activeTypeId });
-    setSelectedFarmId(id); updateSelectedFarmId(id); setDataLoading(true); setLoadedScope('');
+    if (id === effectiveFarmId) return;
+    setSelection({ key: '', id: 'all' });
+    updateSelectedFarmId(id); setDataLoading(true); setLoadedScope('');
   };
 
   useEffect(() => {
-    setSelectedFarmId(user?.farmId || ''); updateSelectedFarmId(user?.farmId || '');
+    updateSelectedFarmId(profileFarmId);
     setLoadedScope(''); setAccessibleFarms([]); setDataLoading(!!isLoggedIn);
-    return () => setSelectedFarmId('');
+    setFarm({}); setFlocks([]); setFeeds([]); setEggs([]); setMortality([]);
+    setVaccinations([]); setMedications([]); setSales([]); setExpenses([]);
+    setCustomers([]); setWorkers([]); setInventory([]); setTasks([]); setDailyRecords([]);
+    setWeightRecords([]); setNotifications([]); setSubscriptionDatabaseScope('');
+    setSelection({ key: '', id: 'all' });
   }, [user?.id, isLoggedIn]);
 
   // Active Subscription & 14-Day Free Trial State
   const [subscription, setSubscription] = useState(() => subscriptionService.getSubscription());
+  useEffect(() => {
+    if (!user?.id || !effectiveFarmId || !isSupabaseConfigured()) return;
+    let active = true, pending = false;
+    const sync = async () => {
+      if (pending || document.visibilityState === 'hidden') return;
+      pending = true;
+      try {
+        const [messages, saved] = await Promise.all([fetchNotifications(user.id, effectiveFarmId), getFarmSubscription(effectiveFarmId)]);
+        if (active) {
+          setNotifications(messages);
+          if (saved) { setSubscription(saved); setSubscriptionDatabaseScope(`${user.id}:${effectiveFarmId}`); }
+        }
+      } catch (error) { console.warn('Notification/subscription refresh failed:', error.message); }
+      finally { pending = false; }
+    };
+    const timer = setInterval(sync, 60000);
+    window.addEventListener('focus', sync);
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', sync); };
+  }, [user?.id, effectiveFarmId]);
 
   const currentPlanId = subscription?.planId || PLANS.STARTER;
   const currentPlan = subscriptionService.getPlanDetails(currentPlanId);
@@ -100,7 +139,7 @@ export const FarmProvider = ({ children }) => {
   const refreshAllData = useCallback(async () => {
     if (authLoading || !isLoggedIn || !user?.id) return;
 
-    let farmId = selectedFarmId || user?.farmId || farm?.id;
+    let farmId = effectiveFarmId;
 
     // Fallback: profile has no farm_id — look up farm by owner_id from Supabase
     if (!farmId && user?.id && isSupabaseConfigured()) {
@@ -144,22 +183,23 @@ export const FarmProvider = ({ children }) => {
         if (!valid()) return;
 
         setFarm(data.farm || {});
-        setFlocks(data.flocks || []);
-        setFeeds(data.feeds || []);
-        setEggs(data.eggs || []);
-        setMortality(data.mortality || []);
-        setVaccinations(data.vaccinations || []);
-        setMedications(data.medications || []);
-        setSales(data.sales || []);
-        setExpenses(data.expenses || []);
-        setCustomers(data.customers || []);
-        setDailyRecords(data.dailyRecords || []);
-        setWorkers(data.workers || []);
-        setInventory(inventoryService.getInventory());
-        setTasks(taskService.getTasks());
+        if (!data.failedFields?.includes('flocks')) setFlocks(data.flocks || []);
+        if (!data.failedFields?.includes('feeds')) setFeeds(data.feeds || []);
+        if (!data.failedFields?.includes('eggs')) setEggs(data.eggs || []);
+        if (!data.failedFields?.includes('mortality')) setMortality(data.mortality || []);
+        if (!data.failedFields?.includes('vaccinations')) setVaccinations(data.vaccinations || []);
+        if (!data.failedFields?.includes('medications')) setMedications(data.medications || []);
+        if (!data.failedFields?.includes('sales')) setSales(data.sales || []);
+        if (!data.failedFields?.includes('expenses')) setExpenses(data.expenses || []);
+        if (!data.failedFields?.includes('customers')) setCustomers(data.customers || []);
+        if (!data.failedFields?.includes('dailyRecords')) setDailyRecords(data.dailyRecords || []);
+        if (!data.failedFields?.includes('workers')) setWorkers(data.workers || []);
+        if (!data.failedFields?.includes('inventory')) setInventory(data.inventory || []);
+        if (!data.failedFields?.includes('tasks')) setTasks(data.tasks || []);
         
         // Load notifications from persistent notificationStore
         const initialNotifs = await fetchNotifications(user.id, farmId);
+        if (!valid()) return;
         setNotifications(initialNotifs);
 
         // Run smart automated farm alerts evaluation asynchronously
@@ -172,7 +212,7 @@ export const FarmProvider = ({ children }) => {
           userId: user.id,
         }).then((newAlerts) => {
           if (newAlerts && newAlerts.length > 0) {
-            fetchNotifications(user.id, farmId).then(setNotifications);
+            fetchNotifications(user.id, farmId).then(rows => { if (valid()) setNotifications(rows); });
           }
         }).catch(err => console.warn('Smart alert evaluation error:', err));
 
@@ -181,47 +221,114 @@ export const FarmProvider = ({ children }) => {
 
         // Update subscription from Supabase if available
         if (data.subscription) {
+          setSubscriptionDatabaseScope(`${user.id}:${farmId}`);
           subscriptionService.saveSubscription(data.subscription);
           setSubscription(data.subscription);
         }
 
-        setWeightRecords((data.dailyRecords || [])
-          .filter(r => r.category === 'weight' && r.status === 'Recorded')
-          .map(r => ({ ...r.values, id: r.id, flockId: r.flockId, date: r.date }))
+               setWeightRecords(
+          (Array.isArray(data?.dailyRecords) ? data.dailyRecords : [])
+            .filter(
+              (record) =>
+                record != null &&
+                record.category === 'weight' &&
+                record.status === 'Recorded'
+            )
+            .map((record) => ({
+              ...(record.values ?? {}),
+              id: record.id,
+              flockId: record.flockId,
+              date: record.date,
+            }))
         );
 
         const key = selectionKey(user.id, farmId);
-        const available = availableTypeIds(data.farm || {}, data.flocks || []);
-        setSelection(current => {
-          const id = restoreSelection(current.key === key ? current.id : localStorage.getItem(key), available);
-          localStorage.setItem(key, id); return { key, id };
+
+        const available = availableTypeIds(
+          data?.farm ?? {},
+          Array.isArray(data?.flocks) ? data.flocks : []
+        );
+
+        setSelection((current) => {
+          const savedSelection =
+            current?.key === key
+              ? current.id
+              : readSelection(key);
+
+          const id = restoreSelection(savedSelection, available);
+
+          return current.key === key && current.id === id ? current : { key, id };
         });
+
       } else {
         // Supabase not configured — no data to load
         if (!valid()) return;
+
         setFarm({});
-        setFlocks([]); setFeeds([]); setEggs([]); setMortality([]);
-        setVaccinations([]); setMedications([]); setSales([]); setExpenses([]);
-        setCustomers([]); setDailyRecords([]); setWorkers([]);
-        setInventory([]); setTasks([]); setNotifications([]);
+        setFlocks([]);
+        setFeeds([]);
+        setEggs([]);
+        setMortality([]);
+        setVaccinations([]);
+        setMedications([]);
+        setSales([]);
+        setExpenses([]);
+        setCustomers([]);
+        setDailyRecords([]);
+        setWorkers([]);
+        setInventory([]);
+        setTasks([]);
+        setNotifications([]);
+        setWeightRecords([]);
       }
 
-      if (valid()) setLoadedScope(identity);
-    } catch (error) {
-      console.error('Farm data load error:', error.message);
-      // Always resolve loading — show error instead of infinite spinner
-      if (valid()) { setLoadedScope(identity); setDataError(error.message || 'Failed to load farm data.'); }
-    } finally {
-      if (valid()) setDataLoading(false);
-      if (refreshScope.current === identity) { refreshScope.current = ''; refreshing.current = false; }
-    }
-  }, [isLoggedIn, authLoading, user?.id, user?.farmId, selectedFarmId, farm?.id]);
+      if (valid()) {
+        setLoadedScope(identity);
+        setDataError(null);
+      }
 
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to load farm data.';
+
+      console.error('Farm data load error:', error);
+
+      // Always resolve loading and display errors
+      // instead of leaving an infinite spinner.
+      if (valid()) {
+        setLoadedScope(identity);
+        setDataError(message);
+      }
+
+    } finally {
+      if (valid()) {
+        setDataLoading(false);
+      }
+
+      if (refreshScope.current === identity) {
+        refreshScope.current = '';
+        refreshing.current = false;
+
+        if (queuedRefresh.current && valid()) {
+          queuedRefresh.current = false;
+
+          queueMicrotask(() => refreshAllData());
+        }
+      }
+    }
+  }, [
+    isLoggedIn,
+    authLoading,
+    user?.id,
+    effectiveFarmId,
+  ]);
   useEffect(() => {
     refreshAllData().catch(err => console.error('Farm data load error:', err));
 
     const handleStorageUpdate = () => {
-      if (refreshing.current) return;
+      if (refreshing.current) { queuedRefresh.current = true; return; }
       refreshAllData().catch(err => console.error('Farm data refresh error:', err));
     };
 
@@ -355,6 +462,7 @@ export const FarmProvider = ({ children }) => {
         sales, customers, expenses, inventory, workers, tasks,
         weightRecords, dailyRecords, notifications,
         currentPlan, currentPlanId, subscription, setSubscription,
+        subscriptionFromDatabase: subscriptionDatabaseScope === scopeId && isScopeMatch,
         updatePlan, toggleAutoRenewal,
         remainingTrialDays: subscriptionService.getRemainingTrialDays(subscription),
         isTrial: subscription?.status === 'trial',
@@ -374,7 +482,11 @@ export const FarmProvider = ({ children }) => {
   );
 };
 
-export const useRawFarm = () => useContext(FarmContext);
+export const useRawFarm = () => {
+  const context = useContext(FarmContext);
+  if (context === null) throw new Error('useRawFarm must be used within FarmProvider. Place FarmProvider above PoultryProvider and all farm consumers.');
+  return context;
+};
 export const useFarm = () => {
   const raw = useRawFarm();
   const empty = { ...raw, farm: {}, flocks: [], feeds: [], eggs: [], mortality: [], vaccinations: [], medications: [], sales: [], expenses: [], weightRecords: [], dailyRecords: [] };

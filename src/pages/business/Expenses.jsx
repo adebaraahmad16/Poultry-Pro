@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Receipt, Plus, Trash2, Edit2, Filter, DollarSign, Calendar, TrendingDown } from '../../components/common/Icons';
@@ -84,7 +85,7 @@ export default function Expenses() {
     setIsAddOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  const [handleSubmit, handleSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!form.amount || Number(form.amount) < 0) {
       toast.error('Validation Error', 'Please enter a valid amount.');
@@ -112,9 +113,9 @@ export default function Expenses() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       await expenseService.deleteExpense(deletingId);
@@ -124,7 +125,7 @@ export default function Expenses() {
     } catch (err) {
       toast.error('Delete Failed', err.message || 'Could not delete the record.');
     }
-  };
+  });
 
   // Filter logic
   const now = new Date();
@@ -455,11 +456,11 @@ export default function Expenses() {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={handleSubmitSaving || (isSaving)}
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-            >
+            >{handleSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving...' : editingRecord ? 'Save Changes' : 'Record Expense'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

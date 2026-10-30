@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import AdminDialog from '../components/AdminDialog';
 import React, { useState } from 'react';
 import { Eye, ShieldAlert, CheckCircle2, Send, Phone, Mail, MapPin } from '../../components/common/Icons';
@@ -15,7 +16,7 @@ export default function Farmers() {
   const [notifyFarmer, setNotifyFarmer] = useState(null);
   const [notificationMsg, setNotificationMsg] = useState('');
 
-  const handleToggleStatus = async (farmer) => {
+  const [handleToggleStatus, handleToggleStatusSaving] = useSaveAction(async (farmer) => {
     const nextStatus = farmer.status === 'Active' ? 'Suspended' : 'Active';
     const ok = await confirm({
       title: `${nextStatus === 'Suspended' ? 'Suspend' : 'Activate'} Farmer Account?`,
@@ -25,14 +26,14 @@ export default function Farmers() {
     });
     if (!ok) return;
 
-    updateFarmerStatus(farmer.id, nextStatus);
+    await updateFarmerStatus(farmer.id, nextStatus);
     if (selectedFarmer && selectedFarmer.id === farmer.id) {
       setSelectedFarmer({ ...selectedFarmer, status: nextStatus });
     }
     toast.success(`Farmer account status updated to ${nextStatus}.`, { title: 'Status Updated' });
-  };
+  });
 
-  const handleSendDirectNotification = async (e) => {
+  const [handleSendDirectNotification, handleSendDirectNotificationSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!notificationMsg.trim() || !notifyFarmer) return;
 
@@ -53,7 +54,7 @@ export default function Farmers() {
     } catch (err) {
       toast.error(err.message || 'Failed to dispatch notification.');
     }
-  };
+  });
 
   const columns = [
     {
@@ -152,7 +153,7 @@ export default function Farmers() {
           >
             <Send className="w-4 h-4" />
           </button>
-          <button
+          <button disabled={handleToggleStatusSaving}
             onClick={() => handleToggleStatus(r)}
             className={`p-1.5 rounded-lg transition ${
               r.status === 'Active'
@@ -160,9 +161,9 @@ export default function Farmers() {
                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
             }`}
             title={r.status === 'Active' ? 'Suspend Account' : 'Reactivate Account'}
-          >
+          >{handleToggleStatusSaving ? 'Saving...' : <>
             {r.status === 'Active' ? <ShieldAlert className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-          </button>
+          </>}</button>
         </div>
       )
     }
@@ -314,7 +315,7 @@ export default function Farmers() {
             </div>
 
             <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
+              <button disabled={handleToggleStatusSaving}
                 type="button"
                 onClick={() => handleToggleStatus(selectedFarmer)}
                 className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
@@ -322,9 +323,9 @@ export default function Farmers() {
                     ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                     : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                 }`}
-              >
+              >{handleToggleStatusSaving ? 'Saving...' : <>
                 {selectedFarmer.status === 'Active' ? 'Suspend Account' : 'Reactivate Account'}
-              </button>
+              </>}</button>
               <button
                 type="button"
                 onClick={() => setSelectedFarmer(null)}
@@ -371,12 +372,12 @@ export default function Farmers() {
                 >
                   Cancel
                 </button>
-                <button
+                <button disabled={handleSendDirectNotificationSaving}
                   type="submit"
                   className="px-5 py-2 bg-[#15803D] hover:bg-emerald-700 text-white text-xs font-bold rounded-xl"
-                >
+                >{handleSendDirectNotificationSaving ? 'Saving...' : <>
                   Send Message
-                </button>
+                </>}</button>
               </div>
             </form>
           </div>

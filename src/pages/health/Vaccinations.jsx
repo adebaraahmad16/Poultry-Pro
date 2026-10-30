@@ -1,3 +1,4 @@
+import useSaveAction from '../../hooks/useSaveAction';
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Syringe, Plus, Trash2, Edit2, Calendar, CheckCircle2, AlertTriangle, Clock, Filter } from '../../components/common/Icons';
@@ -99,7 +100,7 @@ export default function Vaccinations() {
     setIsAddOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  const [handleSubmit, handleSubmitSaving] = useSaveAction(async (e) => {
     e.preventDefault();
     if (!form.vaccine.trim()) {
       toast.error('Vaccine name is required.', { title: 'Validation Error' });
@@ -138,7 +139,7 @@ export default function Vaccinations() {
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
   const toggleStatus = async (id, currentStatus) => {
     const nextStatus = currentStatus === 'Completed' ? 'Upcoming' : 'Completed';
@@ -151,7 +152,7 @@ export default function Vaccinations() {
     }
   };
 
-  const handleDelete = async () => {
+  const [handleDelete, handleDeleteSaving] = useSaveAction(async () => {
     if (!deletingId) return;
     try {
       await healthService.deleteVaccination(deletingId);
@@ -162,7 +163,7 @@ export default function Vaccinations() {
     } finally {
       setDeletingId(null);
     }
-  };
+  });
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -525,11 +526,11 @@ export default function Vaccinations() {
             </button>
             <button 
               type="submit" 
-              disabled={isSaving}
+              disabled={handleSubmitSaving || (isSaving)}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-            >
+            >{handleSubmitSaving ? 'Saving...' : <>
               {isSaving ? 'Saving…' : editingRecord ? 'Update Vaccination' : 'Save Vaccination'}
-            </button>
+            </>}</button>
           </div>
         </form>
       </Modal>

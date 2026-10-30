@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useLayoutEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import { useAdmin } from '../context/AdminContext';
@@ -8,6 +8,8 @@ import { ConfirmProvider } from '../../context/ConfirmContext';
 import AdminDialog from './AdminDialog';
 
 export default function AdminLayout() {
+  const { pathname } = useLocation();
+  useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }, [pathname]);
   const { dataError, refreshAllAdminData } = useAdmin();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

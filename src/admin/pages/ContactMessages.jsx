@@ -2,12 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CONTACT_SUBJECTS, contactQuery, updateContact } from '../../services/contactService';
 import { useContacts } from '../context/ContactContext';
+import { adminRequestMessage, isAdminAccessError } from '../../services/adminAccess';
 import AdminDialog from '../components/AdminDialog';
 const control = 'border border-slate-300 rounded-lg p-3 bg-white text-sm min-w-0';
 const button = 'rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-emerald-50 disabled:opacity-50';
 const label = s => ({ new: 'New', in_progress: 'In Progress', resolved: 'Resolved' }[s]);
 export default function ContactMessages() {
-  const { stats, error: statsError, refresh } = useContacts();
+  const { ready, stats, error: statsError, refresh } = useContacts();
+  const pending = useRef(null);
+  const blocked = useRef(false);
   const [params, setParams] = useSearchParams();
   const id = params.get('message');
   const [filters, setFilters] = useState({ search: '', subject: '', status: '', read: '', from: '', to: '' });
@@ -22,7 +25,11 @@ export default function ContactMessages() {
   const selectedId = useRef(id);
   selectedId.current = id;
   const load = useCallback(async () => {
+    if (!ready) return;
+    const key = JSON.stringify([filters,page]);
+    if (pending.current?.key === key) return pending.current.promise;
     const seq = ++sequence.current;
+    const request = (async () => {
     try {
       await contactQuery(async db => {
         let q = db.from('contact_messages').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(page * 25, page * 25 + 24);
@@ -34,25 +41,31 @@ export default function ContactMessages() {
         const search = filters.search.replace(/[^\p{L}\p{N}@ ._+-]/gu, '').trim();
         if (search) q = q.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,subject.ilike.%${search}%,message.ilike.%${search}%`);
         const result = await q;
-        if (!result.error && seq === sequence.current) { setRows(result.data); setCount(result.count); setError(''); }
+        if (!result.error && seq === sequence.current) { blocked.current = false; setRows(result.data); setCount(result.count); setError(''); }
         return result;
       });
-    } catch { if (seq === sequence.current) setError('Unable to load contact messages. Please retry.'); }
+    } catch (error) { if (seq === sequence.current) { blocked.current = isAdminAccessError(error); setError(adminRequestMessage(error)); } }
     finally { if (seq === sequence.current) setLoading(false); }
-  }, [filters, page]);
+    })().finally(() => { if (pending.current?.promise === request) pending.current = null; });
+    pending.current = { key, promise: request };
+    return request;
+  }, [ready, filters, page]);
   useEffect(() => {
+    blocked.current = false;
+    if (!ready) { setRows([]); setCount(0); return; }
     setLoading(true);
     const timer = setTimeout(load, 250);
-    const poll = setInterval(load, 15000);
-    window.addEventListener('focus', load);
-    return () => { clearTimeout(timer); clearInterval(poll); sequence.current++; window.removeEventListener('focus', load); };
+    const automatic = () => { if (!blocked.current && document.visibilityState !== 'hidden') load(); };
+    const poll = setInterval(automatic, 15000);
+    window.addEventListener('focus', automatic);
+    return () => { clearTimeout(timer); clearInterval(poll); sequence.current++; window.removeEventListener('focus', automatic); };
   }, [load]);
   useEffect(() => {
     let active = true;
     setSelected(null);
-    if (id) contactQuery(db => db.from('contact_messages').select('*').eq('id', id).single()).then(data => { if (active) setSelected(data); }).catch(() => { if (active) setError('Unable to open this message.'); });
+    if (id && ready) contactQuery(db => db.from('contact_messages').select('*').eq('id', id).single()).then(data => { if (active) setSelected(data); }).catch(error => { if (active) setError(adminRequestMessage(error)); });
     return () => { active = false; };
-  }, [id]);
+  }, [id, ready]);
   const mutate = async patch => {
     setBusy(true); setError('');
     try {

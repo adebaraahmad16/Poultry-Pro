@@ -1,190 +1,134 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient.js';
 import { signIn, signUp, signOut, getProfile, sendPasswordReset, onAuthStateChange } from '../services/supabase/authService.js';
-import { subscriptionService, createInitialSubscription } from '../services/subscriptionService';
+import { normalizeProfile, resolveProfileAvatar, saveProfile, saveProfileAvatar, verifiedProfileUser } from '../services/profileService';
+import { subscriptionService } from '../services/subscriptionService';
 import { initializeStorage, getItem, setItem, KEYS } from '../services/storageService';
 import { PLANS } from '../constants/plans.js';
 
 const AuthContext = createContext();
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionMessage, setSessionMessage] = useState('');
-
+  const [profileError, setProfileError] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const current = useRef(null), identity = useRef(null), epoch = useRef(0), revision = useRef(0), write = useRef(null);
+  const commit = useCallback(profile => {
+    const normalized = normalizeProfile(profile);
+    current.current = normalized;
+    setUser(normalized);
+    setIsLoggedIn(Boolean(normalized));
+    if (normalized) localStorage.setItem(KEYS.USER, JSON.stringify(normalized)); // Cache only; never used to authorize a session.
+    else localStorage.removeItem(KEYS.USER);
+    localStorage.setItem(KEYS.IS_LOGGED_IN, String(Boolean(normalized)));
+  }, []);
+  const loadSession = useCallback(async (session, event) => {
+    const id = session?.user?.id || null;
+    if (!id) {
+      epoch.current++; identity.current = null; write.current = null;
+      commit(null); setProfileSaving(false); setProfileError(''); setLoading(false); return;
+    }
+    if (id === identity.current && current.current?.id === id && event !== 'USER_UPDATED') return;
+    if (id !== identity.current) {
+      epoch.current++; identity.current = id; write.current = null;
+      commit(null); setProfileSaving(false); setLoading(true);
+    }
+    const version = epoch.current;
+    const profileVersion = revision.current;
+    try {
+      const profile = await getProfile(id);
+      if (version === epoch.current && identity.current === id && profileVersion === revision.current) { commit(profile); setProfileError(''); }
+    } catch (error) {
+      if (version === epoch.current && profileVersion === revision.current) { commit(null); setProfileError(error.message); setSessionMessage(error.message); }
+    } finally { if (version === epoch.current) setLoading(false); }
+  }, [commit]);
   useEffect(() => {
     initializeStorage();
+    if (!supabase || !isSupabaseConfigured()) { setLoading(false); return; }
+    let active = true;
+    const unsubscribe = onAuthStateChange((session, event) => { if (active) loadSession(session, event); });
+    supabase.auth.getSession().then(({data,error}) => {
+      if (!active) return;
+      if (error) { setProfileError(error.message); setLoading(false); }
+      else loadSession(data?.session);
+    }).catch(error => { if (active) { setProfileError(error.message); setLoading(false); } });
+    return () => { active = false; epoch.current++; unsubscribe(); };
+  }, [loadSession]);
 
-    // If Supabase is not configured, run in offline/demo mode
-    if (!isSupabaseConfigured() || !supabase) {
-      setUser(null);
-      setIsLoggedIn(false);
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    if (!user?.id || !user.avatar_url) return;
+    const version = epoch.current;
+    const timer = setInterval(async () => {
+      const source = current.current;
+      if (!source) return;
+      const updated = await resolveProfileAvatar(source);
+      if (version === epoch.current && current.current === source) commit(updated);
+    }, 45 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [user?.id, user?.avatar_url, commit]);
 
-    let cancelled = false;
+  const refreshProfile = useCallback(async () => {
+    const expected = identity.current;
+    const version = epoch.current;
+    const profileVersion = revision.current;
+    try {
+      const authenticated = await verifiedProfileUser(expected);
+      const profile = await getProfile(authenticated.id);
+      if (version !== epoch.current || identity.current !== authenticated.id) throw new Error('Your account session changed. Please retry.');
+      if (profileVersion !== revision.current) return current.current;
+      commit(profile); setProfileError(''); return profile;
+    } catch (error) { if (version === epoch.current && profileVersion === revision.current) setProfileError(error.message); throw error; }
+  }, [commit]);
+  const runProfileWrite = useCallback(task => {
+    if (write.current) return write.current;
+    const id = identity.current;
+    const version = epoch.current;
+    if (!id || !current.current) return Promise.reject(new Error('Sign in before updating your profile.'));
+    revision.current++;
+    setProfileSaving(true); setProfileError('');
+    const promise = (async () => {
+      try {
+        const saved = await task(id);
+        if (version !== epoch.current || identity.current !== id) throw new Error('Your account session changed. Please retry.');
+        revision.current++;
+        const updated = normalizeProfile({ ...current.current, ...saved });
+        commit(updated); return updated;
+      } catch (error) { if (version === epoch.current) setProfileError(error.message); throw error; }
+      finally { if (write.current === promise) write.current = null; if (version === epoch.current) setProfileSaving(false); }
+    })();
+    write.current = promise; return promise;
+  }, [commit]);
+  const updateProfile = useCallback(values => runProfileWrite(id => saveProfile(values, id)), [runProfileWrite]);
+  const uploadAvatar = useCallback(file => runProfileWrite(id => saveProfileAvatar(file, id)), [runProfileWrite]);
 
-    // Check initial session on mount
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (cancelled) return;
-      if (session?.user) {
-        try {
-          const profile = await getProfile(session.user.id);
-          if (!cancelled) {
-            setUser(profile);
-            setIsLoggedIn(true);
-            setItem(KEYS.USER, profile);
-            localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
-          }
-        } catch {
-          if (!cancelled) {
-            setUser(null);
-            setIsLoggedIn(false);
-          }
-        }
-      } else {
-        if (!cancelled) {
-          setUser(null);
-          setIsLoggedIn(false);
-          localStorage.setItem(KEYS.IS_LOGGED_IN, 'false');
-        }
-      }
-      if (!cancelled) setLoading(false);
-    });
-
-    // Listen to ongoing auth changes
-    const unsubscribe = onAuthStateChange(async (session) => {
-      if (cancelled) return;
-      if (session?.user) {
-        try {
-          const profile = await getProfile(session.user.id);
-          if (!cancelled) {
-            setUser(profile);
-            setIsLoggedIn(true);
-            setItem(KEYS.USER, profile);
-            localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
-          }
-        } catch {
-          if (!cancelled) {
-            setUser(null);
-            setIsLoggedIn(false);
-          }
-        }
-      } else {
-        if (!cancelled) {
-          setUser(null);
-          setIsLoggedIn(false);
-          localStorage.setItem(KEYS.IS_LOGGED_IN, 'false');
-        }
-      }
-      if (!cancelled) setLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  /**
-   * Login with email + password via Supabase.
-   */
   const login = async (email, password) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      throw new Error('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to your environment.');
-    }
-    setSessionMessage('');
+    if (!supabase) throw new Error('Supabase is not configured. Please contact support.');
+    setSessionMessage(''); setProfileError('');
     const { user: profile } = await signIn(email, password);
-
-    // Restore or initialise local subscription state
-    const localSub = subscriptionService.getSubscription();
-    if (!localSub || localSub.status === 'trial') {
-      // subscription is managed server-side; local copy is a UI cache
-    }
-
-    setItem(KEYS.USER, profile);
-    localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
-    setUser(profile);
-    setIsLoggedIn(true);
-    return true;
+    await verifiedProfileUser(profile.id);
+    if (identity.current !== profile.id) { epoch.current++; identity.current = profile.id; }
+    commit(profile); setLoading(false); return true;
   };
-
-  /**
-   * Register a new farmer via Supabase.
-   */
-  const register = async (formData) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      throw new Error('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to your environment.');
-    }
+  const register = async formData => {
+    if (!supabase) throw new Error('Supabase is not configured. Please contact support.');
     setSessionMessage('');
-
-    const { user: newUser, subscription } = await signUp({
-      fullName: formData.fullName,
-      email: formData.email,
-      password: formData.password,
-      phone: formData.phone,
-      farmName: formData.farmName,
-      poultryTypes: formData.poultryTypes,
-      planId: formData.planId || PLANS.BASIC,
-      billingCycle: formData.billingCycle || 'monthly',
-    });
-
-    // Cache the subscription locally for immediate use
-    if (subscription) {
-      subscriptionService.saveSubscription(subscription);
-    }
-
-    // Update local farm profile cache
-    const currentFarm = getItem(KEYS.FARM, {});
-    const updatedFarm = {
-      ...currentFarm,
-      name: formData.farmName || 'My Farm',
-      poultryTypes: Array.isArray(formData.poultryTypes) ? formData.poultryTypes : [],
-    };
-    setItem(KEYS.FARM, updatedFarm);
-
-    setItem(KEYS.USER, newUser);
-    localStorage.setItem(KEYS.IS_LOGGED_IN, 'true');
-    setUser(newUser);
-    setIsLoggedIn(true);
-    return true;
+    const result = await signUp({ ...formData, planId: formData.planId || PLANS.BASIC, billingCycle: formData.billingCycle || 'monthly' });
+    if (!result.session) throw new Error('Your account was created. Confirm your email address, then sign in to continue.');
+    const profile = await getProfile(result.user.id);
+    if (result.subscription) subscriptionService.saveSubscription(result.subscription);
+    setItem(KEYS.FARM, { ...getItem(KEYS.FARM, {}), name: formData.farmName || 'My Farm', poultryTypes: formData.poultryTypes || [] });
+    identity.current = profile.id; epoch.current++; commit(profile); setLoading(false); return true;
   };
-
-  /**
-   * Log out the current farmer.
-   */
   const logout = async () => {
+    epoch.current++; identity.current = null; write.current = null;
+    commit(null); setProfileError(''); setProfileSaving(false); setSessionMessage('');
     await signOut();
-    localStorage.setItem(KEYS.IS_LOGGED_IN, 'false');
-    setIsLoggedIn(false);
-    setUser(null);
-    setSessionMessage('');
   };
-
-  /**
-   * Send password reset email.
-   */
-  const forgotPassword = async (email) => {
-    await sendPasswordReset(email);
-  };
-
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isLoggedIn,
-      loading,
-      login,
-      register,
-      logout,
-      forgotPassword,
-      sessionMessage,
-      isSupabaseReady: isSupabaseConfigured(),
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, isLoggedIn, loading, login, register, logout,
+    forgotPassword: sendPasswordReset, sessionMessage, profileError, profileSaving,
+    updateProfile, refreshProfile, uploadAvatar, isSupabaseReady: isSupabaseConfigured(),
+  }}>{children}</AuthContext.Provider>;
 };
-
 export const useAuth = () => useContext(AuthContext);
