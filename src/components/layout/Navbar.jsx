@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFarm } from '../../context/FarmContext';
 import NotificationDropdown from './NotificationDropdown';
 import GlobalSearchModal from './GlobalSearchModal';
+import ProfileAvatar from '../common/ProfileAvatar';
 
 export default function Navbar({ onOpenMobileMenu }) {
   const { logout } = useAuth();
@@ -114,7 +115,7 @@ export default function Navbar({ onOpenMobileMenu }) {
         <div className="relative min-w-0" ref={profileRef}>
           <button type="button" aria-label={`Account menu for ${name}`} aria-expanded={profileOpen} onClick={() => setProfileOpen(open => !open)} className="flex min-h-11 min-w-11 max-w-full items-center gap-2 rounded-xl px-1 text-left focus-visible:outline-emerald-600">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-bold text-emerald-800 ring-2 ring-emerald-500/20">
-              {avatarUrl ? <img key={avatarUrl} src={avatarUrl} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+              <ProfileAvatar src={avatarUrl} name={name} alt={`${name} profile picture`} className="h-full w-full" />
             </span>
             <span className="hidden max-w-[140px] min-[425px]:block sm:max-w-[180px] text-xs font-semibold text-slate-800 truncate"><span className="sm:hidden">{name.split(/\s+/)[0]}</span><span className="hidden sm:inline">{name}</span></span>
             <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />

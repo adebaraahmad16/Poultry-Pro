@@ -46,10 +46,11 @@ export default function DataTable({
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
+  const safePage = Math.min(currentPage, totalPages);
   const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (safePage - 1) * pageSize;
     return filteredData.slice(start, start + pageSize);
-  }, [filteredData, currentPage, pageSize]);
+  }, [filteredData, safePage, pageSize]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -219,9 +220,9 @@ export default function DataTable({
       {filteredData.length > 0 && (
         <div className="p-3 sm:p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <span className="font-bold text-slate-800">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+            Showing <span className="font-bold text-slate-800">{(safePage - 1) * pageSize + 1}</span> to{' '}
             <span className="font-bold text-slate-800">
-              {Math.min(currentPage * pageSize, filteredData.length)}
+              {Math.min(safePage * pageSize, filteredData.length)}
             </span>{' '}
             of <span className="font-bold text-slate-800">{filteredData.length}</span> records
           </div>
@@ -229,23 +230,23 @@ export default function DataTable({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-1"
+              aria-label="Previous records page" disabled={safePage === 1}
+              onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+              className="min-h-11 min-w-11 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-1"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Previous</span>
             </button>
 
             <span className="px-3 py-1 font-bold text-slate-800 text-xs">
-              Page {currentPage} of {totalPages}
+              Page {safePage} of {totalPages}
             </span>
 
             <button
               type="button"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-1"
+              aria-label="Next records page" disabled={safePage >= totalPages}
+              onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+              className="min-h-11 min-w-11 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold flex items-center gap-1"
             >
               <span className="hidden sm:inline">Next</span>
               <ChevronRight className="w-3.5 h-3.5" />

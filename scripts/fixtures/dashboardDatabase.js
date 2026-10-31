@@ -1,7 +1,7 @@
 // Test-only Supabase double. Never imported by the application or production build.
 export function dashboardDatabase(initial = {}) {
   const state = {
-    userId: initial.userId || 'farmer-a', profileReadDelay: 0, writeDelay: 0, failure: null, calls: [], uploads: new Map(),
+    userId: Object.hasOwn(initial,'userId') ? initial.userId : 'farmer-a', profileReadDelay: 0, writeDelay: 0, failure: null, calls: [], uploads: new Map(),
     rows: initial.rows || {
       profiles: [
         { id: 'farmer-a', email: 'farmer-a@example.invalid', full_name: 'First Farmer', phone: '08000000001', role: 'farmer', farm_id: 'farm-a', avatar_url: '', account_status: 'Active' },
@@ -21,7 +21,7 @@ export function dashboardDatabase(initial = {}) {
   const isAdmin = id => ['admin','super_admin','Super Admin'].includes(profile(id)?.role);
   const ownsFarm = (id,farmId) => isAdmin(id) || state.rows.farms.some(f=>f.id===farmId&&f.owner_id===id);
   const user = () => state.userId ? {id:state.userId,email:profile(state.userId)?.email} : null;
-  const session = () => user() ? {user:user(),access_token:'fixture-token'} : null;
+  const session = () => user() ? {user:user(),access_token:'fixture-token-'+state.userId} : null;
   const emit = event => listeners.forEach(callback=>callback(event,session()));
   const allowed = (table,row,id,write=false) => {
     if(!id)return table==='subscription_plans'&&!write;

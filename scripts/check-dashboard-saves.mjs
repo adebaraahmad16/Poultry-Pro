@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { dashboardDatabase } from './fixtures/dashboardDatabase.js';
 
 globalThis.__dashboardDB=dashboardDatabase();
+globalThis.fetch=async()=>new Response('',{status:404}); // Default fixture bucket is private.
 globalThis.__selectedFarm='farm-a';
 const cache=new Map();globalThis.localStorage={getItem:key=>cache.get(key)||null,setItem:(key,value)=>cache.set(key,value),removeItem:key=>cache.delete(key)};
 const events=[];globalThis.window={dispatchEvent:e=>events.push(e),location:{origin:'http://localhost',hostname:'localhost'}};
@@ -35,10 +36,51 @@ s.failure={table:'profiles',action:'update',message:'RLS denied'};await assert.r
 s.userId='farmer-b';await assert.rejects(profile.saveProfile({full_name:'Wrong account'},'farmer-a'),/session changed/);s.userId='farmer-a';
 for(const value of [{name:' '},{phone:'not a phone'},{avatar_url:'data:image/svg+xml,unsafe'}])await assert.rejects(profile.saveProfile(value,'farmer-a'));
 const file=new File([new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0])],'profile.png',{type:'image/png'});
-const picture=await profile.saveProfileAvatar(file,'farmer-a');assert.ok(picture.avatar_url.includes('/public/avatars/farmer-a/'));assert.ok(picture.avatarDisplayUrl.includes('/sign/avatars/'));
+// Exercise the installed Storage SDK's multipart encoding and real error parser.
+const {StorageClient}=require('@supabase/storage-js');
+const originalStorage=db.storage;let storageResponse,uploadRequests=0;
+const transport=new StorageClient('https://fixture.supabase.invalid/storage/v1',{},async(url,options)=>{
+  uploadRequests++;
+  assert.ok(String(url).includes('/object/avatars/farmer-a/'));
+  assert.equal(options.method,'POST');assert.equal(options.headers['x-upsert'],'false');
+  const image=[...options.body.values()].find(value=>value instanceof Blob);
+  assert.ok(image,'SDK must send binary image data, not a preview URL');assert.equal(image.type,'image/png');
+  assert.deepEqual(new Uint8Array(await image.arrayBuffer()),new Uint8Array(await file.arrayBuffer()));
+  if(storageResponse.status===200)storageResponse.body={Key:new URL(url).pathname.slice('/storage/v1/object/'.length)};
+  return new Response(JSON.stringify(storageResponse.body),{status:storageResponse.status,headers:{'Content-Type':'application/json'}});
+});
+db.storage={from(bucket){const fallback=originalStorage.from(bucket);return {...fallback,upload:(...args)=>transport.from(bucket).upload(...args)};}};
+for(const [status,code,message] of [[400,'NoSuchBucket','Bucket not found'],[400,'InvalidMimeType','mime type image/png is not supported'],[413,'EntityTooLarge','The object exceeded the maximum allowed size'],[403,'AccessDenied','new row violates row-level security policy'],[409,'ResourceAlreadyExists','The resource already exists'],[401,'InvalidJWT','jwt expired']]){
+ storageResponse={status,body:{statusCode:String(status),code,message}};
+ const beforeUpload=s.rows.profiles[0].avatar_url;
+ await assert.rejects(profile.saveProfileAvatar(file,'farmer-a'),error=>error.status===status&&error.code===code&&error.message.includes(message)&&error.bucket==='avatars');
+ assert.equal(s.rows.profiles[0].avatar_url,beforeUpload,'Upload failures must not change the profile');
+}
+storageResponse={status:200,body:{Key:'avatars/farmer-a/upload.png'}};
+await profile.saveProfileAvatar(file,'farmer-a');assert.equal(uploadRequests,7,'No automatic upload retries');db.storage=originalStorage;
+const picture=await profile.saveProfileAvatar(file,'farmer-a');assert.ok(picture.avatar_url.startsWith('storage://avatars/farmer-a/'));assert.ok(picture.avatarDisplayUrl.includes('/sign/avatars/'));
 assert.ok(!profile.profilePatch({avatar_url:picture.avatarDisplayUrl}).avatar_url.includes('?token='),'Signed display URLs must not be persisted');
 await assert.rejects(profile.validateAvatar(new File(['bad'],'file.png',{type:'image/png'})),/not a valid image/);
+await assert.rejects(profile.validateAvatar(new File([new Uint8Array(2*1024*1024+1)],'large.png',{type:'image/png'})),/2 MB/);
+await assert.rejects(profile.validateAvatar(new File(['<svg/>'],'image.svg',{type:'image/svg+xml'})),/2 MB/);
+await assert.rejects(profile.saveProfile({avatar_url:'storage://avatars/farmer-b/other.png'},'farmer-a'),/own Storage folder/);
+const reloaded=await profile.resolveProfileAvatar(profile.normalizeProfile(s.rows.profiles[0]));assert.ok(reloaded.avatarDisplayUrl.includes('/sign/avatars/'));
+await profile.saveProfile({avatar_url:''},'farmer-a');assert.equal(s.rows.profiles[0].avatar_url,'');
+
 const uploadCount=s.uploads.size;s.failure={table:'profiles',action:'update'};await assert.rejects(profile.saveProfileAvatar(file,'farmer-a'));assert.equal(s.uploads.size,uploadCount,'Failed profile saves clean up only the new file');s.failure=null;
+const fromStorage=db.storage.from.bind(db.storage);let signCalls=0;
+db.storage={from(bucket){return {...fromStorage(bucket),async createSignedUrl(){signCalls++;return {data:null,error:{code:'NoSuchKey',message:'Object not found'}};}};}};
+const withoutRead=await profile.saveProfileAvatar(file,'farmer-a');
+assert.equal(s.rows.profiles[0].avatar_url,withoutRead.avatar_url,'Signing failure must not skip the database update');
+assert.equal(withoutRead.avatarDisplayUrl,'');assert.match(withoutRead.avatarError,/Object not found/);
+assert.ok(s.uploads.has(profile.avatarStorageReference(withoutRead.avatar_url).path),'Never delete the newly saved object on display failure');
+const previousReference=withoutRead.avatar_url;globalThis.fetch=async()=>new Response('',{status:200,headers:{'content-type':'image/png'}});
+const publicPicture=await profile.saveProfileAvatar(file,'farmer-a',previousReference);
+assert.ok(publicPicture.avatar_url.includes('/object/public/avatars/farmer-a/'));assert.equal(publicPicture.avatarDisplayUrl,publicPicture.avatar_url);
+assert.equal(s.uploads.has(profile.avatarStorageReference(previousReference).path),false,'Remove old object only after the new reference is saved');
+const signedBefore=signCalls;await profile.resolveProfileAvatar(publicPicture);assert.equal(signCalls,signedBefore,'Public URLs must not be signed');
+await profile.removeProfileAvatar('farmer-a',publicPicture.avatar_url);assert.equal(s.rows.profiles[0].avatar_url,'');assert.equal(s.uploads.has(profile.avatarStorageReference(publicPicture.avatar_url).path),false);
+db.storage=originalStorage;globalThis.fetch=async()=>new Response('',{status:404});
 const flock=await records.createFlock('farm-a',{name:'Original flock',type:'Broilers',initialBirds:100,currentBirds:100,acquisitionDate:'2025-03-02',pen:'House A',source:'Supplier'});
 const changed=await records.updateFlock(flock.id,{currentBirds:95});assert.equal(changed.name,'Original flock');assert.equal(changed.initialBirds,100);assert.equal(changed.acquisitionDate,'2025-03-02');assert.equal(changed.pen,'House A');
 await assert.rejects(records.updateFlock('missing-row',{currentBirds:0}),/No authorized row/);

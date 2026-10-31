@@ -11,6 +11,7 @@ import { farmProfileService } from '../../services/managementService';
 import { resetAllData } from '../../services/storageService';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import SubscriptionManagement from './components/SubscriptionManagement';
+import ProfilePictureEditor from '../../components/common/ProfilePictureEditor';
 
 import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -18,7 +19,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 
 export default function Settings() {
   const { user } = useAuth();
-  const { updateProfile, uploadAvatar, saving: profileSaving, error: profileError, avatarUrl } = useProfile();
+  const { updateProfile, saving: profileSaving, error: profileError } = useProfile();
   const [saveError, setSaveError] = useState('');
   const [farmSaving, setFarmSaving] = useState(false);
   const saveLock = useRef(false);
@@ -92,14 +93,6 @@ export default function Settings() {
       setSuccessMsg('Changes saved successfully.');
     } catch (error) { setSaveError(error.message); }
     finally { saveLock.current = false; }
-  });
-  const [handleAvatar, handleAvatarSaving] = useSaveAction(async event => {
-    const file = event.target.files?.[0];
-    if (!file || profileSaving) return;
-    setSaveError(''); setSuccessMsg('');
-    try { await uploadAvatar(file); setSuccessMsg('Profile picture saved successfully.'); }
-    catch (error) { setSaveError(error.message); }
-    event.target.value = '';
   });
   const [handleSaveFarm, handleSaveFarmSaving] = useSaveAction(async e => {
     e.preventDefault();
@@ -198,10 +191,7 @@ export default function Settings() {
         {activeTab === 'Profile' && (
           <form onSubmit={handleSaveUser} className="space-y-4">
             <h3 className="text-lg font-bold text-slate-900 mb-4">Personal Profile Settings</h3>
-            <div className="flex flex-wrap items-center gap-4">
-              {avatarUrl && <img src={avatarUrl} alt="Your profile" className="h-16 w-16 rounded-full object-cover" />}
-              <label className="block min-w-0 text-sm font-semibold">Profile picture<input type="file" accept="image/jpeg,image/png,image/webp" disabled={profileSaving} onChange={handleAvatar} className="mt-2 block w-full max-w-full text-sm" /><span className="mt-1 block text-xs text-slate-500">JPEG, PNG, or WebP. Maximum 5 MB.</span></label>
-            </div>
+            <ProfilePictureEditor />
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Full Name</label>
               <input

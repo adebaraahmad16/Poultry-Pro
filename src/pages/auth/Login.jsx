@@ -12,7 +12,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try { await login(email, password); navigate('/dashboard'); } catch(e) { setError(e.message); }
+    try { const profile = await login(email, password); navigate(['admin','super_admin','Super Admin'].includes(profile?.role) ? '/admin/dashboard' : '/dashboard'); } catch(e) { setError(e.message); }
   };
 
   return (

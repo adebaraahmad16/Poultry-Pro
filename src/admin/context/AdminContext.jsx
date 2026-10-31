@@ -71,7 +71,12 @@ export const AdminProvider = ({ children }) => {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
+  const [authErrorCode, setAuthErrorCode] = useState('');
   const [dataError, setDataError] = useState('');
+  const [checkedIdentity, setCheckedIdentity] = useState(null);
+  const lifecycle = useRef({ key: '', version: 0 });
+  const identityKey = `${sharedAuth.user?.id || ''}:${sharedAuth.user?.role || ''}:${Boolean(sharedAuth.loading)}`;
+  if (lifecycle.current.key !== identityKey) lifecycle.current = { key: identityKey, version: lifecycle.current.version + 1 };
 
   // Core Data Collections
   const [farmers, setFarmers] = useState([]);
@@ -86,20 +91,34 @@ export const AdminProvider = ({ children }) => {
   const [platformSettings, setPlatformSettings] = useState({});
   const [cmsContent, setCmsContent] = useState({});
   const [subscriptionSettings, setSubscriptionSettings] = useState({});
+  const stateSetters = useRef({ setCurrentAdmin,setIsAdminLoggedIn,setSupabaseAdminId,setLoading,setAuthError,setAuthErrorCode,setDataError,setFarmers,setFarms,setCategories,setSubscriptionPlans,setPayments,setNotifications,setTickets,setAuditLogs,setAdminStaff,setPlatformSettings,setCmsContent,setSubscriptionSettings,setCheckedIdentity });
+  const clearAdminCollections = useCallback(() => {
+    for (const name of ['setFarmers','setFarms','setCategories','setSubscriptionPlans','setPayments','setNotifications','setTickets','setAuditLogs','setAdminStaff']) stateSetters.current[name]([]);
+    for (const name of ['setPlatformSettings','setCmsContent','setSubscriptionSettings']) stateSetters.current[name]({});
+  }, []);
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    clearAdminCollections();setCurrentAdmin(null);setIsAdminLoggedIn(false);setSupabaseAdminId(null);setCheckedIdentity(null);setAuthError('');setDataError('');
+  }, [sharedAuth.user?.id, sharedAuth.user?.role, clearAdminCollections]);
 
   const refreshAllAdminData = useCallback(() => {
     if (isSupabaseConfigured() && authRef.current.loading) return Promise.resolve();
     const identity = authRef.current.user?.id || '';
     if (adminRefresh.current) {
-      if (adminRefresh.current.identity !== identity) queuedAdminRefresh.current = true;
+      if (adminRefresh.current.identity !== identity || adminRefresh.current.version !== lifecycle.current.version) queuedAdminRefresh.current = true;
       return adminRefresh.current.promise;
     }
+    const version = lifecycle.current.version;
+    const current = () => lifecycle.current.version === version && (authRef.current.user?.id || '') === identity && !authRef.current.loading;
     const pending = (async () => {
+    const {setCurrentAdmin,setIsAdminLoggedIn,setSupabaseAdminId,setLoading,setAuthError,setAuthErrorCode,setDataError,setFarmers,setFarms,setCategories,setSubscriptionPlans,setPayments,setNotifications,setTickets,setAuditLogs,setAdminStaff,setPlatformSettings,setCmsContent,setSubscriptionSettings,setCheckedIdentity} = Object.fromEntries(Object.entries(stateSetters.current).map(([name,set]) => [name,value=>{if(current())set(value);} ]));
     if (!initialized.current) setLoading(true);
     setAuthError('');
+    setAuthErrorCode('');
     setDataError('');
     try {
       initializeAdminStorage();
+      if (!isSupabaseConfigured()) {
       setFarms(adminService.getFarms());
       setCategories(adminService.getCategories());
       setPayments(adminService.getPayments());
@@ -110,26 +129,35 @@ export const AdminProvider = ({ children }) => {
       setPlatformSettings(adminService.getSettings());
       setCmsContent(adminService.getCmsContent());
       setSubscriptionSettings(adminService.getSubscriptionSettings());
+      }
 
       // Always refresh the plan catalog (uses defaults when Supabase unconfigured)
       refreshCatalog().then(setSubscriptionPlans).catch(console.error);
 
       // Load farmers from Supabase if configured
       if (isSupabaseConfigured() && supabase) {
+        let authorized = false;
         try {
           // Check if the current user is an admin via Supabase auth
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           if (sessionError) throw sessionError;
           if (session?.user) {
-            const access = await requireSupabaseAdmin();
+            if (!identity || session.user.id !== identity) {
+              if (current()) throw new Error(`The Supabase session (${session.user.id}) and shared profile (${identity || 'missing'}) do not match. Refresh authentication before loading administrator data.`);
+              return;
+            }
+            const access = await requireSupabaseAdmin(identity);
+            if (!current()) return;
             if (access.userId !== session.user.id) throw new Error('The administrator session changed. Please retry.');
             // Verify admin role from profiles table
             const profile = authRef.current.user?.id === session.user.id ? authRef.current.user : await getProfile(session.user.id);
+            if (!current()) return;
 
             if (['admin','super_admin','Super Admin'].includes(profile?.role)) {
-              const superAdmin = initialAdminUsers[0];
+              authorized = true;
               const adminObj = {
-                ...superAdmin,
+                role: profile.role,
+                status: profile.account_status || 'Active',
                 id: session.user.id,
                 avatar: profile.avatarDisplayUrl || profile.avatar_url || '',
                 phone: profile.phone || '',
@@ -141,15 +169,18 @@ export const AdminProvider = ({ children }) => {
               setCurrentAdmin(adminObj);
               setIsAdminLoggedIn(true);
               setSupabaseAdminId(access.userId);
+              setAdminStaff([adminObj]);
+              setTickets(adminService.getTickets());setAuditLogs(adminService.getAuditLogs());
 
               try {
                 const configuration = await loadAdminConfiguration();
+                if (!current()) return;
                 setPlatformSettings({ ...configuration.settings, supportEscalationEmail: SUPPORT_CONTACT.email });
                 setSubscriptionSettings(configuration.subscriptionSettings);
                 setCmsContent({ ...configuration.cms, contact: { ...configuration.cms.contact, email: SUPPORT_CONTACT.email, phone: SUPPORT_CONTACT.phone, whatsapp: SUPPORT_CONTACT.internationalPhone } });
                 setCategories(configuration.categories);
               } catch (error) { setDataError(error.message); }
-              try { setNotifications(await loadBroadcasts()); }
+              try { const broadcasts = await loadBroadcasts(); if (!current()) return; setNotifications(broadcasts); }
               catch (error) { setDataError(error.message); }
 
               // Load farmers, farms, and subscriptions reliably without foreign key joins
@@ -170,9 +201,11 @@ export const AdminProvider = ({ children }) => {
                   .from('farm_subscriptions')
                   .select('*')
               ]);
+              if (!current()) return;
 
               if (allFarms) {
                 const { data: flockRows, error: flockError } = await supabase.from('flocks').select('id,farm_id,type,current_birds,status');
+                if (!current()) return;
                 if (flockError) setDataError(flockError.message);
                 setFarms(allFarms.map(farm => {
                   const flocks = (flockRows || []).filter(flock => flock.farm_id === farm.id);
@@ -181,6 +214,7 @@ export const AdminProvider = ({ children }) => {
                   return { ...farm, farmerName: farmersProfiles?.find(f => f.id === farm.owner_id)?.full_name || '', poultryTypes: farm.poultry_types || [], totalFlocks: flocks.length, totalBirds: flocks.reduce((sum,f) => sum + Number(f.current_birds || 0), 0), breakdown: [...groups.values()] };
                 }));
                 const orders = await supabase.from('subscription_orders').select('*').order('created_at', { ascending: false });
+                if (!current()) return;
                 if (orders.error) setDataError(orders.error.message);
                 else setPayments((orders.data || []).map(order => {
                   const farm = allFarms.find(f => f.id === order.farm_id);
@@ -241,21 +275,20 @@ export const AdminProvider = ({ children }) => {
             setFarmers([]);
           }
         } catch (supaErr) {
+          if (!current() || supaErr.code === 'AUTH_SESSION_CHANGED') return;
+          if (authorized) { setDataError(supaErr.message || 'Administrator data could not be loaded.'); return; }
+          clearAdminCollections();
           setSupabaseAdminId(null);
           setIsAdminLoggedIn(false);
           setCurrentAdmin(null);
           setAuthError(supaErr.message || 'Unable to verify administrator access.');
-          console.warn('Supabase admin data load error:', supaErr.message);
+          setAuthErrorCode(supaErr.code || 'ADMIN_VERIFICATION_FAILED');
           setDataError(supaErr.message || 'Could not load administrator data from Supabase.');
           setFarmers([]);
         }
       } else if (!isBackendConfigured()) {
         // Neither Supabase nor backend configured — no farmer data
-        const cachedAdmin = adminService.getCurrentAdmin();
-        if (cachedAdmin) {
-          setCurrentAdmin(cachedAdmin);
-          setIsAdminLoggedIn(true);
-        }
+        setCurrentAdmin(null);setIsAdminLoggedIn(false);
         setFarmers([]);
       } else {
         // Legacy: Express backend fallback
@@ -292,20 +325,22 @@ export const AdminProvider = ({ children }) => {
       setIsAdminLoggedIn(false);
       setAuthError(error.message || 'Unable to verify administrator access. Please retry.');
     } finally {
-      initialized.current = true;
+      if(current())initialized.current = true;
+      setCheckedIdentity(identity);
       setLoading(false);
     }
     })().finally(() => {
       adminRefresh.current = null;
       if (queuedAdminRefresh.current) { queuedAdminRefresh.current = false; queueMicrotask(refreshAllAdminData); }
     });
-    adminRefresh.current = { identity, promise: pending };
+    adminRefresh.current = { identity, version, promise: pending };
     return pending;
   }, []);
 
   useEffect(() => {
     if (!sharedAuth.loading) refreshAllAdminData();
     const expired = () => {
+      lifecycle.current.version++;
       setSupabaseAdminId(null);
       setCurrentAdmin(null);
       setIsAdminLoggedIn(false);
@@ -326,27 +361,22 @@ export const AdminProvider = ({ children }) => {
   // Auth Actions
   const loginAdmin = async (email, password) => {
     if (isSupabaseConfigured() && supabase) {
-      // Use Supabase for admin login
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw new Error(error.message);
-
-      // Verify this user has admin role
-      const profile = await getProfile(data.user.id);
+      // One login path publishes the verified profile to the shared AuthProvider.
+      const profile = await authRef.current.login(email, password);
 
       if (!profile || !['admin','super_admin','Super Admin'].includes(profile.role)) {
-        await supabase.auth.signOut();
         throw new Error('Access denied. This account does not have admin privileges.');
       }
 
-      const access = await requireSupabaseAdmin();
+      const access = await requireSupabaseAdmin(profile.id);
       setSupabaseAdminId(access.userId);
-      const superAdmin = initialAdminUsers[0];
       const adminObj = {
-        ...superAdmin,
-        id: data.user.id,
+        role: profile.role,
+        status: profile.account_status || 'Active',
+        id: profile.id,
         avatar: profile.avatarDisplayUrl || profile.avatar_url || '',
         phone: profile.phone || '',
-        email: email || superAdmin.email,
+        email: profile.email || email,
         name: profile.full_name || 'Administrator',
         lastLogin: new Date().toLocaleString(),
       };
@@ -388,6 +418,8 @@ export const AdminProvider = ({ children }) => {
   }, [sharedAuth.user]);
 
   const logoutAdmin = () => {
+    lifecycle.current.version++;setCheckedIdentity(null);
+    clearAdminCollections();
     setSupabaseAdminId(null);
     initialized.current = false;
     if (isSupabaseConfigured()) sharedAuth.logout().catch(error => setAuthError(error.message));
@@ -591,17 +623,19 @@ export const AdminProvider = ({ children }) => {
         currentAdmin,
         isAdminLoggedIn: isSupabaseConfigured() ? isAdminLoggedIn && !sharedAuth.loading && sharedAuth.user?.id === currentAdmin?.id && supabaseAdminId === currentAdmin?.id && ['admin','super_admin','Super Admin'].includes(sharedAuth.user?.role) : isAdminLoggedIn,
         supabaseAdminReady: isAdminLoggedIn && !sharedAuth.loading && !loading && Boolean(supabaseAdminId) && sharedAuth.user?.id === supabaseAdminId && ['admin','super_admin','Super Admin'].includes(sharedAuth.user?.role),
-        loading: loading || (isSupabaseConfigured() && sharedAuth.loading),
-        authError,
+        loading: loading || (isSupabaseConfigured() && (sharedAuth.loading || Boolean(sharedAuth.user?.id && checkedIdentity !== sharedAuth.user.id))),
+        authorizationStatus: sharedAuth.loading ? 'loading' : !sharedAuth.user ? sharedAuth.authStatus || 'unauthenticated' : checkedIdentity !== sharedAuth.user.id ? 'verifying' : authError ? authErrorCode === 'ADMIN_ROLE_REQUIRED' ? 'denied' : 'error' : isAdminLoggedIn ? 'authorized' : 'denied',
+        authErrorCode,
+        authError: sharedAuth.loading || checkedIdentity !== (sharedAuth.user?.id || '') ? '' : authError,
         dataError,
         loginAdmin,
         logoutAdmin,
-        farmers,
-        farms,
+        farmers: isSupabaseConfigured() && (!isAdminLoggedIn || sharedAuth.user?.id !== supabaseAdminId) ? [] : farmers,
+        farms: isSupabaseConfigured() && (!isAdminLoggedIn || sharedAuth.user?.id !== supabaseAdminId) ? [] : farms,
         categories,
         subscriptionPlans,
-        payments,
-        notifications,
+        payments: isSupabaseConfigured() && (!isAdminLoggedIn || sharedAuth.user?.id !== supabaseAdminId) ? [] : payments,
+        notifications: isSupabaseConfigured() && (!isAdminLoggedIn || sharedAuth.user?.id !== supabaseAdminId) ? [] : notifications,
         tickets,
         auditLogs,
         adminStaff,

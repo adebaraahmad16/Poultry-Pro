@@ -206,13 +206,20 @@ export async function sendPasswordReset(email) {
  */
 export function onAuthStateChange(callback) {
   if (!supabase) return () => {};
+  let active = true;
+  const timers = new Set();
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     // Leave the auth callback before querying the same Supabase client.
-    setTimeout(async () => {
+    const timer = setTimeout(async () => {
+      timers.delete(timer);
+      if (!active) return;
       // Ignore a queued event from an earlier account/session transition.
-      const current = await supabase.auth.getSession();
-      callback(current.error ? session : current.data?.session, event);
+      try {
+        const current = await supabase.auth.getSession();
+        if (active) callback(current.error ? null : current.data?.session, current.error ? 'SESSION_ERROR' : event, current.error);
+      } catch (error) { if (active) callback(null, 'SESSION_ERROR', error); }
     }, 0);
+    timers.add(timer);
   });
-  return () => subscription.unsubscribe();
+  return () => { active = false; timers.forEach(clearTimeout); timers.clear(); subscription.unsubscribe(); };
 }

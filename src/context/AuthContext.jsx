@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient.js';
 import { signIn, signUp, signOut, getProfile, sendPasswordReset, onAuthStateChange } from '../services/supabase/authService.js';
-import { normalizeProfile, resolveProfileAvatar, saveProfile, saveProfileAvatar, verifiedProfileUser } from '../services/profileService';
+import { normalizeProfile, resolveProfileAvatar, saveProfile, saveProfileAvatar, removeProfileAvatar, verifiedProfileUser } from '../services/profileService';
 import { subscriptionService } from '../services/subscriptionService';
 import { initializeStorage, getItem, setItem, KEYS } from '../services/storageService';
 import { PLANS } from '../constants/plans.js';
+import { verifiedSession, assertSessionCurrent, currentSession, clearSessionVerification } from '../services/authSession';
 
 const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
@@ -14,6 +15,8 @@ export const AuthProvider = ({ children }) => {
   const [sessionMessage, setSessionMessage] = useState('');
   const [profileError, setProfileError] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
+  const [sessionFailure, setSessionFailure] = useState(null);
+  const sessionRead = useRef(0);
   const current = useRef(null), identity = useRef(null), epoch = useRef(0), revision = useRef(0), write = useRef(null);
   const commit = useCallback(profile => {
     const normalized = normalizeProfile(profile);
@@ -24,10 +27,12 @@ export const AuthProvider = ({ children }) => {
     else localStorage.removeItem(KEYS.USER);
     localStorage.setItem(KEYS.IS_LOGGED_IN, String(Boolean(normalized)));
   }, []);
-  const loadSession = useCallback(async (session, event) => {
+  const loadSession = useCallback(async (session, event, retry = 0) => {
     const id = session?.user?.id || null;
     if (!id) {
-      epoch.current++; identity.current = null; write.current = null;
+      if (identity.current && event === 'SIGNED_OUT') setSessionFailure({code:'AUTH_SESSION_EXPIRED',message:'Your session ended. Sign in again to continue.'});
+      epoch.current++; sessionRead.current++; identity.current = null; write.current = null;
+      clearSessionVerification();
       commit(null); setProfileSaving(false); setProfileError(''); setLoading(false); return;
     }
     if (id === identity.current && current.current?.id === id && event !== 'USER_UPDATED') return;
@@ -36,29 +41,40 @@ export const AuthProvider = ({ children }) => {
       commit(null); setProfileSaving(false); setLoading(true);
     }
     const version = epoch.current;
+    const request = ++sessionRead.current;
     const profileVersion = revision.current;
     try {
-      const profile = await getProfile(id);
-      if (version === epoch.current && identity.current === id && profileVersion === revision.current) { commit(profile); setProfileError(''); }
+      const verified = await verifiedSession(id);
+      const profile = await getProfile(verified.user.id);
+      await assertSessionCurrent(verified);
+      if (profile?.id !== verified.user.id) throw new Error('The returned profile does not match the authenticated Supabase user.');
+      if (request === sessionRead.current && version === epoch.current && identity.current === id && profileVersion === revision.current) { commit(profile); setSessionFailure(null); setProfileError(''); setSessionMessage(''); }
     } catch (error) {
-      if (version === epoch.current && profileVersion === revision.current) { commit(null); setProfileError(error.message); setSessionMessage(error.message); }
-    } finally { if (version === epoch.current) setLoading(false); }
+      if (request === sessionRead.current && version === epoch.current && profileVersion === revision.current) {
+        if (error.code === 'AUTH_SESSION_CHANGED' && retry < 1) return await loadSession(await currentSession(), 'SESSION_RETRY', retry + 1);
+        commit(null); setSessionFailure({ code: error.code, message: error.message }); setProfileError(error.message); setSessionMessage(error.message);
+      }
+    } finally { if (request === sessionRead.current && version === epoch.current) setLoading(false); }
   }, [commit]);
   useEffect(() => {
     initializeStorage();
     if (!supabase || !isSupabaseConfigured()) { setLoading(false); return; }
     let active = true;
-    const unsubscribe = onAuthStateChange((session, event) => { if (active) loadSession(session, event); });
+    const unsubscribe = onAuthStateChange((session, event, error) => {
+      if (!active) return;
+      if (error) { epoch.current++;sessionRead.current++;identity.current=null;commit(null);setSessionFailure({code:error.code,message:error.message});setSessionMessage(error.message);setLoading(false); }
+      else loadSession(session, event);
+    });
     supabase.auth.getSession().then(({data,error}) => {
       if (!active) return;
-      if (error) { setProfileError(error.message); setLoading(false); }
+      if (error) { setSessionFailure({code:error.code,message:error.message});setProfileError(error.message); setLoading(false); }
       else loadSession(data?.session);
-    }).catch(error => { if (active) { setProfileError(error.message); setLoading(false); } });
+    }).catch(error => { if (active) { setSessionFailure({code:error.code,message:error.message});setProfileError(error.message); setLoading(false); } });
     return () => { active = false; epoch.current++; unsubscribe(); };
   }, [loadSession]);
 
   useEffect(() => {
-    if (!user?.id || !user.avatar_url) return;
+    if (!user?.id || !user.avatar_url || user.avatarError) return;
     const version = epoch.current;
     const timer = setInterval(async () => {
       const source = current.current;
@@ -67,7 +83,7 @@ export const AuthProvider = ({ children }) => {
       if (version === epoch.current && current.current === source) commit(updated);
     }, 45 * 60 * 1000);
     return () => clearInterval(timer);
-  }, [user?.id, user?.avatar_url, commit]);
+  }, [user?.id, user?.avatar_url, user?.avatarError, commit]);
 
   const refreshProfile = useCallback(async () => {
     const expected = identity.current;
@@ -100,16 +116,18 @@ export const AuthProvider = ({ children }) => {
     })();
     write.current = promise; return promise;
   }, [commit]);
-  const updateProfile = useCallback(values => runProfileWrite(id => saveProfile(values, id)), [runProfileWrite]);
-  const uploadAvatar = useCallback(file => runProfileWrite(id => saveProfileAvatar(file, id)), [runProfileWrite]);
+  const updateProfile = useCallback(values => runProfileWrite(id => values.avatar_url === '' && Object.keys(values).length === 1
+    ? removeProfileAvatar(id, current.current?.avatar_url)
+    : saveProfile(values, id)), [runProfileWrite]);
+  const uploadAvatar = useCallback(file => runProfileWrite(id => saveProfileAvatar(file, id, current.current?.avatar_url)), [runProfileWrite]);
 
   const login = async (email, password) => {
     if (!supabase) throw new Error('Supabase is not configured. Please contact support.');
-    setSessionMessage(''); setProfileError('');
+    setSessionMessage(''); setProfileError(''); setSessionFailure(null);
     const { user: profile } = await signIn(email, password);
     await verifiedProfileUser(profile.id);
     if (identity.current !== profile.id) { epoch.current++; identity.current = profile.id; }
-    commit(profile); setLoading(false); return true;
+    commit(profile); setSessionFailure(null); setLoading(false); return profile;
   };
   const register = async formData => {
     if (!supabase) throw new Error('Supabase is not configured. Please contact support.');
@@ -122,11 +140,15 @@ export const AuthProvider = ({ children }) => {
     identity.current = profile.id; epoch.current++; commit(profile); setLoading(false); return true;
   };
   const logout = async () => {
-    epoch.current++; identity.current = null; write.current = null;
+    epoch.current++; sessionRead.current++; identity.current = null; write.current = null;
+    clearSessionVerification();setSessionFailure(null);
     commit(null); setProfileError(''); setProfileSaving(false); setSessionMessage('');
     await signOut();
   };
   return <AuthContext.Provider value={{ user, isLoggedIn, loading, login, register, logout,
+    authStatus: loading ? 'loading' : user ? 'authenticated' : sessionFailure?.code === 'AUTH_SESSION_EXPIRED' ? 'expired' : sessionFailure ? 'error' : 'unauthenticated',
+    authError: sessionFailure?.message || '',
+    refreshAuth: async () => loadSession(await currentSession(), 'USER_UPDATED'),
     forgotPassword: sendPasswordReset, sessionMessage, profileError, profileSaving,
     updateProfile, refreshProfile, uploadAvatar, isSupabaseReady: isSupabaseConfigured(),
   }}>{children}</AuthContext.Provider>;

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ShieldCheck, Lock, Mail, Eye, EyeOff, CheckCircle2, ArrowRight, ShieldAlert, Bird } from '../../components/common/Icons';
 import { useAdmin } from '../context/AdminContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLogin() {
   const { loginAdmin } = useAdmin();
+  const { sessionMessage, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -15,7 +17,8 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const redirectPath = location.state?.from?.pathname || '/admin/dashboard';
+  const requestedPath = location.state?.from?.pathname;
+  const redirectPath = typeof requestedPath === 'string' && requestedPath.startsWith('/admin/') && requestedPath !== '/admin/login' ? requestedPath : '/admin/dashboard';
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -105,10 +108,10 @@ export default function AdminLogin() {
                 </p>
               </div>
 
-              {error && (
-                <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-700 flex items-center gap-2">
+              {!authLoading && (error || sessionMessage) && (
+                <div role="alert" className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-700 flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 shrink-0 text-rose-600" />
-                  {error}
+                  {error || sessionMessage}
                 </div>
               )}
 

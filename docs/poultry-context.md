@@ -14,6 +14,7 @@ Full-app testing also exposed a refresh loop: fetching notifications cached them
 
 ```powershell
 node scripts/check-poultry-context.mjs
+node scripts/check-context-contract.mjs
 node scripts/check-profile-browser.mjs
 node scripts/check-dashboard-saves.mjs
 node src/services/__tests__/contactService.test.js
@@ -23,3 +24,9 @@ npm.cmd run build
 The poultry test bundles the actual App, AuthProvider, FarmProvider, PoultryProvider, login page and dashboards in React StrictMode. Only the Supabase transport is replaced with controlled test data. It covers signed-out startup, login, paused record loading, turkey/broiler separation, All Poultry, navigation, browser refresh, invalid preferences, account changes, empty/null types and absent farms, blocked preference writes, and stable request counts. It checks runtime exceptions and React render/hook warnings. Artifacts are in ignored `.ui-checks/poultry-context/`.
 
 These are isolated integration checks, not a production Supabase login. No database tables, RLS policies, farm records, subscriptions, account credentials or stored farmer data were modified. No migration is required for this fix.
+
+## Recheck on 31 October 2026
+
+The current source retains the correct App provider nesting and the effect-based service setter. The full-app browser suite passed again. `check-context-contract.mjs` additionally renders the actual Farm/Poultry providers while Auth is loading and signed out, verifies their public contract and preserved fields, checks that rendering does not mutate either service scope, and verifies the explicit missing-provider diagnostic. It uses isolated service/auth fixtures and makes no remote requests.
+
+The repeated `PoultryContext.jsx:7:28` undefined-property error was not reproduced in this source. The current seventh line creates the poultry context; the original direct property access is no longer there. This suggests, but does not establish, a different served version or source map. Diagnose the actual failing page URL and served module/bundle before making more provider changes. No service worker is registered in this project, and the common local development/preview ports were not serving a site during this check.
