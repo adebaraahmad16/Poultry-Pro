@@ -22,7 +22,7 @@ export default function Login() {
         <div className="text-center">
           <Link to="/" title="Go to Landing Page" className="inline-block hover:scale-105 transition-transform">
             <img
-              src="/favicon.svg"
+              src="/favicon%20poultry.png"
               alt="PoultryPro Logo"
               className="w-14 h-14 rounded-2xl mx-auto mb-4 shadow-lg shadow-emerald-600/25 object-contain"
             />

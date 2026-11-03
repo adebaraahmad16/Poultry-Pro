@@ -56,13 +56,12 @@ export default function LegalPageLayout({
       {/* Navigation bar */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
-          <Link to="/" className="flex items-center gap-2 sm:gap-2.5 min-w-0" aria-label="PoultryPro home">
-            <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shrink-0">
-              <Bird className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
-            </span>
-            <span className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 truncate">
-              Poultry<span className="text-emerald-600">Pro</span>
-            </span>
+          <Link to="/" className="flex items-center min-w-0" aria-label="PoultryPro home">
+            <img
+              src="/poultry.png"
+              alt="PoultryPro"
+              className="h-9 sm:h-10 w-auto max-w-[170px] sm:max-w-[200px] object-contain"
+            />
           </Link>
           <Link
             to="/"

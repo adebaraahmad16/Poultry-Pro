@@ -1,5 +1,6 @@
 import HeroDashboardPreview from '../components/landing/HeroDashboardPreview';
 import SectionPhoto from '../components/landing/SectionPhoto';
+import PoultryTypesSection from '../components/landing/PoultryTypesSection';
 import PlanCards from '../components/subscriptions/PlanCards';
 import { usePlanCatalog } from '../components/subscriptions/usePlanCatalog';
 import React, { useState } from 'react';
@@ -18,15 +19,15 @@ function SectionHeading({ eyebrow, title, subtitle, light = false }) {
   return (
     <div className="text-center max-w-3xl mx-auto">
       {eyebrow && (
-        <p className={`text-xs font-extrabold uppercase tracking-widest ${light ? 'text-emerald-300' : 'text-emerald-600'}`}>
+        <p className={`text-xs font-extrabold uppercase tracking-widest ${light ? 'text-emerald-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]' : 'text-emerald-600'}`}>
           {eyebrow}
         </p>
       )}
-      <h2 className={`mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight ${light ? 'text-white' : 'text-slate-900'}`}>
+      <h2 className={`mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight ${light ? 'text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]' : 'text-slate-900'}`}>
         {title}
       </h2>
       {subtitle && (
-        <p className={`mt-3 text-base sm:text-lg leading-relaxed ${light ? 'text-slate-300' : 'text-slate-600'}`}>
+        <p className={`mt-3 text-base sm:text-lg leading-relaxed ${light ? 'text-slate-100 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]' : 'text-slate-600'}`}>
           {subtitle}
         </p>
       )}
@@ -89,19 +90,30 @@ export default function LandingPage() {
         {/* Hero */}
         <section id="hero" aria-labelledby="hero-title" className="relative isolate overflow-hidden bg-[#123524]">
           <SectionPhoto name="hero" eager />
-          <div className="absolute inset-0 bg-slate-950/75" aria-hidden="true" />
           <div data-hero-layout className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-14 lg:px-8">
             <div data-hero-content className="min-w-0">
-              <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">Smart management. Healthier flocks.</p>
-              <h1 id="hero-title" className="max-w-xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl xl:text-[3.25rem]">
+              <span
+                className="inline-block text-xs font-extrabold uppercase tracking-widest text-emerald-300 mb-4"
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.9)' }}
+              >
+                Smart management. Healthier flocks.
+              </span>
+              <h1
+                id="hero-title"
+                className="max-w-xl text-4xl font-extrabold leading-[1.15] tracking-tight text-white sm:text-5xl xl:text-[3.25rem]"
+                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 14px rgba(0,0,0,0.9), 0 0 24px rgba(0,0,0,0.95)' }}
+              >
                 Manage Your Poultry Farm <span className="text-emerald-300">Smarter,</span> Grow Your Business Faster.
               </h1>
-              <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-100 sm:text-lg">
+              <p
+                className="mt-5 max-w-xl text-base sm:text-lg font-semibold leading-relaxed text-white"
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 2px 8px rgba(0,0,0,0.9), 0 0 16px rgba(0,0,0,0.95)' }}
+              >
                 Manage your flocks, track farm records, monitor expenses, and grow your poultry business all in one place.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 {startCta}
-                <a href="#features" className="flex w-full items-center justify-center rounded-2xl border border-white/50 bg-white px-7 py-4 text-base font-bold text-[#1F2937] transition-colors hover:bg-slate-100 sm:w-auto">
+                <a href="#features" className="flex w-full items-center justify-center rounded-2xl border border-white/30 bg-white px-7 py-4 text-base font-bold text-[#1F2937] transition-all hover:bg-slate-100 shadow-md sm:w-auto">
                   Explore Features
                 </a>
               </div>
@@ -146,42 +158,7 @@ export default function LandingPage() {
         </section>
 
         {/* Poultry-type personalization */}
-        <section id="poultry-types" className="relative isolate overflow-hidden border-t border-slate-200/60 bg-[#123524] py-16 sm:py-20">
-          <SectionPhoto name="poultry-types" />
-          <div className="absolute inset-0 bg-[#F8FAF9]/80" aria-hidden="true" />
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading
-              eyebrow="Personalized for you"
-              title="Built Around the Poultry You Raise"
-              subtitle="Whether you raise broilers, layers, turkeys or ducks, PoultryPro adapts to your operation."
-            />
-
-            <div className="mt-10 grid grid-cols-1 auto-rows-fr md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {POULTRY_TYPES.filter(t => t.id !== 'quails').map((t) => {
-                const Icon = Bird;
-                return (
-                  <div key={t.id} data-poultry-type={t.id} className="flex h-full min-w-0 flex-col items-center rounded-2xl border border-slate-200 bg-white/95 p-6 text-center shadow-sm transition-shadow hover:shadow-md">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto" aria-hidden="true">
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <h3 className="mt-3 text-sm font-extrabold text-slate-900">{t.label}</h3>
-                    <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">{t.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-10 text-center">
-              <Link
-                to="/register"
-                className="inline-flex items-center gap-2 px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-2xl shadow-md shadow-emerald-600/20 transition-all"
-              >
-                Explore Poultry Management
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-        </section>
+        <PoultryTypesSection />
 
         {/* Dashboard preview */}
         <section id="dashboard-preview" className="py-20 bg-white border-t border-slate-100">
@@ -283,14 +260,28 @@ export default function LandingPage() {
         {/* Why Choose PoultryPro? — 4 benefits */}
         <section id="benefits" className="relative isolate py-20 bg-slate-50 border-t border-slate-200/60">
           <SectionPhoto name="farmer" />
-          <div className="absolute inset-0 bg-slate-50/90" aria-hidden="true" />
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <SectionHeading
-              eyebrow="Why PoultryPro"
-              title="Why Choose PoultryPro?"
-              subtitle="Built specifically for poultry farmers who want clarity, efficiency, and growth."
-            />
-            <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <span
+                className="inline-block text-xs font-extrabold uppercase tracking-widest text-emerald-300 mb-3"
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.9)' }}
+              >
+                Why PoultryPro
+              </span>
+              <h2
+                className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white"
+                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 14px rgba(0,0,0,0.9), 0 0 24px rgba(0,0,0,0.95)' }}
+              >
+                Why Choose PoultryPro?
+              </h2>
+              <p
+                className="mt-3 text-base sm:text-lg font-semibold leading-relaxed text-white"
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 2px 8px rgba(0,0,0,0.9), 0 0 16px rgba(0,0,0,0.95)' }}
+              >
+                Built specifically for poultry farmers who want clarity, efficiency, and growth.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { icon: Clock, title: 'Simple Farm Management', desc: 'Intuitive tools designed specifically for poultry farmers to streamline daily operations.' },
                 { icon: NotebookPen, title: 'Better Record Keeping', desc: 'Replace scattered paper notebooks with organized, secure digital records you can trust.' },
@@ -464,22 +455,29 @@ export default function LandingPage() {
         {/* Final CTA */}
         <section className="relative isolate overflow-hidden py-20 bg-[#123524] border-t border-emerald-700/30">
           <SectionPhoto name="cta" />
-          <div className="absolute inset-0 bg-slate-950/75" aria-hidden="true" />
-          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-              Ready to Manage Your Farm Smarter?
-            </h2>
-            <p className="mt-4 text-base sm:text-lg text-emerald-100 max-w-xl mx-auto leading-relaxed">
-              Join PoultryPro and simplify your daily poultry farm operations.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to={isLoggedIn ? '/dashboard' : '/register'}
-                className="w-full sm:w-auto px-8 py-4 bg-[#15803D] hover:bg-green-800 text-white font-bold text-base rounded-2xl transition-all shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2"
+          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-6">
+              <h2
+                className="text-3xl sm:text-5xl font-black text-white tracking-tight"
+                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 14px rgba(0,0,0,0.9), 0 0 24px rgba(0,0,0,0.95)' }}
               >
-                {isLoggedIn ? 'Go to Your Dashboard' : 'Get Started'}
-                <ArrowRight className="w-5 h-5" />
-              </Link>
+                Ready to Manage Your Farm Smarter?
+              </h2>
+              <p
+                className="mt-4 text-base sm:text-lg font-semibold text-emerald-200 max-w-xl mx-auto leading-relaxed"
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 2px 8px rgba(0,0,0,0.9), 0 0 16px rgba(0,0,0,0.95)' }}
+              >
+                Join PoultryPro and simplify your daily poultry farm operations.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link
+                  to={isLoggedIn ? '/dashboard' : '/register'}
+                  className="w-full sm:w-auto px-8 py-4 bg-[#15803D] hover:bg-green-800 text-white font-bold text-base rounded-2xl transition-all shadow-lg shadow-black/30 flex items-center justify-center gap-2 hover:scale-[1.02]"
+                >
+                  {isLoggedIn ? 'Go to Your Dashboard' : 'Get Started'}
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>

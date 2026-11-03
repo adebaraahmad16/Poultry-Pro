@@ -54,7 +54,7 @@ export default function Navbar({ onOpenMobileMenu }) {
 
         {/* Mobile Brand Logo */}
         <div className="flex items-center gap-2 lg:hidden">
-          <img src="/favicon.svg" alt="PoultryPro Logo" className="w-8 h-8 rounded-lg shadow-sm" />
+          <img src="/favicon%20poultry.png" alt="PoultryPro Logo" className="w-8 h-8 rounded-lg shadow-sm object-contain" />
           <span className="font-bold text-sm text-slate-900 tracking-tight hidden sm:inline">
             Poultry<span className="text-emerald-600">Pro</span>
           </span>

@@ -48,12 +48,13 @@ export default function LandingFooter() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           {/* Brand column */}
           <div className="col-span-2 md:col-span-2">
-            <div className="flex items-center gap-2.5">
-              <span className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
-                <Bird className="w-5 h-5" />
-              </span>
-              <span className="text-lg font-extrabold text-white">PoultryPro</span>
-            </div>
+            <Link to="/" className="inline-flex items-center bg-white rounded-xl px-3.5 py-2 shadow-md hover:bg-slate-50 transition-colors" aria-label="PoultryPro home">
+              <img
+                src="/poultry.png"
+                alt="PoultryPro"
+                className="h-9 sm:h-10 w-auto max-w-[190px] sm:max-w-[210px] object-contain"
+              />
+            </Link>
             <p className="mt-3 text-sm leading-relaxed text-slate-400 max-w-xs">
               Smart Management. Healthier Flocks. Better Profits.
             </p>

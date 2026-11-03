@@ -24,13 +24,12 @@ export default function LandingNavbar() {
     <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5" aria-label="PoultryPro home">
-          <span className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-md">
-            <Bird className="w-6 h-6 stroke-[2.5]" />
-          </span>
-          <span className="text-xl font-extrabold tracking-tight text-slate-900">
-            Poultry<span className="text-emerald-600">Pro</span>
-          </span>
+        <Link to="/" className="flex items-center" aria-label="PoultryPro home">
+          <img
+            src="/poultry.png"
+            alt="PoultryPro"
+            className="h-10 sm:h-11 w-auto max-w-[190px] sm:max-w-[220px] object-contain"
+          />
         </Link>
 
         {/* Desktop nav */}

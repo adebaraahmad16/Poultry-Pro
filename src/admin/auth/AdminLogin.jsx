@@ -51,9 +51,11 @@ export default function AdminLogin() {
 
             <div className="relative z-10">
               <Link to="/" className="flex items-center gap-3 group" aria-label="PoultryPro home">
-                <span className="w-11 h-11 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-md">
-                  <Bird className="w-7 h-7 stroke-[2.5]" />
-                </span>
+                <img
+                  src="/favicon%20poultry.png"
+                  alt="PoultryPro Logo"
+                  className="w-11 h-11 rounded-xl object-contain shadow-md"
+                />
                 <div>
                   <span className="text-2xl font-extrabold tracking-tight text-white block leading-none">
                     Poultry<span className="text-emerald-400">Pro</span>

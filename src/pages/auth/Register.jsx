@@ -97,9 +97,11 @@ export default function Register() {
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl max-w-2xl w-full p-6 sm:p-8">
         <div className="text-center">
           <Link to="/" title="Go to Landing Page" className="inline-block hover:scale-105 transition-transform">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto mb-4 shadow-md shadow-emerald-600/25">
-              <Bird className="w-7 h-7 stroke-[2.5]" />
-            </div>
+            <img
+              src="/favicon%20poultry.png"
+              alt="PoultryPro Logo"
+              className="w-14 h-14 rounded-2xl mx-auto mb-4 shadow-lg shadow-emerald-600/25 object-contain"
+            />
           </Link>
           <h2 className="text-2xl font-extrabold text-slate-900">Create PoultryPro Account</h2>
           <p className="mt-1 text-sm text-slate-500">Includes 14-day unconditional free trial • No credit card required</p>

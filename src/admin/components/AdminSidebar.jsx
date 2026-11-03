@@ -88,9 +88,11 @@ export default function AdminSidebar({
       <div className="min-h-0 flex flex-1 flex-col">
         <div className="h-16 shrink-0 px-4 flex items-center justify-between border-b border-emerald-900/60">
           <NavLink to="/admin/dashboard" className="flex items-center gap-2.5 overflow-hidden" aria-label="PoultryPro home">
-            <span className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-md shrink-0">
-              <Bird className="w-6 h-6 stroke-[2.5]" />
-            </span>
+            <img
+              src="/favicon%20poultry.png"
+              alt="PoultryPro Logo"
+              className="w-10 h-10 rounded-xl object-contain shadow-md shrink-0"
+            />
             {!collapsed && (
               <div className="min-w-0">
                 <span className="text-xl font-extrabold tracking-tight text-white block leading-none">

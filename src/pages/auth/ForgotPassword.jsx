@@ -27,9 +27,13 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl max-w-md w-full p-8 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto mb-4 shadow-md">
-          <Bird className="w-7 h-7 stroke-[2.5]" />
-        </div>
+        <Link to="/" title="Go to Landing Page" className="inline-block hover:scale-105 transition-transform">
+          <img
+            src="/favicon%20poultry.png"
+            alt="PoultryPro Logo"
+            className="w-14 h-14 rounded-2xl mx-auto mb-4 shadow-lg shadow-emerald-600/25 object-contain"
+          />
+        </Link>
 
         {!submitted ? (
           <>

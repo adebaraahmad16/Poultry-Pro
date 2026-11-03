@@ -90,11 +90,13 @@ export default function AdminHeader({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Brand Logo in Title Bar (Same as Landing Page) */}
+        {/* Brand Logo in Title Bar */}
         <Link to="/admin/dashboard" className="hidden sm:flex shrink-0 items-center gap-2.5 mr-1" aria-label="PoultryPro Admin">
-          <span className="w-9 h-9 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-sm shrink-0">
-            <Bird className="w-5 h-5 stroke-[2.5]" />
-          </span>
+          <img
+            src="/favicon%20poultry.png"
+            alt="PoultryPro Logo"
+            className="w-9 h-9 rounded-xl object-contain shadow-sm shrink-0"
+          />
           <span className="text-lg font-extrabold tracking-tight text-slate-900 hidden sm:inline-block">
             Poultry<span className="text-emerald-600">Pro</span>
           </span>

@@ -105,7 +105,7 @@ export default function Sidebar({ className = "", scrollScope = "desktop" }) {
       {/* Brand Logo */}
       <div className="p-5 flex items-center gap-3 border-b border-slate-800">
         <img 
-          src="/favicon.svg" 
+          src="/favicon%20poultry.png" 
           alt="PoultryPro Logo" 
           className="w-10 h-10 rounded-xl shadow-lg shadow-emerald-900/40 object-contain hover:scale-105 transition-transform" 
         />
