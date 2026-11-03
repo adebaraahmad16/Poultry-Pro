@@ -1,7 +1,8 @@
 import { usePlanCatalog } from '../../components/subscriptions/usePlanCatalog';
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Bird, Mail, Lock, User, Phone, Home, ArrowRight, ArrowLeft, Check, Sparkles } from '../../components/common/Icons';
+import { Bird, Mail, User, Phone, Home, ArrowRight, ArrowLeft, Check, Sparkles } from '../../components/common/Icons';
+import PasswordInput from '../../components/common/PasswordInput';
 import { useAuth } from '../../context/AuthContext';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import { PLANS, PLAN_DETAILS } from '../../constants/plans';
@@ -262,32 +263,28 @@ export default function Register() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
+              <label htmlFor="reg-password" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Password</label>
+              <PasswordInput
+                id="reg-password"
+                required
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                aria-label="Password"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Confirm Password</label>
-              <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
+              <label htmlFor="reg-confirm-password" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Confirm Password</label>
+              <PasswordInput
+                id="reg-confirm-password"
+                required
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                aria-label="Confirm Password"
+              />
             </div>
           </div>
 

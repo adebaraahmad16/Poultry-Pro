@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bird, Mail, Lock, ArrowRight, ArrowLeft } from '../../components/common/Icons';
+import { Bird, Mail, ArrowRight, ArrowLeft } from '../../components/common/Icons';
+import PasswordInput from '../../components/common/PasswordInput';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Login() {
@@ -20,10 +21,10 @@ export default function Login() {
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl max-w-md w-full p-8">
         <div className="text-center">
           <Link to="/" title="Go to Landing Page" className="inline-block hover:scale-105 transition-transform">
-            <img 
-              src="/favicon.svg" 
-              alt="PoultryPro Logo" 
-              className="w-14 h-14 rounded-2xl mx-auto mb-4 shadow-lg shadow-emerald-600/25 object-contain" 
+            <img
+              src="/favicon.svg"
+              alt="PoultryPro Logo"
+              className="w-14 h-14 rounded-2xl mx-auto mb-4 shadow-lg shadow-emerald-600/25 object-contain"
             />
           </Link>
           <h2 className="text-2xl font-extrabold text-slate-900">Welcome Back</h2>
@@ -48,19 +49,17 @@ export default function Login() {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">Password</label>
+              <label htmlFor="login-password" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">Password</label>
               <Link to="/forgot-password" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700">Forgot?</Link>
             </div>
-            <div className="relative">
-              <Lock className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-              />
-            </div>
+            <PasswordInput
+              id="login-password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              aria-label="Password"
+            />
           </div>
 
           <button

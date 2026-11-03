@@ -12,6 +12,7 @@ import { resetAllData } from '../../services/storageService';
 import PoultryTypeSelect from '../../components/common/PoultryTypeSelect';
 import SubscriptionManagement from './components/SubscriptionManagement';
 import ProfilePictureEditor from '../../components/common/ProfilePictureEditor';
+import PasswordInput from '../../components/common/PasswordInput';
 
 import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../context/ConfirmContext';
@@ -374,14 +375,43 @@ export default function Settings() {
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-slate-900 mb-4">Security Settings</h3>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Current Password</label>
-                <input type="password" autoComplete="current-password" value={passwords.current} onChange={e => setPasswords({ ...passwords, current: e.target.value })} placeholder="••••••••" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
+                <label htmlFor="sec-current-password" className="block text-xs font-semibold text-slate-700 uppercase mb-1">Current Password</label>
+                <PasswordInput
+                  id="sec-current-password"
+                  showLockIcon={false}
+                  autoComplete="current-password"
+                  value={passwords.current}
+                  onChange={e => setPasswords({ ...passwords, current: e.target.value })}
+                  placeholder="••••••••"
+                  inputClassName="py-2.5"
+                  aria-label="Current Password"
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">New Password</label>
-                <input type="password" autoComplete="new-password" value={passwords.next} onChange={e => setPasswords({ ...passwords, next: e.target.value })} placeholder="••••••••" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
+                <label htmlFor="sec-new-password" className="block text-xs font-semibold text-slate-700 uppercase mb-1">New Password</label>
+                <PasswordInput
+                  id="sec-new-password"
+                  showLockIcon={false}
+                  autoComplete="new-password"
+                  value={passwords.next}
+                  onChange={e => setPasswords({ ...passwords, next: e.target.value })}
+                  placeholder="••••••••"
+                  inputClassName="py-2.5"
+                  aria-label="New Password"
+                />
               </div>
-              <label className="block text-xs font-semibold text-slate-700">Confirm New Password<input type="password" autoComplete="new-password" value={passwords.confirm} onChange={e => setPasswords({ ...passwords, confirm: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></label>
+              <div>
+                <label htmlFor="sec-confirm-password" className="block text-xs font-semibold text-slate-700 uppercase mb-1">Confirm New Password</label>
+                <PasswordInput
+                  id="sec-confirm-password"
+                  showLockIcon={false}
+                  autoComplete="new-password"
+                  value={passwords.confirm}
+                  onChange={e => setPasswords({ ...passwords, confirm: e.target.value })}
+                  inputClassName="py-2.5"
+                  aria-label="Confirm New Password"
+                />
+              </div>
               <button
                 type="button"
                 disabled={passwordSaving}
