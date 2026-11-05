@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient.js';
-import { signIn, signUp, signOut, getProfile, sendPasswordReset, onAuthStateChange } from '../services/supabase/authService.js';
+import { signIn, signUp, signOut, getProfile, sendPasswordReset, onAuthStateChange, initializeFarmerAccount, consumeRegistrationIntent } from '../services/supabase/authService.js';
 import { normalizeProfile, resolveProfileAvatar, saveProfile, saveProfileAvatar, removeProfileAvatar, verifiedProfileUser } from '../services/profileService';
 import { subscriptionService } from '../services/subscriptionService';
 import { initializeStorage, getItem, setItem, KEYS } from '../services/storageService';
@@ -126,6 +126,30 @@ export const AuthProvider = ({ children }) => {
     setSessionMessage(''); setProfileError(''); setSessionFailure(null);
     const { user: profile } = await signIn(email, password);
     await verifiedProfileUser(profile.id);
+
+    // If this farmer registered while email confirmation was enabled, their farm +
+    // subscription creation was deferred. Initialize now that we have a live session.
+    if (!profile.farmId) {
+      const intent = consumeRegistrationIntent(profile.id);
+      if (intent) {
+        try {
+          await initializeFarmerAccount({
+            userId: profile.id,
+            fullName: profile.fullName || '',
+            email: profile.email || email,
+            phone: profile.phone || null,
+            farmName: intent.farmName,
+            poultryTypes: intent.poultryTypes,
+            planId: intent.planId,
+            billingCycle: intent.billingCycle,
+          });
+        } catch (initError) {
+          // Don't block login -- FarmContext will show empty state; farmer can retry
+          console.warn('[login] Post-confirmation account init failed:', initError.message);
+        }
+      }
+    }
+
     if (identity.current !== profile.id) { epoch.current++; identity.current = profile.id; }
     commit(profile); setSessionFailure(null); setLoading(false); return profile;
   };

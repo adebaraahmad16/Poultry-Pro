@@ -7,15 +7,124 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient.js';
 import { createInitialSubscription } from '../subscriptionService.js';
 import { PLANS } from '../../constants/plans.js';
 
+// localStorage key for deferred registration intent (used when email confirmation is required)
+const REGISTRATION_INTENT_KEY = 'poultrypro_registration_intent';
+
+/**
+ * Persist registration intent so it can be completed after email confirmation + login.
+ * Only called when Supabase returns no session (email confirmation enabled).
+ */
+function saveRegistrationIntent(userId, { farmName, poultryTypes, planId, billingCycle }) {
+  try {
+    localStorage.setItem(REGISTRATION_INTENT_KEY, JSON.stringify({
+      userId,
+      farmName: farmName || 'My Farm',
+      poultryTypes: Array.isArray(poultryTypes) ? poultryTypes : [],
+      planId: planId || PLANS.BASIC,
+      billingCycle: billingCycle || 'monthly',
+    }));
+  } catch { /* localStorage unavailable — intent will not be deferred */ }
+}
+
+/**
+ * Read and clear the deferred registration intent from localStorage.
+ * Returns null if none exists or if it belongs to a different user.
+ */
+export function consumeRegistrationIntent(userId) {
+  try {
+    const raw = localStorage.getItem(REGISTRATION_INTENT_KEY);
+    if (!raw) return null;
+    const intent = JSON.parse(raw);
+    if (intent?.userId && intent.userId !== userId) return null;
+    localStorage.removeItem(REGISTRATION_INTENT_KEY);
+    return intent;
+  } catch { return null; }
+}
+
+/**
+ * Initialize a farmer's farm + subscription after a confirmed authenticated session exists.
+ * Safe to call multiple times — checks for existing records before inserting.
+ *
+ * IMPORTANT: This must only be called when auth.uid() is non-null (i.e. a live session exists),
+ * otherwise the RLS policies (owner_id = auth.uid()) will reject the INSERT.
+ */
+export async function initializeFarmerAccount({ userId, fullName, email, phone, farmName, poultryTypes, planId, billingCycle }) {
+  if (!supabase || !userId) return null;
+
+  // Profile upsert — trigger may have already created it; upsert is safe
+  const { error: profileError } = await supabase.from('profiles').upsert({
+    id: userId,
+    full_name: fullName || '',
+    email: email || '',
+    phone: phone || null,
+    role: 'farmer',
+  }, { onConflict: 'id' });
+  if (profileError) console.warn('[initializeFarmerAccount] Profile upsert:', profileError.code, profileError.message);
+
+  // Check for existing farm to avoid duplicate records
+  const { data: existingFarm } = await supabase.from('farms').select('id').eq('owner_id', userId).maybeSingle();
+  let farmId = existingFarm?.id;
+
+  if (!farmId) {
+    const newFarmId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const { data: farmData, error: farmError } = await supabase.from('farms').insert({
+      id: newFarmId,
+      owner_id: userId,
+      name: farmName || 'My Farm',
+      poultry_types: Array.isArray(poultryTypes) ? poultryTypes : [],
+    }).select('id').maybeSingle();
+
+    if (farmError) {
+      console.error('[initializeFarmerAccount] Farm creation failed:', farmError.code, farmError.message, 'userId:', userId);
+      throw new Error(`Farm setup failed: ${farmError.message}`);
+    }
+    farmId = farmData?.id || newFarmId;
+  }
+
+  // Link profile to farm
+  await supabase.from('profiles').update({ farm_id: farmId }).eq('id', userId);
+
+  // Check for existing subscription to avoid duplicate records
+  const { data: existingSub } = await supabase.from('farm_subscriptions').select('farm_id').eq('farm_id', farmId).maybeSingle();
+  const initialSub = createInitialSubscription(planId || PLANS.BASIC, billingCycle || 'monthly');
+
+  if (!existingSub) {
+    const trialEndsAt = new Date(initialSub.trialEndsAt).toISOString();
+    const { error: subError } = await supabase.from('farm_subscriptions').insert({
+      farm_id: farmId,
+      user_id: userId,
+      plan_id: (planId || PLANS.BASIC).toLowerCase(),
+      status: 'trial',
+      billing_cycle: billingCycle || 'monthly',
+      trial_ends_at: trialEndsAt,
+      renewal_date: trialEndsAt,
+      auto_renew: true,
+    });
+    if (subError) {
+      console.error('[initializeFarmerAccount] Subscription creation failed:', subError.code, subError.message, 'farmId:', farmId, 'userId:', userId);
+      // Don't throw — farm exists; subscription will be retried on next login
+    }
+  }
+
+  return { farmId, subscription: initialSub };
+}
+
 /**
  * Register a new farmer with Supabase Auth and create their profile + farm.
+ *
+ * When email confirmation is ENABLED in Supabase, authData.session is null and
+ * auth.uid() returns null server-side, so any INSERT guarded by RLS policy
+ * "(owner_id = auth.uid())" will fail with a 401/403 error.
+ *
+ * Fix: when no session is returned, store the registration intent in localStorage
+ * and defer farm + subscription creation to post-login initialization.
  */
 export async function signUp({ fullName, email, password, phone, farmName, poultryTypes, planId, billingCycle }) {
   if (!isSupabaseConfigured() || !supabase) {
     throw new Error('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.');
   }
 
-  // 1. Create the auth user
+  // 1. Create the auth user (email + password only — no DB writes yet)
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -32,56 +141,24 @@ export async function signUp({ fullName, email, password, phone, farmName, poult
   if (!authData?.user) throw new Error('Registration failed. Please try again.');
 
   const userId = authData.user.id;
+  const hasSession = !!authData.session;
 
-  // 2. Create the farmer profile row (trigger may also do this; upsert is safe)
-  const { error: profileError } = await supabase.from('profiles').upsert({
-    id: userId,
-    full_name: fullName,
-    email,
-    phone: phone || null,
-    role: 'farmer',
-  }, { onConflict: 'id' });
+  if (!hasSession) {
+    // Email confirmation is required — auth.uid() is null, RLS would block any INSERT.
+    // Persist farm intent so it can be initialized after verification + login.
+    saveRegistrationIntent(userId, { farmName, poultryTypes, planId, billingCycle });
 
-  if (profileError) console.warn('Profile upsert warning:', profileError.message);
-
-  // 3. Create the farm record — provide an explicit UUID to avoid null-ID constraint
-  const farmId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-  const { data: farmData, error: farmError } = await supabase.from('farms').insert({
-    id: farmId,
-    owner_id: userId,
-    name: farmName || 'My Farm',
-    poultry_types: Array.isArray(poultryTypes) ? poultryTypes : [],
-  }).select().maybeSingle();
-
-  const resolvedFarmId = farmData?.id || farmId;
-
-  if (farmError) {
-    console.warn('Farm creation warning:', farmError.message);
+    return {
+      user: { id: userId, email, fullName, phone, role: 'farmer' },
+      session: null,
+      subscription: null,
+    };
   }
 
-  // 4. Update profile with farm_id
-  if (resolvedFarmId) {
-    await supabase.from('profiles').update({ farm_id: resolvedFarmId }).eq('id', userId);
-  }
-
-  // 5. Create the initial subscription (trial)
-  const initialSub = createInitialSubscription(planId || PLANS.BASIC, billingCycle || 'monthly');
-  const trialEndsAt = new Date(initialSub.trialEndsAt).toISOString();
-
-  if (resolvedFarmId) {
-    const { error: subError } = await supabase.from('farm_subscriptions').insert({
-      farm_id: resolvedFarmId,
-      user_id: userId,
-      plan_id: (planId || PLANS.BASIC).toLowerCase(),
-      status: 'trial',
-      billing_cycle: billingCycle || 'monthly',
-      trial_ends_at: trialEndsAt,
-      renewal_date: trialEndsAt,
-      auto_renew: true,
-    });
-    if (subError) console.warn('Subscription creation warning:', subError.message);
-  }
+  // 2. Session exists (email confirmation disabled / auto-confirmed) — initialize now
+  const { farmId, subscription: initialSub } = await initializeFarmerAccount({
+    userId, fullName, email, phone, farmName, poultryTypes, planId, billingCycle,
+  });
 
   return {
     user: {
@@ -89,7 +166,7 @@ export async function signUp({ fullName, email, password, phone, farmName, poult
       email,
       fullName,
       phone,
-      farmId: resolvedFarmId,
+      farmId,
       farmName: farmName || 'My Farm',
       poultryTypes: Array.isArray(poultryTypes) ? poultryTypes : [],
       role: 'farmer',
