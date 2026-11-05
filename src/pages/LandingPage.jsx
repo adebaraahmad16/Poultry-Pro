@@ -88,7 +88,7 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section id="hero" aria-labelledby="hero-title" className="relative isolate overflow-hidden bg-[#123524]">
+        <section id="hero" aria-labelledby="hero-title" className="relative isolate overflow-hidden bg-[#123524] min-h-[580px] sm:min-h-[640px] lg:min-h-[700px] flex items-center">
           <SectionPhoto name="hero" eager />
           <div data-hero-layout className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-14 lg:px-8">
             <div data-hero-content className="min-w-0">
@@ -258,9 +258,9 @@ export default function LandingPage() {
         </section>
 
         {/* Why Choose PoultryPro? — 4 benefits */}
-        <section id="benefits" className="relative isolate py-20 bg-slate-50 border-t border-slate-200/60">
+        <section id="benefits" className="relative isolate overflow-hidden py-16 sm:py-20 lg:py-24 bg-[#132A1C] border-t border-emerald-900/40 min-h-[520px] sm:min-h-[580px] flex items-center">
           <SectionPhoto name="farmer" />
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-14">
               <span
                 className="inline-block text-xs font-extrabold uppercase tracking-widest text-emerald-300 mb-3"
@@ -453,9 +453,9 @@ export default function LandingPage() {
         </section>
 
         {/* Final CTA */}
-        <section className="relative isolate overflow-hidden py-20 bg-[#123524] border-t border-emerald-700/30">
+        <section className="relative isolate overflow-hidden py-16 sm:py-20 lg:py-24 bg-[#123524] border-t border-emerald-700/30 min-h-[420px] sm:min-h-[480px] flex items-center">
           <SectionPhoto name="cta" />
-          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center py-6">
               <h2
                 className="text-3xl sm:text-5xl font-black text-white tracking-tight"

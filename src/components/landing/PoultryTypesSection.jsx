@@ -8,26 +8,46 @@ export const POULTRY_SLIDES = [
     id: 'broilers',
     name: 'Broilers',
     alt: 'Commercial broiler chickens in a farm environment',
+    width: 1600,
+    height: 900,
+    // Broiler chicks and red feeders across litter floor
+    positionClass: 'object-[center_60%] sm:object-[center_55%]',
   },
   {
     id: 'layers',
     name: 'Layers',
     alt: 'Free-range egg-laying hens on a poultry farm',
+    width: 1600,
+    height: 778,
+    // Brown & white laying hens graze on the grass in the bottom half (Y: 65-90%)
+    positionClass: 'object-[center_75%] sm:object-[center_65%] lg:object-[center_60%]',
   },
   {
     id: 'cockerels',
     name: 'Cockerels',
     alt: 'Cockerel rooster in a farmyard poultry setting',
+    width: 1600,
+    height: 1067,
+    // Cockerel stands on the left/center-left (X: 38-44%, Y: 25-50%); right is dead straw
+    positionClass: 'object-[38%_28%] sm:object-[42%_32%] lg:object-[44%_35%]',
   },
   {
     id: 'turkeys',
     name: 'Turkeys',
     alt: 'Flock of domestic turkeys on farm pasture',
+    width: 1600,
+    height: 1078,
+    // Sea of white broad-breasted turkeys with vivid red snoods
+    positionClass: 'object-[50%_55%] sm:object-center',
   },
   {
     id: 'ducks',
     name: 'Ducks',
     alt: 'Flock of domestic ducks on a poultry farm',
+    width: 1600,
+    height: 1067,
+    // Clear white ducks flocking in the foreground
+    positionClass: 'object-[52%_48%] sm:object-[50%_50%]',
   },
 ];
 
@@ -78,12 +98,14 @@ export default function PoultryTypesSection() {
     };
   }, []);
 
-  // Preload next slide image to avoid delay
+  // Preload next slide image matching device resolution without duplicate downloads
   useEffect(() => {
     const nextIdx = (currentIndex + 1) % POULTRY_SLIDES.length;
     const nextSlide = POULTRY_SLIDES[nextIdx];
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const suffix = isMobile ? '-768.webp' : '-1600.webp';
     const img = new Image();
-    img.src = `/images/poultry/${nextSlide.id}.jpg`;
+    img.src = `/images/poultry/${nextSlide.id}${suffix}`;
   }, [currentIndex]);
 
   // Automatic slideshow transition every 5 seconds
@@ -109,7 +131,7 @@ export default function PoultryTypesSection() {
     <section
       id="poultry-types"
       ref={sectionRef}
-      className="relative isolate overflow-hidden border-t border-slate-200/60 py-16 sm:py-20"
+      className="relative isolate overflow-hidden border-t border-slate-200/60 py-16 sm:py-20 lg:py-24 bg-[#153422] min-h-[580px] sm:min-h-[640px] lg:min-h-[680px] flex items-center"
     >
       {/* 1. Full-width Background Slideshow (moving transition, zero overlays) */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -118,8 +140,8 @@ export default function PoultryTypesSection() {
           style={{ transform: `translateX(-${currentIndex * 100}%)`, willChange: 'transform' }}
         >
           {POULTRY_SLIDES.map((slide, index) => (
-            <div key={slide.id} className="relative h-full w-full shrink-0">
-              <picture className="absolute inset-0 block w-full h-full">
+            <div key={slide.id} className="relative h-full w-full shrink-0 overflow-hidden">
+              <picture className="absolute inset-0 block h-full w-full">
                 <source
                   type="image/webp"
                   srcSet={`/images/poultry/${slide.id}-768.webp 768w, /images/poultry/${slide.id}-1600.webp 1600w`}
@@ -130,8 +152,28 @@ export default function PoultryTypesSection() {
                   alt={slide.alt}
                   loading={index === 0 ? 'eager' : 'lazy'}
                   fetchpriority={index === 0 ? 'high' : 'auto'}
-                  decoding="async"
-                  className="h-full w-full object-cover object-center"
+                  decoding={index === 0 ? 'sync' : 'async'}
+                  width={slide.width}
+                  height={slide.height}
+                  className={`h-full w-full object-cover select-none pointer-events-none ${slide.positionClass}`}
+                  style={{
+                    imageRendering: 'auto',
+                    transform: 'translateZ(0)',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                  }}
+                  onError={(event) => {
+                    const image = event.currentTarget;
+                    if (image.dataset.fallbackAttempted) {
+                      image.style.visibility = 'hidden';
+                      return;
+                    }
+                    image.dataset.fallbackAttempted = 'true';
+                    image.parentElement?.querySelectorAll('source').forEach((source) => {
+                      source.media = 'not all';
+                    });
+                    image.src = `/images/poultry/${slide.id}.jpg`;
+                  }}
                 />
               </picture>
             </div>
@@ -140,8 +182,8 @@ export default function PoultryTypesSection() {
       </div>
 
       {/* 2. Section Content */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* High-visibility frosted heading plate */}
+      <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* High-visibility heading */}
         <div className="text-center max-w-3xl mx-auto">
           <span
             className="inline-block text-xs font-extrabold uppercase tracking-widest text-emerald-300 mb-3"
